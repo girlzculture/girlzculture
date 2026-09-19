@@ -107,7 +107,14 @@ for(const [locale,width,height,staff] of [['en',390,844,false],['fr',768,1000,fa
   const f=await p0OwnerFixture(page,{populated:true,locale,role:staff?'salon_team':'salon_owner'});
   if(staff)await page.route('**/api/salon/workspace',route=>route.fulfill({json:{salon:f.business,isOwner:false,isTeamMember:true,permissions:{products:true},records:f.records}}));
   const t=(source:string)=>(DASHBOARD_SOURCE_MESSAGES as Record<string,Record<string,string>>)[locale]?.[source]||source;
+  const pickupLabels={
+   en:{reserved:'Reserved for pickup',ready:'Ready for pickup',collected:'Picked up',notCollected:'Not picked up',financialCollected:'Collected'},
+   fr:{reserved:'Réservé pour le retrait',ready:'Prêt à retirer',collected:'Retiré par le client',notCollected:'Non retiré',financialCollected:'Encaissé'},
+   es:{reserved:'Reservado para recoger',ready:'Listo para recoger',collected:'Recogido por el cliente',notCollected:'No recogido',financialCollected:'Cobrado'},
+   'zh-CN':{reserved:'已预订自提',ready:'可到店自取',collected:'客户已取货',notCollected:'未取货',financialCollected:'已收款'},
+  }[locale];
   const orderId='a4000000-0000-4000-8000-000000000001',reference='GC-PICKUP-OWN-1042',failureId='a4000000-0000-4000-8000-000000000099',warningId='a4000000-0000-4000-8000-000000000098';
+  const collectedNotice={en:`Pickup reservation ${reference}: Picked up.`,fr:`Réservation à retirer ${reference} : Retiré par le client.`,es:`Reserva para recoger ${reference}: Recogido por el cliente.`,'zh-CN':`自提预订 ${reference}：客户已取货。`}[locale];
   let order={id:orderId,salon_id:f.business.id,public_reference:reference,guest_name:'Fixture Pickup Customer',fulfillment_method:'Pickup',fulfillment_status:'New',reservation_status:'Reserved',payment_status:'Deposit paid',total_amount:80,deposit_amount:10,remaining_balance:70,pickup_deadline:'2026-09-24T18:30:00Z',created_at:'2026-09-19T12:00:00Z',items:[{id:'a4000000-0000-4000-8000-000000000002',order_id:orderId,product_name:'Fixture Coconut Oil',quantity:2,line_total:60},{id:'a4000000-0000-4000-8000-000000000003',order_id:orderId,product_name:'Fixture Styling Comb',quantity:1,line_total:20}]};
   const posts:Record<string,unknown>[]=[];let firstPost=true,reads=0;
   let observePost!:()=>void,releasePost!:()=>void;const postObserved=new Promise<void>(resolve=>{observePost=resolve;}),postReleased=new Promise<void>(resolve=>{releasePost=resolve;});
@@ -123,17 +130,19 @@ for(const [locale,width,height,staff] of [['en',390,844,false],['fr',768,1000,fa
   await page.setViewportSize({width,height});await page.goto('/salon/dashboard/products');
   const section=page.locator('#product-orders'),card=section.getByRole('article').filter({has:page.getByText(reference,{exact:true})});
   await expect(card).toBeVisible();await expect(card).toContainText('Fixture Pickup Customer');await expect(card).toContainText('2× Fixture Coconut Oil');await expect(card).toContainText('1× Fixture Styling Comb');
+  await expect(card.getByText(pickupLabels.reserved,{exact:true})).toBeVisible();await expect(card.getByRole('button',{name:pickupLabels.notCollected,exact:true})).toBeVisible();
   const intl=locale==='fr'?'fr-FR':locale==='es'?'es-US':locale==='zh-CN'?'zh-CN':'en-US',money=(amount:number)=>new Intl.NumberFormat(intl,{style:'currency',currency:'USD'}).format(amount);
   await expect(card).toContainText(money(80));await expect(card).toContainText(money(10));await expect(card).toContainText(money(70));await expect(card).toContainText(t('Balance at pickup'));await expect(card).toContainText(t('Pickup by'));await expect(card).toContainText('2026');
   await card.scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('product-pickup-populated.png'),fullPage:false});
-  await card.getByRole('button',{name:t('Ready for pickup'),exact:true}).click();await postObserved;
-  try{await expect(card.getByRole('button',{name:t('Canceled'),exact:true})).toBeDisabled();await expect(card.getByRole('button',{name:t('Collected'),exact:true})).toHaveCount(0);expect(posts).toHaveLength(1);}finally{releasePost();}
-  await expect(section.getByRole('status')).toContainText(failureId);await expect(card.getByRole('button',{name:t('Ready for pickup'),exact:true})).toBeEnabled();await expect(card.getByText(t('Reserved'),{exact:true})).toBeVisible();await expect(card.getByRole('button',{name:t('Collected'),exact:true})).toHaveCount(0);expect(order.reservation_status).toBe('Reserved');
+  await card.getByRole('button',{name:pickupLabels.ready,exact:true}).click();await postObserved;
+  try{await expect(card.getByRole('button',{name:t('Canceled'),exact:true})).toBeDisabled();await expect(card.getByRole('button',{name:pickupLabels.collected,exact:true})).toHaveCount(0);expect(posts).toHaveLength(1);}finally{releasePost();}
+  await expect(section.getByRole('status')).toContainText(failureId);await expect(card.getByRole('button',{name:pickupLabels.ready,exact:true})).toBeEnabled();await expect(card.getByText(pickupLabels.reserved,{exact:true})).toBeVisible();await expect(card.getByRole('button',{name:pickupLabels.collected,exact:true})).toHaveCount(0);expect(order.reservation_status).toBe('Reserved');
   await card.scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('product-pickup-status-failure.png'),fullPage:false});
-  await card.getByRole('button',{name:t('Ready for pickup'),exact:true}).click();await expect(section.getByRole('status')).toContainText(warningId);await expect(section.getByRole('status')).not.toContainText(failureId);await expect(card.getByRole('button',{name:t('Collected'),exact:true})).toBeVisible();expect(posts).toHaveLength(2);
-  const beforeRefresh=reads;await section.getByRole('button',{name:t('Refresh'),exact:true}).click();await expect.poll(()=>reads).toBeGreaterThan(beforeRefresh);await expect(section.getByRole('status')).toHaveCount(0);await expect(card.getByText(t('Ready for pickup'),{exact:true})).toBeVisible();
-  await card.getByRole('button',{name:t('Collected'),exact:true}).click();await expect(card.getByText(t('Collected'),{exact:true})).toBeVisible();await expect(card.getByRole('button')).toHaveCount(0);expect(posts.map(row=>row.fulfillment_status)).toEqual(['Ready for pickup','Ready for pickup','Collected']);
-  await page.reload();await expect(card.getByText(t('Collected'),{exact:true})).toBeVisible();await expect(card).toContainText(money(70));await expect(card.getByRole('button')).toHaveCount(0);expect(posts).toHaveLength(3);
+  await card.getByRole('button',{name:pickupLabels.ready,exact:true}).click();await expect(section.getByRole('status')).toContainText(warningId);await expect(section.getByRole('status')).not.toContainText(failureId);await expect(card.getByRole('button',{name:pickupLabels.collected,exact:true})).toBeVisible();expect(posts).toHaveLength(2);
+  const beforeRefresh=reads;await section.getByRole('button',{name:t('Refresh'),exact:true}).click();await expect.poll(()=>reads).toBeGreaterThan(beforeRefresh);await expect(section.getByRole('status')).toHaveCount(0);await expect(card.getByText(pickupLabels.ready,{exact:true})).toBeVisible();
+  await card.getByRole('button',{name:pickupLabels.collected,exact:true}).click();await expect(card.getByText(pickupLabels.collected,{exact:true})).toBeVisible();await expect(card.getByText(pickupLabels.financialCollected,{exact:true})).toHaveCount(0);await expect(card).toContainText(money(70));expect(order.remaining_balance).toBe(70);expect(order.payment_status).toBe('Deposit paid');await expect(card.getByRole('button')).toHaveCount(0);expect(posts.map(row=>row.fulfillment_status)).toEqual(['Ready for pickup','Ready for pickup','Collected']);
+  await expect(section.getByRole('status')).toHaveText(collectedNotice);
+  await page.reload();await expect(card.getByText(pickupLabels.collected,{exact:true})).toBeVisible();await expect(card.getByText(pickupLabels.financialCollected,{exact:true})).toHaveCount(0);await expect(card).toContainText(money(70));await expect(card.getByRole('button')).toHaveCount(0);expect(posts).toHaveLength(3);
   await card.scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('product-pickup-collected.png'),fullPage:false});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);expect(f.actions).toEqual([]);expect(f.unexpected).toEqual([]);
  });
 }

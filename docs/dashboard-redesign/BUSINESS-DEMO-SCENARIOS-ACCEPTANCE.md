@@ -1,6 +1,6 @@
 # EXEC-06 isolated business demonstrations — 19 September 2026
 
-Status: **AUTOMATED ONLY; focused source,14 browser cases and bounded visual acceptance pass.** This slice does not establish complete EXEC-06 or hosted business workflow acceptance. See `BUSINESS-DEMO-VISUAL-REVIEW.md` for preserved before/after evidence and exact limits.
+Status: **AUTOMATED ONLY; all14 demo browser cases pass on build194 after the three CI locator corrections.** This slice does not establish complete EXEC-06 or hosted business workflow acceptance. See `BUSINESS-DEMO-VISUAL-REVIEW.md` for preserved before/after evidence and exact limits.
 
 ## Inventory and boundaries
 
@@ -27,3 +27,17 @@ All four required interface languages have complete local dictionary parity. Sam
 Independent source review by `reconciliation_review`: **PASS**. The reviewer found no concrete blocker in sample arithmetic/assignments, pending/reserved labels, scenario-state reset, normalized demo-only URL inputs, disconnected transport or fixtures that reject unexpected business/provider requests. This is source review, not browser acceptance.
 
 Root coordinated the successful build/browser run and inspected corrected phone/landscape screenshots. No production mutation, provider call or deployment occurred. Existing real-business record and hosted acceptance obligations remain separate.
+
+## Later CI locator boundary — 0af98ff
+
+Release run35456360463, shard1 job105932226478, reported three demo failures: French768 and Spanish1440 disclosure focus matched two summaries; English390 initial-calendar control measurement returned a null bounding box. The original log, screenshots and traces are preserved outside Git in `ci-0af98ff-shard1-job.log` and `ci-0af98ff-shard1-artifact/`. Artifact10588635604 was downloaded without rerunning the workflow. The shard's fourth failure belongs to Finance and is tracked separately.
+
+The actual before-action snapshots contain two copies: hidden streamed `DIV#S:1` and the rendered workspace. `ci-0af98ff-demo-trace-boundary.json` records their decoded ancestor paths. The page-wide CSS disclosure locator included both. The English trace fails at its first measurement, the label-based scenario selector, while its screenshot and accessibility snapshot show the visible named combobox. The hidden duplicate ID/label was selected instead. This is demonstrated by the original trace, not inferred from earlier local passes.
+
+The test-only correction scopes disclosure interaction to the accessible main and addresses the scenario control by its exact combobox role/name. Each44px assertion now first requires visibility and a non-null rendered box; all four navigation controls must exist. Keyboard, disclosure contents, saved URL/history, exact sample values, initial-content geometry, accessibility and forbidden-request assertions remain. Geometry queries already operate inside accessible regions/articles and need no page-wide selector change. No application source, timeout, retry, sleep or assertion threshold changed.
+
+Targeted spec ESLint and diff checks: **PASS**. Independent read-only review: **PASS**. The parent-coordinated build194 after-check now passes **14/14** demo cases in Chromium and WebKit; the historical local result is not reused as proof of this correction.
+
+`../redesign-evidence/combined-194-browser.log` records the exact14 passing demo cases, including original four-locale workflows and both initial-content geometry cases with the corrected visible-control locators. The whole mixed-feature run is **42 passed / 8 promotion failures** (3.3 minutes), not a passing whole-run or release claim. `combined-194-build.log` passed; `combined-194-source-before.json` and `combined-194-source-after.json` retain the identical837-file digest `3b2e71fc92faceea8a6ce4ba39f51424d029581b627f89daff25855afca3e7ab`. The subsequent compiled change is limited to three promotion option-value attributes and does not change the demo source or these preserved results.
+
+These are local disconnected demonstration fixtures, not real business operations, provider acceptance or hosted deployment. No additional screenshot review, browser rerun or provider action was performed while recording this result; the earlier bounded visual review remains separately attributed to its captures.

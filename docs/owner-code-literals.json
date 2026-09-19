@@ -510,6 +510,10 @@
         {
           "file": "src/lib/bookingRescheduleCore.ts",
           "context": "f506806fc0200dbe5548355d53a42fc28578c763ef469ad985dbd9f144050b7a"
+        },
+        {
+          "file": "src/lib/promotionDateTime.ts",
+          "context": "93e7035d913271859a5d2967b8368fe533be8a73abd374e0ae5b9dee732945ca"
         }
       ]
     },
@@ -2914,6 +2918,10 @@
         {
           "file": "src/lib/businessMoneyInsights.ts",
           "context": "b5b01cb527c4c2fb6df00846b995d6554b936774de786ff4535d4b78f9d015ae"
+        },
+        {
+          "file": "src/lib/promotionDateTime.ts",
+          "context": "74040026640b756062982c083e665cf5c1d1048667dd491b40b81bbd49220bc4"
         }
       ]
     },
@@ -3836,6 +3844,36 @@
         {
           "file": "src/lib/businessServiceCapacity.ts",
           "context": "03cdd6dec6833bdef5b2e84e3f7ff0ee746ff7db026e46dd044d4c183792f752"
+        }
+      ]
+    },
+    {
+      "source": ":00Z",
+      "reason": "UTC suffix used only to validate wall-clock calendar fields before zone conversion.",
+      "contexts": [
+        {
+          "file": "src/lib/promotionDateTime.ts",
+          "context": "fc59e75f081dad2a968a070c3bf4e720c33a123e9d3c87c704e29f5b5ac8b6c6"
+        }
+      ]
+    },
+    {
+      "source": "{reference}",
+      "reason": "Replacement token in the already translated pickup-success template; never displayed as a standalone label.",
+      "contexts": [
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "context": "4cc02e585925107657fefcb2535eaa717cc9501e67f1d81e3d8c974553a924ac"
+        }
+      ]
+    },
+    {
+      "source": "{status}",
+      "reason": "Replacement token in the already translated pickup-success template; the substituted pickup status is independently localized.",
+      "contexts": [
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "context": "af28058a8a11068923436888b28f270970be48dc36bd00a190e5463b96330306"
         }
       ]
     }

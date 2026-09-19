@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {loadNodeTypescript} from './helpers/load-node-typescript.mjs';
+const {summarizeOperatingBooks}=loadNodeTypescript(process.cwd())('src/lib/businessFinanceCore.ts');
 const id=n=>`18300000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const args={start:'2026-08-01T04:00:00Z',end:'2026-08-29T04:00:00Z'};
 function fixture({denied=[],failure=null,own=false}={}){
@@ -8,7 +9,7 @@ function fixture({denied=[],failure=null,own=false}={}){
  const row={service_id:id(2),name:'Own service',completed_count:1,previous_count:2,contribution_cents:5000,review_status:'owner_reviewed',review:{note:'PRIVATE_OWNER_REVIEW',allocations:[{id:id(3),cents:3000}]},href:'/salon/dashboard/services/'+id(2)};
  const value={period:{from:'2026-08-01',to:'2026-08-28',timeZone:'America/New_York'},previous_period:{from:'2026-07-04',to:'2026-07-31',timeZone:'America/New_York'},as_of:'2026-09-19T12:00:00Z',rows:[row],recommendations:[row],cost_sources:[{label:'PRIVATE_EXPENSE',id:id(3)}],can_review:true,net_profit_verified:false,definition:'Owner-recorded contribution, not net profit.'};
  const context={salon:{id:id(1),time_zone:'America/New_York'},user:{id:id(9)},isOwner:true,admin:{async rpc(name,p){calls.push([name,p]);if(name==='p0_actor_has_permission')return {data:!denied.includes(p.p_permission)&&['earnings','bookings','styles'].includes(p.p_permission),error:null};throw Error(name);},from(){const q={select(){return q;},eq(){return q;},gte(){return q;},lt(){return q;},order(){return q;},range:async()=>({data:[],error:null})};return q;}}};
- const load=loadNodeTypescript(process.cwd(),{'@/lib/supabaseAdmin':{requireSalonOwner:async()=>context},'@/lib/businessFinanceServer':{readBusinessFinances:async()=>({scope:{kind:own?'own':'business',stylist_id:null},summary:{balances:[],by_stylist:{},compensation_position:{}},stylists:[],evidence:{},insights:null})},'@/lib/businessServiceContributionServer':{readServiceContribution:async(c,from,to)=>{assert.equal(c,context);calls.push(['contribution',{from,to}]);if(failure)throw Error(failure);return value;}}});
+ const load=loadNodeTypescript(process.cwd(),{'@/lib/supabaseAdmin':{requireSalonOwner:async()=>context},'@/lib/businessFinanceServer':{readBusinessFinances:async(c,period)=>({scope:{kind:own?'own':'business',stylist_id:null},summary:summarizeOperatingBooks(c.salon.id,{sales:[],payments:[],expenses:[],obligations:[],compensation_payments:[]},period),stylists:[],evidence:{},insights:null})},'@/lib/businessServiceContributionServer':{readServiceContribution:async(c,from,to)=>{assert.equal(c,context);calls.push(['contribution',{from,to}]);if(failure)throw Error(failure);return value;}}});
  return {calls,load,context,value,read:tool=>load('src/lib/ownerReadServer.ts').readOwnerOperation(context,tool,args)};
 }
 for(const tool of ['get_business_summary','get_earnings_summary'])test('actual '+tool+' includes bounded own-service contribution evidence for the exact requested completed period',async()=>{

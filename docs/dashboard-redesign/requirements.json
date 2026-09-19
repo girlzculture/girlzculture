@@ -706,7 +706,11 @@
         "src/app/globals.css",
         "src/components/owner/BusinessPhotoLibrary.tsx",
         "src/i18n/business-photo-recovery-copy.ts",
-        "tests/browser/business-photo-conflict.spec.ts"
+        "tests/browser/business-photo-conflict.spec.ts",
+        "src/components/owner/BusinessOverview.tsx",
+        "src/i18n/business-overview-source-catalog.ts",
+        "src/lib/businessOverview.ts",
+        "tests/p0-business-overview.test.mjs"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
@@ -714,13 +718,15 @@
       "changes": [
         "Short assistant copy, safe support references and explicit photo saving/retry states exist in current source. Independent bounded source review confirmed this group is partially implemented, not untouched.",
         "Photo conflict recovery now reloads authoritative saved details through the existing protected profile read, preserves the owner draft, and discards late results after the editor closes or switches.",
-        "The reproduced320px My Page mobile section-label collision is corrected in source by intrinsic-width, nonshrinking controls with whole-control wrapping. Labels, routes, selected markers, More menu and desktop layout are unchanged."
+        "The reproduced320px My Page mobile section-label collision is corrected in source by intrinsic-width, nonshrinking controls with whole-control wrapping. Labels, routes, selected markers, More menu and desktop layout are unchanged.",
+        "Overview already uses a concise business cancellation-rate alert linked to Availability; calculation details are retained in the optional View totals and definitions disclosure. The four-locale copy and evidence-based unavailable state are implemented."
       ],
       "verification": [
         "2026-09-19 bounded source/evidence reconciliation only: corrected stale not-started label; no new execution or live acceptance claimed.",
         "photo-conflict-before-roles.log demonstrates the missing Reload control before correction. combined-ui-final-browser.log initially passed6/8 Photo cases; two late-reload failures came from a generic open-dialog locator matching GC Assistant after the photo editor closed. The exact named photo-dialog locator preserves the assertions; combined-ui-tabs-browser.log now passes all8 Photo recovery/boundary cases plus8 existing profile/photo regressions. No hosted persistence is claimed.",
         "The earlier320px French capture showed My Page Informations/Prestations section labels colliding. The corrected final French320px capture was independently inspected and is readable without overlap; this is bounded visual evidence, not a whole-page acceptance claim.",
-        "my-page-tabs-before.log preserves the French320px geometry failure before correction. Focused ESLint/TypeScript pass; combined-ui-tabs-browser.log passes all8 new Chromium/WebKit cases across four locales, each at320/390px with actual text/control bounds, exact routes, More-menu navigation and back."
+        "my-page-tabs-before.log preserves the French320px geometry failure before correction. Focused ESLint/TypeScript pass; combined-ui-tabs-browser.log passes all8 new Chromium/WebKit cases across four locales, each at320/390px with actual text/control bounds, exact routes, More-menu navigation and back.",
+        "2026-09-19 bounded source/evidence reconciliation: BusinessOverview.tsx, business-overview-source-catalog.ts, businessOverview.ts and p0-business-overview.test.mjs support the existing alert/action/disclosure. No new run or whole-screen, native-language or hosted acceptance is claimed."
       ],
       "live_evidence": [],
       "detailed_clause": "| UI-05 | Use plain business language. Replace implementation-oriented explanations in ordinary screens with useful labels, statuses, help, and recoverable errors. | For example, media owners see uploading/saved/published/retry status rather than a permanent explanation of storage stages. |",
@@ -731,7 +737,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Simplify the Overview cancellation alert wording and complete the remaining changed-screen plain-language review and hosted acceptance. Photo recovery and the My Page mobile-section correction have bounded automated evidence; final-source required CI remains.",
+      "remaining": "Complete the remaining changed-screen plain-language and whole-workspace visual review, actual-language quality checks and hosted acceptance. The Overview cancellation alert already uses business language with an Availability action; its calculation explanation is in an optional disclosure. Photo recovery and the My Page mobile-section correction retain bounded automated evidence; final-source required CI remains.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -4459,7 +4465,18 @@
         "src/lib/businessReviews.ts",
         "src/app/api/salon/workspace/route.ts",
         "src/app/api/salon/reviews/[id]/reply/route.ts",
-        "supabase/migrations/20260918142356_business_review_reply_revisions.sql"
+        "supabase/migrations/20260918142356_business_review_reply_revisions.sql",
+        "src/app/api/salon/waitlist/route.ts",
+        "tests/p0-appointment-waitlist.test.mjs",
+        "scripts/sql/verify-appointment-waitlist.sql",
+        "src/lib/businessCustomerCampaignServer.ts",
+        "scripts/sql/verify-business-customer-campaigns.sql",
+        "src/lib/businessCommunicationServer.ts",
+        "src/lib/businessScheduleOpportunitiesServer.ts",
+        "src/lib/businessRebookingAdviceServer.ts",
+        "src/lib/businessServiceContributionServer.ts",
+        "src/lib/businessServiceCapacityServer.ts",
+        "src/lib/assistantServiceContribution.ts"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
@@ -4470,14 +4487,16 @@
         "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded.",
         "Demonstrated missing/foreign prior request IDs could leave client transcript prose in provider context. Planner now drops associated prose unless every requested ID resolves under the current business, actor and permissions.",
         "Explicit owner-reviewed own-business guest visit links preserve original profiles/formulas/photos. Reversible links never merge Auth identity; distinct registered identities cannot be joined directly or through guest records. Fresh field/assignment projections and link revocation before assistant follow-up.",
-        "Reviews: public-only actual rating average/distribution/month trend, hidden/disputed history retained, searchable/filterable paged inbox with selected desktop detail and phone route; original customer words retained. Guarded reply revisions, moderation hold, private history, retry deduplication, stale-draft recovery and exact support reference. Authorized query pagination removes the 1000-review silent cap."
+        "Reviews: public-only actual rating average/distribution/month trend, hidden/disputed history retained, searchable/filterable paged inbox with selected desktop detail and phone route; original customer words retained. Guarded reply revisions, moderation hold, private history, retry deduplication, stale-draft recovery and exact support reference. Authorized query pagination removes the 1000-review silent cap.",
+        "Waitlist reads derive the current actor/business and reject caller overrides; campaigns and booking communications bind recipients/consent to the current business. Advice readers refresh permission and assignment around scoped reads, and contribution model facts exclude source notes and client identities. Prior assistant facts are refreshed and stale, foreign or denied context is discarded before either model phase."
       ],
       "verification": [
         "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
         "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending.",
         "Fail-before / pass-after regression for entirely foreign and mixed history. All 34 planner tests pass, preserving authorized clarification and language continuity.",
         "163-migration clean database plus two-business client-link SQL passed; 46 focused server/planner cases; 18 client-card/link browser cases (14 initial plus4 new WebKit) across4 locales/viewports; TypeScript/build/lint pass. Synthetic evidence only; live release pending.",
-        "Local:reviews-browser.log10/10 across Chromium/WebKit four locales; reviews-concurrency-pagination-final.log4/4; reviews-core-final.log10/10; two-business/revoked-role/idempotency/CAS/queue SQL passes. Clean164chain passed, later current-queue replay projection verified by focused SQL. reviews-existing-final.log passes current projection/notification safeguards. Live acceptance and final CI pending."
+        "Local:reviews-browser.log10/10 across Chromium/WebKit four locales; reviews-concurrency-pagination-final.log4/4; reviews-core-final.log10/10; two-business/revoked-role/idempotency/CAS/queue SQL passes. Clean164chain passed, later current-queue replay projection verified by focused SQL. reviews-existing-final.log passes current projection/notification safeguards. Live acceptance and final CI pending.",
+        "2026-09-19 bounded audit confirms implemented waitlist API/Node/actual-role SQL boundaries, campaign two-business/staff/consent SQL and recorded10 Node plus18 production-build browser cases (CUSTOMER-CAMPAIGNS-ACCEPTANCE.md), communication preference/follow-up SQL, and protected advice readers. Existing planner/execution tests cover foreign/missing IDs, reassignment and secondary-grant loss. No provider delivery, final deployed-role or full-system audit claim is added."
       ],
       "live_evidence": [],
       "evidence": [
@@ -4492,7 +4511,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Local two-business/role/forged-ID tests pass for implemented modules. Extend the same guards to remaining communications, waitlists and advice; verify final direct/follow-up denial before model access.",
+      "remaining": "Complete final-candidate direct/follow-up denial and deployed-role acceptance for the implemented boundaries, including the prohibition on another business's public information. Communications, waitlists and current advice modules already have own-business and permission guards with bounded automated evidence; the named-module review is not a full-system security or hosted acceptance claim.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -4698,7 +4717,8 @@
         "supabase/migrations/20260918060000_assistant_scoped_history.sql",
         "tests/p0-assistant-planning.test.mjs",
         "src/components/owner/BusinessClientLinks.tsx",
-        "supabase/migrations/20260918131641_business_client_visit_links.sql"
+        "supabase/migrations/20260918131641_business_client_visit_links.sql",
+        "tests/p0-assistant-execution.test.mjs"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
@@ -4708,14 +4728,16 @@
         "Added protected operating-book records/RPCs, idempotent external receipts and refund links, versioned compensation and obligations, owner/full/own-stylist/logging scopes; new ledger-backed finance screen and assistant summaries. Existing Unpaid substring bug corrected. These foundations do not complete all detailed clauses.",
         "Finance permission downgrade and stylist reassignment now discard broader stored results and derived transcript before planning. Idempotent read replay retrieves fresh authorized data. Raw request/audit REST history is backend-only. Current-scope own-earnings saves are separately guarded.",
         "Demonstrated missing/foreign prior request IDs could leave client transcript prose in provider context. Planner now drops associated prose unless every requested ID resolves under the current business, actor and permissions.",
-        "Explicit owner-reviewed own-business guest visit links preserve original profiles/formulas/photos. Reversible links never merge Auth identity; distinct registered identities cannot be joined directly or through guest records. Fresh field/assignment projections and link revocation before assistant follow-up."
+        "Explicit owner-reviewed own-business guest visit links preserve original profiles/formulas/photos. Reversible links never merge Auth identity; distinct registered identities cannot be joined directly or through guest records. Fresh field/assignment projections and link revocation before assistant follow-up.",
+        "Actual server/read-to-planner tests already exercise own-versus-foreign records, forged business arguments, public-information rejection, foreign/missing prior request IDs and fresh permission/assignment changes before model context. Their evidence does not depend on composing every assertion into one browser conversation."
       ],
       "verification": [
         "14 execution + 31 planning + 4 profile/media tests; live interface refusal still pending",
         "156-migration chain passed against an empty local PostgreSQL17.11 fixture, including two-business and role SQL assertions. Finance arithmetic10/10, data-boundary6/6 and route5/5 tests; operational assistant18/18 and planning31/31. No production migration applied.",
         "Planning33/33,execution15/15; full157-migration disposable local chain and rollback SQL two-business/role/replay guards passed. Production unchanged; live isolation still pending.",
         "Fail-before / pass-after regression for entirely foreign and mixed history. All 34 planner tests pass, preserving authorized clarification and language continuity.",
-        "163-migration clean database plus two-business client-link SQL passed; 46 focused server/planner cases; 18 client-card/link browser cases (14 initial plus4 new WebKit) across4 locales/viewports; TypeScript/build/lint pass. Synthetic evidence only; live release pending."
+        "163-migration clean database plus two-business client-link SQL passed; 46 focused server/planner cases; 18 client-card/link browser cases (14 initial plus4 new WebKit) across4 locales/viewports; TypeScript/build/lint pass. Synthetic evidence only; live release pending.",
+        "2026-09-19 bounded reconciliation retains p0-assistant-execution.test.mjs direct/media/foreign-public/forged-ID assertions and p0-assistant-planning.test.mjs previous-request-only follow-up, changed-fact and secondary-grant-revocation assertions. The audit did not comprehensively inventory every interface refusal capture and therefore does not declare those captures absent; hosted refusal remains unverified. No new tests were run."
       ],
       "live_evidence": [],
       "detailed_clause": "SCOPE-05 — Verify direct requests, indirect comparisons, guessed record IDs and follow-up questions across two isolated test businesses. Confirm both refusal in the interface and rejection at data/tool boundaries. Preserve the explicit public-information restriction even if ordinary website visitors can view those profiles manually.",
@@ -4726,7 +4748,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Local two-business/role/forged-ID tests pass for implemented modules. Extend the same guards to remaining communications, waitlists and advice; verify final direct/follow-up denial before model access.",
+      "remaining": "Map retained interface refusal/error evidence and existing two-business server/read-to-planner tests to direct requests, indirect comparisons, guessed IDs and follow-ups, including the public-information restriction; complete any uncovered final-candidate interface and hosted-role acceptance. Existing automated boundary evidence remains valid. A single continuous browser conversation, prescribed fixture sequence or real-provider run is not an additional requirement or the only acceptable automated proof.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -5532,16 +5554,20 @@
         "src/components/owner/BusinessPolicies.tsx",
         "src/lib/businessPolicyCore.ts",
         "src/lib/businessPolicyServer.ts",
-        "src/components/booking/BusinessPolicyDisclosure.tsx"
+        "src/components/booking/BusinessPolicyDisclosure.tsx",
+        "src/components/SalonBookingWizard.tsx",
+        "tests/browser/p0-public-policy.spec.ts"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
+      "blocker": "Remaining connected full-clause and final migrated hosted acceptance are outstanding; this is not an external blocker.",
       "changes": [
-        "Current published policy is fetched separately if newer drafts push it beyond the 30-row history. Missing current policy fails closed. Save/publish requires fresh readback and links to the canonical public policy. Booking acknowledgement opens the policy in the clicked visible review panel instead of the hidden desktop duplicate."
+        "Current published policy is fetched separately if newer drafts push it beyond the 30-row history. Missing current policy fails closed. Save/publish requires fresh readback and links to the canonical public policy. Booking acknowledgement opens the policy in the clicked visible review panel instead of the hidden desktop duplicate.",
+        "The owner editor and public disclosure use the shared policy summary; protected current-revision reads and exact publication readback are implemented. Booking acknowledgement captures the accepted revision/version/snapshot and preserves older booked terms. Existing separate owner and public fixtures do not yet carry one owner-saved revision through the whole specified path."
       ],
       "verification": [
-        "11 policy API,10 owner policy browser and6 corrected public-policy Chromium/WebKit cases pass. The changed assistant/policy final combined server suite is72/72. See ASSISTANT-POLICY-OPERATIONAL-ACCEPTANCE.md. No production policy was changed."
+        "11 policy API,10 owner policy browser and6 corrected public-policy Chromium/WebKit cases pass. The changed assistant/policy final combined server suite is72/72. See ASSISTANT-POLICY-OPERATIONAL-ACCEPTANCE.md. No production policy was changed.",
+        "ASSISTANT-POLICY-OPERATIONAL-ACCEPTANCE.md retains10 passing owner policy and6 passing public/booking Chromium/WebKit cases plus11 API cases, including missing-current fail-closed, failed load/save and retained draft recovery. Bounded source review of p0-public-policy.spec.ts confirms the owner public-link href assertion and separately seeded public-to-booking fixture; no continuous same-revision or deployed persistence pass is inferred. No new test was run."
       ],
       "live_evidence": [],
       "detailed_clause": "POL-08 — Acceptance follows the full path: edit → save/review → publish → refresh → public policy link → booking acknowledgement, including a failed-save recovery. The owner must be able to preview exactly what customers will read.",
@@ -5552,7 +5578,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Complete browser edit/review/publish/refresh/public-link/booking-acknowledgement acceptance, failed-load recovery and final migrated live path.",
+      "remaining": "Connect the implemented and separately tested stages into the clause's same-business/same-revision edit → save/review → publish → refresh → public policy link → booking acknowledgement path, including failed-save recovery, then verify the final migrated hosted persistence. Existing owner tests check the public href but do not follow it; public/booking tests seed a separate revision fixture. This is a connected acceptance gap, not evidence that another policy implementation or the already-tested recovery behavior is missing.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -10066,24 +10092,31 @@
         "src/lib/businessServiceContributionServer.ts",
         "src/lib/assistantServiceContribution.ts",
         "src/components/owner/BusinessServiceContribution.tsx",
-        "supabase/migrations/20260919101239_business_service_contribution_reviews.sql"
+        "supabase/migrations/20260919101239_business_service_contribution_reviews.sql",
+        "src/lib/businessServiceCapacity.ts",
+        "src/lib/businessServiceCapacityServer.ts",
+        "src/components/owner/BusinessServiceCapacity.tsx",
+        "src/lib/businessMorningBriefServer.ts",
+        "src/components/owner/BusinessMorningBrief.tsx"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Remaining calculations, complete action journeys and full-clause/hosted acceptance are outstanding; this is not an external blocker.",
+      "blocker": "Remaining full-clause, real-record action and hosted acceptance are outstanding; this is not an external blocker.",
       "changes": [
         "Deterministic own-business finance explanations, equal-day trends, bounded recorded price samples, appointment-cohort current states and linked receipts, and saved-offer attribution. Useful period-preserving links reuse existing Finances views.",
         "Own-business seven-day capacity evidence now unions canonical booked/held/blocked intervals, excludes unavailable/draft resources, ranks up to six dated professional opportunities, and opens that exact Calendar scope for review. It is not a historical demand, service-fit, profit or market-price claim. The assistant receives a complete bounded projection rather than depth-truncated interval objects.",
         "The existing authorized business-summary read now exposes historical completed-appointment patterns by local weekday and six-hour period. It excludes partial/future days, compares only nonzero observed periods over sufficient local calendar days, and explicitly does not infer opening hours, demand, zero-capacity periods or forecasts. No new data query or identity projection is introduced.",
         "Bookings and the assistant expose same-business regular-client absence evidence using explicit canonical identities, at least three completed visits from 365 local calendar days before today through the current check time (including today), last visit at least 42 local calendar days ago and no active current/future appointment. No other business history, name/email matching, inferred demand or contact permission is used. Assigned staff receive only their authorized professional scope.",
-        "Finances allows an owner to allocate existing canonical operating expense/wage evidence to a completed service period. A fresh reviewed contribution, compared with fewer completed appointments in an equal prior local-day period, supports service/calendar review. It is not verified net profit, capacity or demand. The same bounded safe facts reach business and earnings assistant summaries, with fresh earnings/bookings/styles grants, exact period binding and no review notes/client/source identities."
+        "Finances allows an owner to allocate existing canonical operating expense/wage evidence to a completed service period. A fresh reviewed contribution, compared with fewer completed appointments in an equal prior local-day period, supports service/calendar review. It is not verified net profit, capacity or demand. The same bounded safe facts reach business and earnings assistant summaries, with fresh earnings/bookings/styles grants, exact period binding and no review notes/client/source identities.",
+        "Service-specific opportunity checks now resolve required saved choices, canonical duration/buffer, own professional assignment, closures/blocks/bookings/holds and checkout lead/advance bounds over at most seven dates. The contribution candidate fingerprint is checked again; dated Calendar links are read-only alternatives, not reservations, demand forecasts or verified net-profit claims. Morning Brief also links real low/out/unknown stock evidence to protected inventory actions."
       ],
       "verification": [
         "MoneyInsights8 focused plus15 finance regressions pass. Booking-cohort/referral/localization combined43 pass; malformed date before/after evidence; actual local service_role projection verified. Browser and hosted acceptance still pending this checkpoint.",
         "SCHEDULE-OPPORTUNITIES-ACCEPTANCE.md: focused core/authorization/count/DST/projection regressions and14 Chromium/WebKit cases now pass on the combined production build. Fresh-grant and assigned-professional isolation, failed refresh, unavailable hours, exact incident references and dated navigation are covered. Hosted records and remaining historical/profit advice remain unverified.",
         "APPOINTMENT-PATTERNS-ACCEPTANCE.md: five core cases and actual own-reader→planner→answer integration passed within55 focused regressions. Independent source review passed. Final hosted question against authorized records remains unverified.",
         "RETURNING-CLIENT-ADVICE-ACCEPTANCE.md: 13 focused core cases, 46 planner regressions and actual-role 182 SQL pass. All 14 returning-client Chromium/WebKit cases passed in combined-183-final-advice-products-browser.log. The overall run was 61 passed, 1 WebKit Subscription reload failure and 4 not run, with a separate runner error; that run is not a complete pass. Five-thousand-record cutoff, fresh grants, identity and prior-transcript revocation are covered. Hosted records and actual approved communication remain unverified.",
-        "SERVICE-CONTRIBUTION-ACCEPTANCE.md: 12 core/server/API tests, 66 integrated assistant regressions and actual-role 183 SQL pass. The reproduced 409 refresh draft-loss defect is corrected and its before trace retained. All 20 contribution Chromium/WebKit cases passed in combined-183-final-advice-products-browser.log; the overall run remains incomplete at 61 passed, 1 WebKit Subscription reload failure and 4 not run, with a separate runner error. Combined 181-to-183 SQL and local advisors pass with no new findings. This supports owner-reviewed recorded contribution, not verified net profit or spare capacity; final hosted financial/provider acceptance remains unverified."
+        "SERVICE-CONTRIBUTION-ACCEPTANCE.md: 12 core/server/API tests, 66 integrated assistant regressions and actual-role 183 SQL pass. The reproduced 409 refresh draft-loss defect is corrected and its before trace retained. All 20 contribution Chromium/WebKit cases passed in combined-183-final-advice-products-browser.log; the overall run remains incomplete at 61 passed, 1 WebKit Subscription reload failure and 4 not run, with a separate runner error. Combined 181-to-183 SQL and local advisors pass with no new findings. This supports owner-reviewed recorded contribution, not verified net profit or spare capacity; final hosted financial/provider acceptance remains unverified.",
+        "SERVICE-CAPACITY-ACCEPTANCE.md records13 unique new Node cases,70 unique affected regressions and14/14 Chromium/WebKit capacity cases on build191 (combined-191-focused-browser.log); the mixed run was26 passed/4 unrelated failures, not a whole-run pass. Seven saved component images were inspected with explicit whole-workspace/device limits. The existing historical-pattern, returning-client and reviewed-contribution evidence remains separate; no new run, hosted financial verification or unconditional profitability claim is added."
       ],
       "live_evidence": [],
       "detailed_clause": "ADVISE-02 — Provide proactive, specific suggestions: slow Tuesday afternoons; a genuinely profitable but underbooked service; own-business regulars absent for six weeks; uneven stylist utilization; open Thursday slots; and low stock before the weekend. Explain the relevant numbers briefly. Do not hardcode the sample “8%”, “6 clients” or “3 slots” as facts.",
@@ -10094,7 +10127,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish capacity/opportunity and richer action journeys, bounded real-record hosted acceptance, complete visual review and required release checks. Recorded prices are own-business samples, not geographic market benchmarks or prescribed prices; booked offer usage does not prove incremental revenue.",
+      "remaining": "Complete full-clause acceptance against authorized own-business records: a completed period with explicitly complete owner-reviewed recorded costs, a qualifying own service and current canonical service-fit dates, retaining the contribution, demand and overlapping-start qualifications and useful action links. Historical patterns, absent regulars, stock guidance and current service-capacity calculations are implemented with bounded evidence; complete whole-workspace visual, hosted and required release checks. Recorded contribution is not verified net profit, fewer appointments do not prove low demand, and available overlapping starts are not a packed appointment count.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -10194,22 +10227,31 @@
         "src/lib/businessServiceContributionServer.ts",
         "src/lib/assistantServiceContribution.ts",
         "src/components/owner/BusinessServiceContribution.tsx",
-        "supabase/migrations/20260919101239_business_service_contribution_reviews.sql"
+        "supabase/migrations/20260919101239_business_service_contribution_reviews.sql",
+        "src/lib/gcAssistantCore.ts",
+        "src/lib/assistantPageActions.ts",
+        "src/lib/assistantBookingReschedule.ts",
+        "src/lib/businessCustomerCampaignServer.ts",
+        "src/lib/businessServiceCapacityServer.ts",
+        "src/components/owner/BusinessServiceCapacity.tsx",
+        "src/components/owner/BusinessMorningBrief.tsx"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
-      "blocker": "Remaining calculations, complete action journeys and full-clause/hosted acceptance are outstanding; this is not an external blocker.",
+      "blocker": "Remaining complete action-journey, full-clause and hosted acceptance are outstanding; this is not an external blocker.",
       "changes": [
         "Deterministic own-business finance explanations, equal-day trends, bounded recorded price samples, appointment-cohort current states and linked receipts, and saved-offer attribution. Useful period-preserving links reuse existing Finances views.",
         "Own-business seven-day capacity evidence now unions canonical booked/held/blocked intervals, excludes unavailable/draft resources, ranks up to six dated professional opportunities, and opens that exact Calendar scope for review. It is not a historical demand, service-fit, profit or market-price claim. The assistant receives a complete bounded projection rather than depth-truncated interval objects.",
         "Bookings and the assistant expose same-business regular-client absence evidence using explicit canonical identities, at least three completed visits from 365 local calendar days before today through the current check time (including today), last visit at least 42 local calendar days ago and no active current/future appointment. No other business history, name/email matching, inferred demand or contact permission is used. Assigned staff receive only their authorized professional scope.",
-        "Finances allows an owner to allocate existing canonical operating expense/wage evidence to a completed service period. A fresh reviewed contribution, compared with fewer completed appointments in an equal prior local-day period, supports service/calendar review. It is not verified net profit, capacity or demand. The same bounded safe facts reach business and earnings assistant summaries, with fresh earnings/bookings/styles grants, exact period binding and no review notes/client/source identities."
+        "Finances allows an owner to allocate existing canonical operating expense/wage evidence to a completed service period. A fresh reviewed contribution, compared with fewer completed appointments in an equal prior local-day period, supports service/calendar review. It is not verified net profit, capacity or demand. The same bounded safe facts reach business and earnings assistant summaries, with fresh earnings/bookings/styles grants, exact period binding and no review notes/client/source identities.",
+        "The existing assistant registers permissioned promotion, availability-block and resolved-booking message drafts and maps them to real owner workflows. Contribution/rebooking/Morning Brief links use own records and protected service, Calendar, inventory, waitlist, booking or campaign-review destinations. Campaign sending and marketplace rescheduling retain their existing explicit review/confirmation and consent stages; preparing content never proves sending or saving."
       ],
       "verification": [
         "MoneyInsights8 focused plus15 finance regressions pass. Booking-cohort/referral/localization combined43 pass; malformed date before/after evidence; actual local service_role projection verified. Browser and hosted acceptance still pending this checkpoint.",
         "SCHEDULE-OPPORTUNITIES-ACCEPTANCE.md: focused core/authorization/count/DST/projection regressions and14 Chromium/WebKit cases now pass on the combined production build. Fresh-grant and assigned-professional isolation, failed refresh, unavailable hours, exact incident references and dated navigation are covered. Hosted records and remaining historical/profit advice remain unverified.",
         "RETURNING-CLIENT-ADVICE-ACCEPTANCE.md: 13 focused core cases, 46 planner regressions and actual-role 182 SQL pass. All 14 returning-client Chromium/WebKit cases passed in combined-183-final-advice-products-browser.log. The overall run was 61 passed, 1 WebKit Subscription reload failure and 4 not run, with a separate runner error; that run is not a complete pass. Five-thousand-record cutoff, fresh grants, identity and prior-transcript revocation are covered. Hosted records and actual approved communication remain unverified.",
-        "SERVICE-CONTRIBUTION-ACCEPTANCE.md: 12 core/server/API tests, 66 integrated assistant regressions and actual-role 183 SQL pass. The reproduced 409 refresh draft-loss defect is corrected and its before trace retained. All 20 contribution Chromium/WebKit cases passed in combined-183-final-advice-products-browser.log; the overall run remains incomplete at 61 passed, 1 WebKit Subscription reload failure and 4 not run, with a separate runner error. Combined 181-to-183 SQL and local advisors pass with no new findings. This supports owner-reviewed recorded contribution, not verified net profit or spare capacity; final hosted financial/provider acceptance remains unverified."
+        "SERVICE-CONTRIBUTION-ACCEPTANCE.md: 12 core/server/API tests, 66 integrated assistant regressions and actual-role 183 SQL pass. The reproduced 409 refresh draft-loss defect is corrected and its before trace retained. All 20 contribution Chromium/WebKit cases passed in combined-183-final-advice-products-browser.log; the overall run remains incomplete at 61 passed, 1 WebKit Subscription reload failure and 4 not run, with a separate runner error. Combined 181-to-183 SQL and local advisors pass with no new findings. This supports owner-reviewed recorded contribution, not verified net profit or spare capacity; final hosted financial/provider acceptance remains unverified.",
+        "2026-09-19 bounded source/evidence audit reviewed gcAssistantCore.ts, assistantPageActions.ts, current advice links and canonical campaign/reschedule workflows. Existing SCHEDULE-OPPORTUNITIES-, RETURNING-CLIENT-ADVICE-, SERVICE-CONTRIBUTION-, SERVICE-CAPACITY- and CUSTOMER-CAMPAIGNS-ACCEPTANCE documents supply bounded local evidence. The audit found no exact missing action but does not establish every full suggestion-to-readback or hosted-delivery journey."
       ],
       "live_evidence": [],
       "detailed_clause": "ADVISE-03 — Offer useful next steps such as preparing a promotion, featuring a service, drafting a rebooking message, suggesting a schedule adjustment or a restock action. Execute only the authorized/approved operation through the real workflow. Suggesting a message, purchase or reschedule is not evidence it was sent, bought or saved.",
@@ -10220,7 +10262,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish capacity/opportunity and richer action journeys, bounded real-record hosted acceptance, complete visual review and required release checks. Recorded prices are own-business samples, not geographic market benchmarks or prescribed prices; booked offer usage does not prove incremental revenue.",
+      "remaining": "Complete acceptance of relevant suggestions through the existing authorized review/save workflows and authoritative readback, including denial, cancel and recoverable-error outcomes and truthful prepared/saved/provider-accepted/delivered states. Permissioned promotion, message and availability drafts, dated Calendar/service links, rebooking review and protected inventory actions already exist; no exact additional action implementation is demonstrated by the bounded audit. Hosted messaging, complete visual review and required release checks remain separate. Do not infer an automatic purchase or unreviewed send from the clause's examples.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",

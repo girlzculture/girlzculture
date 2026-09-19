@@ -144,6 +144,7 @@
     "src/lib/ownerBusinessMetrics.ts",
     "src/lib/ownerRealtime.ts",
     "src/lib/plans.ts",
+    "src/lib/promotionDateTime.ts",
     "src/lib/responsiveMedia.ts",
     "src/lib/salonOpenStatus.ts",
     "src/lib/salonPresets.ts",
@@ -175,6 +176,17 @@
           "line": 38,
           "kind": "template",
           "context": "13a3a3a558467297cd911710022c081ef076e37ad2fe58bb5b662fc95bbc0f17"
+        }
+      ]
+    },
+    "01d1ce2d0868": {
+      "source": ":00Z",
+      "occurrences": [
+        {
+          "file": "src/lib/promotionDateTime.ts",
+          "line": 29,
+          "kind": "literal",
+          "context": "fc59e75f081dad2a968a070c3bf4e720c33a123e9d3c87c704e29f5b5ac8b6c6"
         }
       ]
     },
@@ -431,7 +443,7 @@
           "file": "src/components/owner/FinanceEarningsLeaders.tsx",
           "line": 12,
           "kind": "jsx-text",
-          "context": "1d6e6223f6346f98aeff88abf351d73f6c660fcd0b86b75fc2c23b0223bbd353"
+          "context": "a5796eaca25ffb616efb20f7bb1216b602007752c921ac4b0571f3a1ed12902e"
         },
         {
           "file": "src/components/owner/FinancePeriodControls.tsx",
@@ -648,6 +660,28 @@
           "line": 76,
           "kind": "literal",
           "context": "75214654c2e4f3c0c7bd93bac89ad9acc7773e6825b06a05e6688b70b4792de0"
+        }
+      ]
+    },
+    "1e8b7aaf2bd9": {
+      "source": "{reference}",
+      "occurrences": [
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "line": 201,
+          "kind": "literal",
+          "context": "4cc02e585925107657fefcb2535eaa717cc9501e67f1d81e3d8c974553a924ac"
+        }
+      ]
+    },
+    "11e758b6434a": {
+      "source": "{status}",
+      "occurrences": [
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "line": 202,
+          "kind": "literal",
+          "context": "af28058a8a11068923436888b28f270970be48dc36bd00a190e5463b96330306"
         }
       ]
     },
@@ -1648,6 +1682,12 @@
           "line": 72,
           "kind": "template",
           "context": "e1fca7c7f1aa7b1424f5a0eb2f504c46bc5a60037f49cc6c884657ce3c5d2b24"
+        },
+        {
+          "file": "src/lib/promotionDateTime.ts",
+          "line": 13,
+          "kind": "template",
+          "context": "93e7035d913271859a5d2967b8368fe533be8a73abd374e0ae5b9dee732945ca"
         }
       ]
     },
@@ -2020,13 +2060,19 @@
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 120,
+          "line": 126,
           "kind": "template",
           "context": "c0262f3f3987eeb72a177b17c4ca872c777f351fe8cd3a4eee5f686f0cd9efc8"
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 302,
+          "line": 315,
+          "kind": "template",
+          "context": "525dfce91d37c0ec9e1298ef2971159dd3a208b96dbd06caadba19544b8ba32c"
+        },
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "line": 316,
           "kind": "template",
           "context": "525dfce91d37c0ec9e1298ef2971159dd3a208b96dbd06caadba19544b8ba32c"
         },
@@ -2486,7 +2532,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 240,
+          "line": 251,
           "kind": "template",
           "context": "dc876b9fc53e8b7c507c32d75d1b4b72acae1620424a136b0d55434fa1750901"
         }
@@ -2918,7 +2964,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 121,
+          "line": 128,
           "kind": "jsx-attribute",
           "context": "83300093c8d3df65b4ead88321a2fa194ac076dbeb6140da01d92b72b25ff36a"
         }
@@ -3278,7 +3324,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 139,
+          "line": 148,
           "kind": "jsx-text",
           "context": "2ed996e7c9ce461f08016765b16be815794db4dc5941b0f5257320459e959df3"
         }
@@ -3393,43 +3439,43 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 78,
+          "line": 86,
           "kind": "literal",
           "context": "4856ee121fbfcef51cb80ea6e54d84c8fb62ec7ab96e8b981407b2a8e5ad6230"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 99,
+          "line": 106,
           "kind": "literal",
           "context": "4856ee121fbfcef51cb80ea6e54d84c8fb62ec7ab96e8b981407b2a8e5ad6230"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 122,
+          "line": 129,
           "kind": "jsx-text",
-          "context": "18010fb32ac002855e9006fb9f267fd9807107825848923474ad304dffa7d1f5"
+          "context": "000578835b2df8061a90e887b7acd62df766ddb46fbd6c833bc5c69c7fb64c73"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 139,
+          "line": 148,
           "kind": "literal",
           "context": "5c12017d5b14f756777100a0936a79879dd56cff86df1c642b2d32700523118e"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 139,
+          "line": 148,
           "kind": "literal",
           "context": "8f8499178f4af62e8471f83b888274d7d0f8617343c49357325d5f70699345b9"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 139,
+          "line": 148,
           "kind": "literal",
           "context": "4916754c105ec41198434a363ff4e3ab1ca0eaa8983ea28648d0b8d7865b506c"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 145,
+          "line": 154,
           "kind": "literal",
           "context": "b3d0f3e493ae914b7079c311a117df2977d63bad035c93d98e4bf011abf720e9"
         },
@@ -4551,13 +4597,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 126,
+          "line": 135,
           "kind": "jsx-text",
           "context": "28d7694d4a077127c818ec0acaef11af1c0483d12c83430e85a324a36772cbed"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 146,
+          "line": 155,
           "kind": "literal",
           "context": "01fb67973e8867881564c6f678af8de77f3d09ac22236891ac903ce636e10c33"
         }
@@ -4973,7 +5019,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 23,
+          "line": 24,
           "kind": "literal",
           "context": "24102a9c8bdcab6546d8bd37a4782a81d8211e0d3ae31a6bdc378d55875f39f0"
         },
@@ -5209,7 +5255,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 126,
+          "line": 135,
           "kind": "jsx-attribute",
           "context": "5d9987d493b3ac0f1e0f517e6946b9245d007aaeb83ba30f8f72f36cecf40285"
         }
@@ -5610,7 +5656,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 139,
+          "line": 148,
           "kind": "jsx-text",
           "context": "1c944cd61f9d98207df0ccf7330c1db593838420878eb0b7be94e06835ef0df2"
         }
@@ -5683,7 +5729,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 89,
+          "line": 97,
           "kind": "literal",
           "context": "88d5e4a7f7d3523cec2f01a4a3e85b8a458e2c9bed993b275de92454346d83e6"
         }
@@ -6379,7 +6425,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 261,
+          "line": 272,
           "kind": "jsx-text",
           "context": "265f618d257ac389cbfdd0c879e0ace6eac1485a0bf857f38b16e8a6eb549f4e"
         }
@@ -8429,7 +8475,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 134,
+          "line": 143,
           "kind": "jsx-text",
           "context": "e9087bc12c1037ce6f297a7ccd05cb4e28d62546df3362e6884b6fc23bf886d2"
         }
@@ -8506,7 +8552,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 115,
+          "line": 121,
           "kind": "literal",
           "context": "40fb2f9377a9727662ad5fe544a03e470da78f9534550c4099d9615aef993085"
         }
@@ -8546,19 +8592,19 @@
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 113,
+          "line": 119,
           "kind": "literal",
           "context": "bf5dc059c58ec99c923b4e28874f75165a3136750cd863818d8c465177845487"
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 115,
+          "line": 121,
           "kind": "literal",
           "context": "12a4f6e3f6b834b1b07c5fa0c3c85bcd1133f4551b1dac289cce48bd57c8121f"
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 297,
+          "line": 309,
           "kind": "literal",
           "context": "12a4f6e3f6b834b1b07c5fa0c3c85bcd1133f4551b1dac289cce48bd57c8121f"
         }
@@ -8852,7 +8898,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 130,
+          "line": 136,
           "kind": "literal",
           "context": "43d212175d226521cac573fa1cda9d1d739b2f9b64aae4d4e8b0d9bb35b58cae"
         }
@@ -9581,6 +9627,46 @@
           "line": 42,
           "kind": "literal",
           "context": "244f9ae2c4c14e3b3db288b0ff3b76dcb83f45ebe233e09554c4cc2d2d3eafcb"
+        }
+      ]
+    },
+    "68b5b5e36941": {
+      "source": "Choose a valid offer date and time.",
+      "occurrences": [
+        {
+          "file": "src/components/owner/SalonPromotionsManager.tsx",
+          "line": 74,
+          "kind": "literal",
+          "context": "d76e4e04b469fcf788c1e94804db857bdf0aefab3faa7f933712b28d25e49b87"
+        },
+        {
+          "file": "src/lib/promotionDateTime.ts",
+          "line": 24,
+          "kind": "literal",
+          "context": "ab313352c2010f807cda7d8950d0bec9815f0bf5fb030a9e6ed5290b9f09ffce"
+        },
+        {
+          "file": "src/lib/promotionDateTime.ts",
+          "line": 27,
+          "kind": "literal",
+          "context": "ab313352c2010f807cda7d8950d0bec9815f0bf5fb030a9e6ed5290b9f09ffce"
+        },
+        {
+          "file": "src/lib/promotionDateTime.ts",
+          "line": 30,
+          "kind": "literal",
+          "context": "ab313352c2010f807cda7d8950d0bec9815f0bf5fb030a9e6ed5290b9f09ffce"
+        }
+      ]
+    },
+    "873487565e65": {
+      "source": "Choose a valid offer time zone.",
+      "occurrences": [
+        {
+          "file": "src/lib/promotionDateTime.ts",
+          "line": 18,
+          "kind": "literal",
+          "context": "918ceff9a88a746ce7213bc522ea6d372ac251a2b532d0f6f80925fc872e4e00"
         }
       ]
     },
@@ -11654,7 +11740,7 @@
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 49,
+          "line": 55,
           "kind": "literal",
           "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
         },
@@ -12064,7 +12150,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 115,
+          "line": 122,
           "kind": "literal",
           "context": "dd0018a4eaf14d71bbbb5e3d8aadb0c8b4615cc338e7cc07349c5ec8f07f7fff"
         }
@@ -12130,7 +12216,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 105,
+          "line": 112,
           "kind": "jsx-text",
           "context": "ee7d258e8b97952177c810f17c8f9b2e0e84a053375978e86760a299df06a3be"
         }
@@ -12141,13 +12227,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 108,
+          "line": 115,
           "kind": "literal",
           "context": "b20844f6b899d5e314d892e2ef0e8bd86b7185eccb3ec7319b58220078d1b268"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 134,
+          "line": 143,
           "kind": "literal",
           "context": "1e0248a482c05c819b930e5855310ef1738382b902329259a5ef6656f05d7c21"
         }
@@ -12686,7 +12772,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 121,
+          "line": 128,
           "kind": "jsx-attribute",
           "context": "e1d3934d5cf1418e237af9f213c5ba5dd1b3567d2b331dc735031a1ca7afd5b3"
         }
@@ -13030,7 +13116,7 @@
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 257,
+          "line": 268,
           "kind": "jsx-text",
           "context": "3f901545529b43f279686413209a18ff4cd38c257a35df9bbb14f333f2578545"
         },
@@ -13312,7 +13398,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 131,
+          "line": 140,
           "kind": "jsx-text",
           "context": "6a825b4b948e9323d001e62693401659b85799657d646cffaf16e95a70be51ba"
         },
@@ -13341,7 +13427,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 119,
+          "line": 126,
           "kind": "jsx-text",
           "context": "31685d473e4fbb779f5d87b78ba5c9dbe66ef3b024c25af374182d83d070d3af"
         }
@@ -13502,7 +13588,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 120,
+          "line": 127,
           "kind": "jsx-attribute",
           "context": "bdb8f93c76e64058c327a0ca38df58201fc4e9141897170ea90491d33d23b63a"
         }
@@ -13695,31 +13781,31 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 63,
+          "line": 65,
           "kind": "literal",
           "context": "0bd2f2aa5265b8ba06780d100998ba52c00767880dfe269da16f43081c8a4d9c"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 111,
+          "line": 118,
           "kind": "literal",
           "context": "d0d58a3a5f21b5dab9503c6a98e0a392cf92227b9491460e78c707fb0e2c368a"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 122,
+          "line": 129,
           "kind": "literal",
           "context": "db8cc23d76cd8f482e89e2fd4a20613818045d7cc37698223cb957de3562630f"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 122,
+          "line": 129,
           "kind": "jsx-text",
-          "context": "fe4532cf231f4486ff9f3cf92bb4c16ed012eddd8fdc35f3ddde5b8643676b61"
+          "context": "39406350f57819f2efa426b403a087d114974f5e770b0a917d5a2966fc4e086d"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 139,
+          "line": 148,
           "kind": "literal",
           "context": "5c12017d5b14f756777100a0936a79879dd56cff86df1c642b2d32700523118e"
         },
@@ -13792,7 +13878,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 115,
+          "line": 122,
           "kind": "jsx-text",
           "context": "97b317be396661afb5dc9c44bb38a96602a57baeca0a0d6b3e706d8fc4b6780d"
         }
@@ -14052,7 +14138,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 139,
+          "line": 148,
           "kind": "jsx-text",
           "context": "873dc13bfcce1ae1f66a90e6476e0c3273d466ce0bb7158f6ece149dfe6e2888"
         }
@@ -14081,7 +14167,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 108,
+          "line": 115,
           "kind": "template",
           "context": "b20844f6b899d5e314d892e2ef0e8bd86b7185eccb3ec7319b58220078d1b268"
         },
@@ -14200,7 +14286,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 115,
+          "line": 122,
           "kind": "literal",
           "context": "dd0018a4eaf14d71bbbb5e3d8aadb0c8b4615cc338e7cc07349c5ec8f07f7fff"
         }
@@ -14322,7 +14408,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 132,
+          "line": 141,
           "kind": "jsx-text",
           "context": "1202973a9959f402aaea112170fa0341eab650b5afcd8e6747fa386362810a7b"
         }
@@ -14462,6 +14548,12 @@
           "line": 10,
           "kind": "literal",
           "context": "1615c7dad4bafb12205df47585794cc68897b40b600d8f05f2b37d2bcbae696c"
+        },
+        {
+          "file": "src/lib/promotionDateTime.ts",
+          "line": 11,
+          "kind": "literal",
+          "context": "74040026640b756062982c083e665cf5c1d1048667dd491b40b81bbd49220bc4"
         }
       ]
     },
@@ -14685,7 +14777,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 124,
+          "line": 131,
           "kind": "jsx-attribute",
           "context": "f42a90088175414d6a2adf560f66eab868870540471d00b6a5b475c2efa1d4e6"
         }
@@ -15755,7 +15847,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 119,
+          "line": 126,
           "kind": "jsx-text",
           "context": "92be9f1eaaec531a352ed87c5a821326a5ce090b5ec0c1d08caba83ab615f899"
         }
@@ -15934,7 +16026,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 119,
+          "line": 126,
           "kind": "jsx-text",
           "context": "b35cb8c8262303bf3b36a2e3e36d448cac5635e863ea7721bfa96a5b20e51372"
         }
@@ -15951,7 +16043,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 119,
+          "line": 126,
           "kind": "jsx-text",
           "context": "8af907781d43f3ebde6704d6e7bcd54c2813b60d83b43e89157b4c40cb311a87"
         }
@@ -16098,7 +16190,7 @@
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 199,
+          "line": 210,
           "kind": "jsx-text",
           "context": "f050c45b8596767a49706b780fc43202d53ef9c98ad4c465aae4e54cb5e2dbd6"
         }
@@ -18249,7 +18341,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 117,
+          "line": 124,
           "kind": "jsx-attribute",
           "context": "4fcf35cbf74fa0401486cd5bc4fb2d1d83bb8f3667d39d7f803306315a85c56d"
         }
@@ -18504,7 +18596,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 109,
+          "line": 116,
           "kind": "jsx-attribute",
           "context": "bceb861de002fb782efad4339379dab664b10599b5889360b6fb6ea0b4fa885c"
         }
@@ -19832,7 +19924,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 115,
+          "line": 121,
           "kind": "literal",
           "context": "40fb2f9377a9727662ad5fe544a03e470da78f9534550c4099d9615aef993085"
         }
@@ -20472,7 +20564,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 127,
+          "line": 136,
           "kind": "jsx-attribute",
           "context": "6cd8df3b048621eb9be85e53daee4774779fb6fadd32f720ef117140c493e4be"
         }
@@ -21339,7 +21431,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 133,
+          "line": 142,
           "kind": "jsx-text",
           "context": "bbfdedff7de2a60a91955adf84e99f65edf80c057242168a8d880c47f082144e"
         }
@@ -21427,13 +21519,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 106,
+          "line": 113,
           "kind": "jsx-text",
           "context": "7890a1a412c98aa08d8afdd6f352e98c51249ad0b07ae7d112d5d43635f0c764"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 111,
+          "line": 118,
           "kind": "literal",
           "context": "12e21d5929bbebe258d519ea5d5c44d9e5da9b0d289b5e4c14749558044f41eb"
         }
@@ -22128,7 +22220,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 314,
+          "line": 326,
           "kind": "literal",
           "context": "b31ad0835465d399e248b48ae2bd06c0c4cfeb7a54c75e155417d650c5e6c16e"
         }
@@ -22139,7 +22231,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 314,
+          "line": 326,
           "kind": "literal",
           "context": "b31ad0835465d399e248b48ae2bd06c0c4cfeb7a54c75e155417d650c5e6c16e"
         }
@@ -22194,7 +22286,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 139,
+          "line": 148,
           "kind": "jsx-text",
           "context": "bf92eaaad4b2b77a1e029ea4a49c383e5cab0baeec4cc5a758e5306fc1553891"
         }
@@ -22712,7 +22804,13 @@
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 113,
+          "line": 25,
+          "kind": "literal",
+          "context": "a9492a129ad60fd118d0696a87956f1c24e58e32d41479c479fdf899621dba53"
+        },
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "line": 119,
           "kind": "literal",
           "context": "bf5dc059c58ec99c923b4e28874f75165a3136750cd863818d8c465177845487"
         }
@@ -22770,6 +22868,17 @@
           "line": 84,
           "kind": "jsx-text",
           "context": "23769b5d712db4d803dbf35d5a242173fd72893ac04c62926bf8409eb43429b7"
+        }
+      ]
+    },
+    "8b128e588de0": {
+      "source": "Not picked up",
+      "occurrences": [
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "line": 25,
+          "kind": "literal",
+          "context": "a9492a129ad60fd118d0696a87956f1c24e58e32d41479c479fdf899621dba53"
         }
       ]
     },
@@ -23073,6 +23182,17 @@
         }
       ]
     },
+    "03c7d21e871a": {
+      "source": "Offer dates use this time zone.",
+      "occurrences": [
+        {
+          "file": "src/components/owner/SalonPromotionsManager.tsx",
+          "line": 133,
+          "kind": "localized-source",
+          "context": "aa470893335bc755eb304b00902234af3d8bd3452d9a8e79bb49ea33ad0eb3ef"
+        }
+      ]
+    },
     "346de52b1a7e": {
       "source": "Offer expires {value0}",
       "occurrences": [
@@ -23128,7 +23248,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 119,
+          "line": 126,
           "kind": "jsx-attribute",
           "context": "f1ff6dfa07370605e4f2ffc6d3b21020f8609e9545446bbae925f3086e274275"
         }
@@ -23222,7 +23342,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 130,
+          "line": 139,
           "kind": "jsx-attribute",
           "context": "70212272b9d834de9a4f6f3fb1fe6a417ebd725087227226ea90856e7a6ae70a"
         }
@@ -24005,7 +24125,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 196,
+          "line": 207,
           "kind": "jsx-text",
           "context": "cb9efada3bf9a71470c1f1525d0d54239b06420faa003e1f8d88f4a983046ce3"
         }
@@ -24602,7 +24722,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 93,
+          "line": 99,
           "kind": "literal",
           "context": "a8ff826c2372c83f77dfdec9750c3db8b3b451097bd8bc04095daf8844e12a34"
         }
@@ -24613,7 +24733,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 173,
+          "line": 181,
           "kind": "literal",
           "context": "580500e96f550994afc915886021412892d06e6fd55b0133928b0d3b420f9a6c"
         }
@@ -24624,7 +24744,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 197,
+          "line": 208,
           "kind": "jsx-text",
           "context": "94405e1cdd2b0409bd26ad18041a288f65a0e137aa3595715cdc138d10adbe2b"
         }
@@ -24685,7 +24805,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 139,
+          "line": 148,
           "kind": "jsx-text",
           "context": "f8001def41476c1bc54b9af150bcd1790b16cf2477a54dd82ff556b4acc1407c"
         }
@@ -24724,31 +24844,31 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 79,
+          "line": 87,
           "kind": "literal",
           "context": "41be007707efdd15cc5163ed636b184f22efe27227b3f2b6dee58c43570b80fc"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 99,
+          "line": 106,
           "kind": "literal",
           "context": "41be007707efdd15cc5163ed636b184f22efe27227b3f2b6dee58c43570b80fc"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 122,
+          "line": 129,
           "kind": "jsx-text",
-          "context": "614fba465e6c6c18313c039271b1fafa22f1db9bd92bef657fc37c7165d1f79a"
+          "context": "31ccfc865cde5d48e7b67413e764d5378f478ebe92e2f19de991248aca774051"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 139,
+          "line": 148,
           "kind": "literal",
           "context": "d82565e9bf3fd823776ad353d1f1350358a8bccdbf10333fa1626cc51787d778"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 145,
+          "line": 154,
           "kind": "literal",
           "context": "6d3bc1ab314228584ab5cdbc0e02d466e4394408fa75f8932cbc855a729b54a3"
         }
@@ -25165,7 +25285,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 119,
+          "line": 126,
           "kind": "jsx-text",
           "context": "b401e8979a7b5130fa902a4e1cf527aa7ba2c55e252df190b7dba3dfd9130d58"
         }
@@ -25432,6 +25552,17 @@
         }
       ]
     },
+    "924a70ff4bab": {
+      "source": "Picked up",
+      "occurrences": [
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "line": 24,
+          "kind": "literal",
+          "context": "0b4bb401f8a322ae741770287d9835aa7b23f8de5f533cfe5c81163798800f23"
+        }
+      ]
+    },
     "a51122c1008c": {
       "source": "Pickup",
       "occurrences": [
@@ -25449,7 +25580,7 @@
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 288,
+          "line": 299,
           "kind": "literal",
           "context": "9fbe65e8042c608db52846845a4fe9debe35fdc70a2eb211051c2c51ba646052"
         }
@@ -25460,7 +25591,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 267,
+          "line": 278,
           "kind": "jsx-text",
           "context": "0abbc4cb1fa477c5b432c122c653c21c67c8b4628b9dedf39e851b9601d61093"
         }
@@ -25482,9 +25613,20 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 234,
+          "line": 245,
           "kind": "literal",
           "context": "9a1fd8b185873b4896b0b90b73fdea7a9476b142e75daf24b8b1ce8d45c0656b"
+        }
+      ]
+    },
+    "eb1881f8b1d6": {
+      "source": "Pickup reservation {reference}: {status}.",
+      "occurrences": [
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "line": 200,
+          "kind": "localized-source",
+          "context": "66c0dd6661b35ec00131c20c415390a10d83b92df02c9c7e029aecb0634ce2aa"
         }
       ]
     },
@@ -25493,7 +25635,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 169,
+          "line": 177,
           "kind": "literal",
           "context": "b2aa2ff2cd8d696e81abbf97d7281788c4e0199a70e0931326c6e4a8197a03fe"
         }
@@ -26024,7 +26166,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 174,
+          "line": 182,
           "kind": "literal",
           "context": "580500e96f550994afc915886021412892d06e6fd55b0133928b0d3b420f9a6c"
         }
@@ -26435,7 +26577,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 44,
+          "line": 45,
           "kind": "literal",
           "context": "a4f8a819a22c29567d269f8352925571a608425de9ce96d22159436a44d62226"
         },
@@ -26535,7 +26677,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 199,
+          "line": 210,
           "kind": "jsx-attribute",
           "context": "a78fc48b63a0a4060274eb6213644c3dc28fa544b45b983a50a9bcffde9b738e"
         }
@@ -26557,7 +26699,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 169,
+          "line": 177,
           "kind": "literal",
           "context": "b2aa2ff2cd8d696e81abbf97d7281788c4e0199a70e0931326c6e4a8197a03fe"
         }
@@ -26568,7 +26710,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 199,
+          "line": 210,
           "kind": "jsx-attribute",
           "context": "317a2037266dcac0a8148925ea95014c8393ae1c1e09ece218bae9355ed70471"
         }
@@ -26897,7 +27039,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 139,
+          "line": 148,
           "kind": "literal",
           "context": "381114e6b7ef3d05db92a12c1deb28e5950db6435a08370ab1165219f291211b"
         },
@@ -27010,7 +27152,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 105,
+          "line": 112,
           "kind": "jsx-text",
           "context": "b9a979ab077c24c4f50ee6e96d6bdfe71d32dc97dd989f5491031fffcb75d253"
         }
@@ -27137,7 +27279,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 118,
+          "line": 125,
           "kind": "jsx-attribute",
           "context": "f5e6c79384b17c5a222b57e9c088cf7bab48d6d1c88e3e2d7907f5bb4f1589c3"
         }
@@ -27210,7 +27352,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 130,
+          "line": 139,
           "kind": "jsx-attribute",
           "context": "fdd7c4d5635f4bdd6f738e57c8831b83d9bb65aad802b24cc9e3e9dba298efd7"
         }
@@ -27776,6 +27918,18 @@
           "line": 19,
           "kind": "literal",
           "context": "68fdff4fc406966042d245ce0374c4bdf2382fe563fd8aadf0fb3dd85f328c6c"
+        },
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "line": 23,
+          "kind": "literal",
+          "context": "2e628eeed5aca218d205d978874e6c2963f383cd8ea5e56e5c7c2c5d1ac7c0b3"
+        },
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "line": 23,
+          "kind": "literal",
+          "context": "2e628eeed5aca218d205d978874e6c2963f383cd8ea5e56e5c7c2c5d1ac7c0b3"
         }
       ]
     },
@@ -27796,7 +27950,7 @@
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 287,
+          "line": 298,
           "kind": "literal",
           "context": "af8590727ceaec6b61a53e017559a6263aee513ac77b79b73d2d359c38c1561a"
         }
@@ -28566,7 +28720,7 @@
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 183,
+          "line": 191,
           "kind": "jsx-text",
           "context": "21a93532ebc4f84a9f33a6bfef5dcfec26774dd372ca90ae740418355f2edda2"
         }
@@ -29577,9 +29731,20 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 153,
+          "line": 161,
           "kind": "template",
-          "context": "be08b63b414f9809910b605bdeb09337fca13cad11761f6100a9851dff6d50b6"
+          "context": "ab3ccaa5faad5e1917187b280412b55e216610dd1ff2a375285e43808a0e6352"
+        }
+      ]
+    },
+    "779f63fe6d95": {
+      "source": "Reserved for pickup",
+      "occurrences": [
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "line": 22,
+          "kind": "literal",
+          "context": "27e397766510cdefae0d1ce75b82660d0236cc599e212af18107a6ef534dff86"
         }
       ]
     },
@@ -31215,7 +31380,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 118,
+          "line": 125,
           "kind": "jsx-attribute",
           "context": "7ece8e43fcf321569f7b39fc7f09568acdbecd4e773e6e9809cf0342027e9c65"
         }
@@ -31259,7 +31424,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 134,
+          "line": 143,
           "kind": "literal",
           "context": "1e0248a482c05c819b930e5855310ef1738382b902329259a5ef6656f05d7c21"
         }
@@ -31580,7 +31745,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 139,
+          "line": 148,
           "kind": "jsx-text",
           "context": "08bb61fafea5ae28b67fdc1eefa3f6950a7f118d327e76c7dba2ce2dcfba3d25"
         }
@@ -31729,7 +31894,13 @@
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 303,
+          "line": 315,
+          "kind": "literal",
+          "context": "01455e636140c9726ece7717d4bf1b9aedfb0f1b41da955b4f2772c93c7103af"
+        },
+        {
+          "file": "src/components/owner/SalonProductOrders.tsx",
+          "line": 316,
           "kind": "literal",
           "context": "54f01e98a8dbad6d13dc0c48fbb4b1f91b894400e401f76fa6533f5f095a4890"
         },
@@ -32312,13 +32483,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 126,
+          "line": 135,
           "kind": "jsx-text",
           "context": "be4d258b3d2b03d12b98108c18fe6a8a7f2c9e1b1d70be6272427d3265ebb07e"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 146,
+          "line": 155,
           "kind": "literal",
           "context": "6c6f0e07ba9137488ce8ac969e396cc7865949c86f62fbe15b4d96c99669ce54"
         }
@@ -32346,13 +32517,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 126,
+          "line": 135,
           "kind": "jsx-text",
           "context": "a0799628e2c47b8cdadf0c72eaa72684945d93f076215555600011c30ef9c113"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 146,
+          "line": 155,
           "kind": "literal",
           "context": "1fc96ea6bb37fb28d75910f673c364d9ee9bae59edbd9fe8cf66472a3b11fe73"
         }
@@ -32396,13 +32567,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 126,
+          "line": 135,
           "kind": "jsx-text",
           "context": "c996516b9d4ced6a350491d22026fdd2630deb3d375d833b219759d89575bbdd"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 146,
+          "line": 155,
           "kind": "literal",
           "context": "7959fba8128f69cf6f34b0a8eb062f41d4531821d824a5ce317924008ca7b112"
         }
@@ -32413,13 +32584,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 126,
+          "line": 135,
           "kind": "jsx-text",
           "context": "67cf90466345a19e8e6ad64a16ee181865474084133a19f3a79be690586bacd2"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 146,
+          "line": 155,
           "kind": "literal",
           "context": "1066745ca5bee038c86b121cc2ae9de583ac7608286f33c23293fe5dd801b39b"
         }
@@ -32430,13 +32601,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 126,
+          "line": 135,
           "kind": "jsx-text",
           "context": "4466f88156e5851446f9c835f71b1a7b54d062894053d493eef0a9d7a410c55f"
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 146,
+          "line": 155,
           "kind": "literal",
           "context": "e491cec48117a095e4725c5c6baa1ccfff9b7bf177b8e1e0402e1d8fc4c13dc4"
         }
@@ -32611,7 +32782,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 41,
+          "line": 42,
           "kind": "literal",
           "context": "a784c7ee73d7001d64ffa2cc5b05b9df32f7d7eae91bfc622f92137d396f2ec6"
         },
@@ -32830,7 +33001,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 147,
+          "line": 156,
           "kind": "literal",
           "context": "41b90207926bf95d237d2ad6ed642fc6c8ce6477edbb37523294717cd4fa51a2"
         },
@@ -32919,7 +33090,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 126,
+          "line": 135,
           "kind": "localized-source",
           "context": "8e8621dad2cd045a749a1815dcd87faeffb0c19b05511c5b2f60b9c745788dda"
         }
@@ -33256,13 +33427,13 @@
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 125,
+          "line": 131,
           "kind": "literal",
           "context": "1dded1ba6cad36e87e2d85107d26c22b038ffb5477170d431905daa3424fb296"
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 285,
+          "line": 296,
           "kind": "literal",
           "context": "607396689cf7ab134930038ac1c62b3adb6b989b313114b7386a722464150769"
         }
@@ -33285,13 +33456,13 @@
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 222,
+          "line": 233,
           "kind": "literal",
           "context": "86cdd37cb79f9a92f7b96ba32ddf9ea02c73bb76f5b9d4f0c44e08e1fef344a3"
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 286,
+          "line": 297,
           "kind": "literal",
           "context": "86cdd37cb79f9a92f7b96ba32ddf9ea02c73bb76f5b9d4f0c44e08e1fef344a3"
         }
@@ -33302,7 +33473,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 126,
+          "line": 132,
           "kind": "localized-source",
           "context": "8fa48804f8735aa36f2a1d4a610650d60ead7be3c2dc75c132b8fff40dd2ec22"
         }
@@ -33950,7 +34121,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 139,
+          "line": 148,
           "kind": "literal",
           "context": "268f97a7a2780e92cba5d53de0decef3f48a561d159fc3c373b6fda6c9aa6670"
         }
@@ -34335,7 +34506,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 123,
+          "line": 130,
           "kind": "jsx-attribute",
           "context": "f2b663d781ac2769250c59b03774e2b64f686e451edee2a4f5cd387195a1d262"
         }
@@ -34405,7 +34576,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 122,
+          "line": 129,
           "kind": "jsx-attribute",
           "context": "a43b930ac65860b778af1aa9c3f5337633c11e6e1f7e4e3943ca2e06c2628688"
         }
@@ -35360,13 +35531,13 @@
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 93,
+          "line": 99,
           "kind": "literal",
           "context": "a8ff826c2372c83f77dfdec9750c3db8b3b451097bd8bc04095daf8844e12a34"
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 102,
+          "line": 108,
           "kind": "literal",
           "context": "2144005d540b85eadf505f017075d2bad74083b6893bea56ebbee809aa8b261d"
         }
@@ -35377,7 +35548,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 198,
+          "line": 209,
           "kind": "jsx-text",
           "context": "aeffe8ed8cb98c00d3c4348c110f1269017672fd14842774fedf96b359768f6e"
         }
@@ -35515,7 +35686,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 117,
+          "line": 124,
           "kind": "jsx-attribute",
           "context": "5889999cfd4c3d4da0067135de98a3bf92836f3fccd3369f6d0aeef61da35b71"
         }
@@ -36244,6 +36415,17 @@
         }
       ]
     },
+    "79e6bcbdad1b": {
+      "source": "That time does not exist in the offer's time zone. Choose another time.",
+      "occurrences": [
+        {
+          "file": "src/lib/promotionDateTime.ts",
+          "line": 33,
+          "kind": "literal",
+          "context": "2a0afed54f1f23664000a0ba45303115574cfc20f12d653dc43f489de8757967"
+        }
+      ]
+    },
     "140f33f507d5": {
       "source": "That time is unavailable. Choose another time.",
       "occurrences": [
@@ -36258,6 +36440,17 @@
           "line": 62,
           "kind": "literal",
           "context": "1bafcfc078938f26088d4c7c9717821e305f74029969466e7b302d1d28032a9f"
+        }
+      ]
+    },
+    "d2c9aa8bc740": {
+      "source": "That time occurs twice in the offer's time zone. Choose a time outside the repeated hour.",
+      "occurrences": [
+        {
+          "file": "src/lib/promotionDateTime.ts",
+          "line": 37,
+          "kind": "literal",
+          "context": "5c29938f18360c3cd0ae0a5620af5f8b09a3c9b4c4e0a01bbc101b67704a521b"
         }
       ]
     },
@@ -36686,6 +36879,17 @@
           "line": 198,
           "kind": "literal",
           "context": "690a0570ad9eea12ee4e75640b63df1e5ca0710a8dc6bdb0186bf63b906407fc"
+        }
+      ]
+    },
+    "4780016991de": {
+      "source": "The offer must end after it starts.",
+      "occurrences": [
+        {
+          "file": "src/lib/promotionDateTime.ts",
+          "line": 42,
+          "kind": "literal",
+          "context": "17a4941436a059a2128d887ecd763b1e7c27fb12dcb5f96f212fc93fedc4140a"
         }
       ]
     },
@@ -38216,7 +38420,7 @@
         },
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 125,
+          "line": 132,
           "kind": "jsx-attribute",
           "context": "66a6d587632ea0615151d9348c02e508d03b73dfdfde8f433dfbc8653774122c"
         }
@@ -38273,7 +38477,7 @@
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 199,
+          "line": 210,
           "kind": "jsx-text",
           "context": "ff087aaddc606dd1640a4e9e08694d12db21492b1573fa67b80ab88ddfcc87fe"
         }
@@ -38445,7 +38649,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 128,
+          "line": 137,
           "kind": "jsx-attribute",
           "context": "7f266cfb11259f2a612bdf41261feab455e5907ae4c14eaea8f7ce1505b0c852"
         }
@@ -38500,7 +38704,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 127,
+          "line": 133,
           "kind": "localized-source",
           "context": "1da795302a46eb127aa0129e89f5c585b94d3992dc5e90cd1fa1028ea6015004"
         }
@@ -38511,7 +38715,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 276,
+          "line": 287,
           "kind": "jsx-text",
           "context": "11e04232ae4481fb96bf1d010b3be03a8a6d876617ea9dadc89860775335ceb8"
         }
@@ -39026,7 +39230,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 76,
+          "line": 82,
           "kind": "literal",
           "context": "8b16a446b8eae70fee50dcc47919ecb26bcb0d39b91494322f3bcd458de6f0d4"
         }
@@ -39087,13 +39291,13 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 56,
+          "line": 62,
           "kind": "literal",
           "context": "2d7a2343b9ca52dbaab0b0bc906d152d2fd5b05e5233c09637c818b0a32559ba"
         },
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 60,
+          "line": 66,
           "kind": "literal",
           "context": "96959baa3a820893b44f8e7f25df03850dd115a0408ae40bbd2e57759aba0edc"
         }
@@ -39226,7 +39430,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 157,
+          "line": 165,
           "kind": "literal",
           "context": "9407f2c9dae1d72eea623da7c8a09dc9ac2537b970c3081c70c0149882cb95eb"
         }
@@ -40769,7 +40973,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonPromotionsManager.tsx",
-          "line": 129,
+          "line": 138,
           "kind": "jsx-attribute",
           "context": "b97897d72bdde6191adc36958ba963d3f1935c875c9d45ecdd208d2852d4d3c5"
         }
@@ -42677,7 +42881,7 @@
       "occurrences": [
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
-          "line": 44,
+          "line": 50,
           "kind": "literal",
           "context": "5339e39f57573a3b49b38426707808613bd7b70c37fd29161a00438215bebbd5"
         },

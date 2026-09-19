@@ -1,4 +1,10 @@
 const rows = [
+  ["Offer dates use this time zone.", "Les dates de l’offre utilisent ce fuseau horaire.", "Las fechas de la oferta usan esta zona horaria.", "优惠日期使用此时区。"],
+  ["Choose a valid offer time zone.", "Choisissez un fuseau horaire valide pour l’offre.", "Elige una zona horaria válida para la oferta.", "请选择有效的优惠时区。"],
+  ["Choose a valid offer date and time.", "Choisissez une date et une heure valides pour l’offre.", "Elige una fecha y hora válidas para la oferta.", "请选择有效的优惠日期和时间。"],
+  ["That time does not exist in the offer's time zone. Choose another time.", "Cette heure n’existe pas dans le fuseau horaire de l’offre. Choisissez une autre heure.", "Esa hora no existe en la zona horaria de la oferta. Elige otra hora.", "该时间在优惠时区中不存在。请选择其他时间。"],
+  ["That time occurs twice in the offer's time zone. Choose a time outside the repeated hour.", "Cette heure se répète dans le fuseau horaire de l’offre. Choisissez une heure en dehors de cette période.", "Esa hora se repite en la zona horaria de la oferta. Elige una hora fuera de ese intervalo.", "该时间在优惠时区中出现两次。请选择重复时段以外的时间。"],
+  ["The offer must end after it starts.", "La fin de l’offre doit être postérieure à son début.", "La oferta debe terminar después de su inicio.", "优惠结束时间必须晚于开始时间。"],
   ["Marketing content", "Contenu marketing", "Contenido de marketing", "营销内容"],
   ["Business updates", "Actualités du salon", "Novedades del negocio", "商家动态"],
   ["View services and book", "Voir les services et réserver", "Ver servicios y reservar", "查看服务并预约"],

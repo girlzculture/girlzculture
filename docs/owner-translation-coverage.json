@@ -10,8 +10,8 @@
     "wo": "Founder explicitly deferred Wolof; not release-verified."
   },
   "scope": "All inventoried owner graph copy, including dynamic labels, error literals and templates. Only documented proper names and reviewed non-copy source contexts are excluded. Source coverage is not linguistic review or full browser workflow acceptance.",
-  "candidate_count": 3066,
-  "excluded_code_count": 241,
+  "candidate_count": 3079,
+  "excluded_code_count": 244,
   "intentional_untranslated": [
     "Girlz Culture",
     "Girlz",
@@ -99,21 +99,21 @@
   ],
   "locales": {
     "en": {
-      "source_count": 2751,
-      "covered": 2751,
+      "source_count": 2761,
+      "covered": 2761,
       "missing_count": 0,
       "missing": []
     },
     "fr": {
-      "source_count": 2751,
-      "covered": 2751,
+      "source_count": 2761,
+      "covered": 2761,
       "missing_count": 0,
       "missing": []
     },
     "wo": {
-      "source_count": 2751,
+      "source_count": 2761,
       "covered": 1728,
-      "missing_count": 1023,
+      "missing_count": 1033,
       "missing": [
         {
           "source": "{completed} completed · {cancelled} cancelled · {noShow} no-show · {other} other current states",
@@ -691,13 +691,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/SalonPromotionsManager.tsx",
-              "line": 126,
+              "line": 135,
               "kind": "jsx-text",
               "context": "28d7694d4a077127c818ec0acaef11af1c0483d12c83430e85a324a36772cbed"
             },
             {
               "file": "src/components/owner/SalonPromotionsManager.tsx",
-              "line": 146,
+              "line": 155,
               "kind": "literal",
               "context": "01fb67973e8867881564c6f678af8de77f3d09ac22236891ac903ce636e10c33"
             }
@@ -2495,6 +2495,46 @@
               "line": 91,
               "kind": "localized-source",
               "context": "16dfbdca1619829d7b80b1dcc75605645ddf5b979fdbc4ec5ffa5f08f695ab2e"
+            }
+          ]
+        },
+        {
+          "source": "Choose a valid offer date and time.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SalonPromotionsManager.tsx",
+              "line": 74,
+              "kind": "literal",
+              "context": "d76e4e04b469fcf788c1e94804db857bdf0aefab3faa7f933712b28d25e49b87"
+            },
+            {
+              "file": "src/lib/promotionDateTime.ts",
+              "line": 24,
+              "kind": "literal",
+              "context": "ab313352c2010f807cda7d8950d0bec9815f0bf5fb030a9e6ed5290b9f09ffce"
+            },
+            {
+              "file": "src/lib/promotionDateTime.ts",
+              "line": 27,
+              "kind": "literal",
+              "context": "ab313352c2010f807cda7d8950d0bec9815f0bf5fb030a9e6ed5290b9f09ffce"
+            },
+            {
+              "file": "src/lib/promotionDateTime.ts",
+              "line": 30,
+              "kind": "literal",
+              "context": "ab313352c2010f807cda7d8950d0bec9815f0bf5fb030a9e6ed5290b9f09ffce"
+            }
+          ]
+        },
+        {
+          "source": "Choose a valid offer time zone.",
+          "occurrences": [
+            {
+              "file": "src/lib/promotionDateTime.ts",
+              "line": 18,
+              "kind": "literal",
+              "context": "918ceff9a88a746ce7213bc522ea6d372ac251a2b532d0f6f80925fc872e4e00"
             }
           ]
         },
@@ -6681,6 +6721,17 @@
           ]
         },
         {
+          "source": "Not picked up",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SalonProductOrders.tsx",
+              "line": 25,
+              "kind": "literal",
+              "context": "a9492a129ad60fd118d0696a87956f1c24e58e32d41479c479fdf899621dba53"
+            }
+          ]
+        },
+        {
           "source": "Not sent",
           "occurrences": [
             {
@@ -6772,6 +6823,17 @@
               "line": 61,
               "kind": "literal",
               "context": "ad6bfea6007d99fb38e492adbea4a0118538b4c660194239f19d2e788f41cf16"
+            }
+          ]
+        },
+        {
+          "source": "Offer dates use this time zone.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SalonPromotionsManager.tsx",
+              "line": 133,
+              "kind": "localized-source",
+              "context": "aa470893335bc755eb304b00902234af3d8bd3452d9a8e79bb49ea33ad0eb3ef"
             }
           ]
         },
@@ -7563,6 +7625,28 @@
               "line": 35,
               "kind": "literal",
               "context": "5a40860ca7b99cf6b71499e0b647e70abb1fae7240b644802e4732a8d5dab4ae"
+            }
+          ]
+        },
+        {
+          "source": "Picked up",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SalonProductOrders.tsx",
+              "line": 24,
+              "kind": "literal",
+              "context": "0b4bb401f8a322ae741770287d9835aa7b23f8de5f533cfe5c81163798800f23"
+            }
+          ]
+        },
+        {
+          "source": "Pickup reservation {reference}: {status}.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SalonProductOrders.tsx",
+              "line": 200,
+              "kind": "localized-source",
+              "context": "66c0dd6661b35ec00131c20c415390a10d83b92df02c9c7e029aecb0634ce2aa"
             }
           ]
         },
@@ -8980,6 +9064,17 @@
           ]
         },
         {
+          "source": "Reserved for pickup",
+          "occurrences": [
+            {
+              "file": "src/components/owner/SalonProductOrders.tsx",
+              "line": 22,
+              "kind": "literal",
+              "context": "27e397766510cdefae0d1ce75b82660d0236cc599e212af18107a6ef534dff86"
+            }
+          ]
+        },
+        {
           "source": "Restock",
           "occurrences": [
             {
@@ -10164,7 +10259,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/SalonPromotionsManager.tsx",
-              "line": 126,
+              "line": 135,
               "kind": "localized-source",
               "context": "8e8621dad2cd045a749a1815dcd87faeffb0c19b05511c5b2f60b9c745788dda"
             }
@@ -11173,6 +11268,28 @@
           ]
         },
         {
+          "source": "That time does not exist in the offer's time zone. Choose another time.",
+          "occurrences": [
+            {
+              "file": "src/lib/promotionDateTime.ts",
+              "line": 33,
+              "kind": "literal",
+              "context": "2a0afed54f1f23664000a0ba45303115574cfc20f12d653dc43f489de8757967"
+            }
+          ]
+        },
+        {
+          "source": "That time occurs twice in the offer's time zone. Choose a time outside the repeated hour.",
+          "occurrences": [
+            {
+              "file": "src/lib/promotionDateTime.ts",
+              "line": 37,
+              "kind": "literal",
+              "context": "5c29938f18360c3cd0ae0a5620af5f8b09a3c9b4c4e0a01bbc101b67704a521b"
+            }
+          ]
+        },
+        {
           "source": "The attendance record could not be saved. Your explanation is retained.",
           "occurrences": [
             {
@@ -11235,6 +11352,17 @@
               "line": 19,
               "kind": "localized-source",
               "context": "75d76ea3a841f13a102f78c2c4da53ac3ef921950b8267eaba210976d00f2077"
+            }
+          ]
+        },
+        {
+          "source": "The offer must end after it starts.",
+          "occurrences": [
+            {
+              "file": "src/lib/promotionDateTime.ts",
+              "line": 42,
+              "kind": "literal",
+              "context": "17a4941436a059a2128d887ecd763b1e7c27fb12dcb5f96f212fc93fedc4140a"
             }
           ]
         },
@@ -12811,14 +12939,14 @@
       ]
     },
     "es": {
-      "source_count": 2751,
-      "covered": 2751,
+      "source_count": 2761,
+      "covered": 2761,
       "missing_count": 0,
       "missing": []
     },
     "zh-CN": {
-      "source_count": 2751,
-      "covered": 2751,
+      "source_count": 2761,
+      "covered": 2761,
       "missing_count": 0,
       "missing": []
     }

@@ -1,4 +1,9 @@
 const rows=[
+ ['Pickup reservation {reference}: {status}.','Réservation à retirer {reference} : {status}.','Reserva para recoger {reference}: {status}.','自提预订 {reference}：{status}。'],
+ ['Reserved for pickup','Réservé pour le retrait','Reservado para recoger','已预订自提'],
+ ['Ready for pickup','Prêt à retirer','Listo para recoger','可到店自取'],
+ ['Picked up','Retiré par le client','Recogido por el cliente','客户已取货'],
+ ['Not picked up','Non retiré','No recogido','未取货'],
  ['All stock','Tout le stock','Todo el stock','全部库存'],
  ['Product catalog','Catalogue de produits','Catálogo de productos','商品目录'],
  ['Your catalog, stock and orders, together.','Votre catalogue, votre stock et vos commandes au même endroit.','Tu catálogo, existencias y pedidos en un solo lugar.','集中管理商品目录、库存和订单。'],

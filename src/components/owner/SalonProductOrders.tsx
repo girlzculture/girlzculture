@@ -18,6 +18,12 @@ const reservationActions: Record<string, string[]> = {
   Reserved: ["Ready for pickup", "Canceled", "Not collected"],
   "Ready for pickup": ["Collected", "Canceled", "Not collected"],
 };
+const pickupStatusLabels: Record<string, string> = {
+  Reserved: "Reserved for pickup",
+  "Ready for pickup": "Ready for pickup",
+  Collected: "Picked up",
+  "Not collected": "Not picked up",
+};
 
 export default function SalonProductOrders({
   mode = "operations",
@@ -36,7 +42,7 @@ export default function SalonProductOrders({
   const [orders, setOrders] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<string | { reference: string; pickupStatus: string }>("");
 
   const request = useCallback(
     async (method = "GET", body?: Record<string, unknown>) => {
@@ -150,7 +156,9 @@ export default function SalonProductOrders({
       setMessage(
         warnings[0]?.message
           ? String(warnings[0].message)
-          : `Reservation ${String(order.public_reference)} is now ${status}.`,
+          : order.reservation_status
+            ? { reference: String(order.public_reference), pickupStatus: status }
+            : `Reservation ${String(order.public_reference)} is now ${status}.`,
       );
     } catch (error) {
       setMessage(
@@ -186,9 +194,12 @@ export default function SalonProductOrders({
       {message ? (
         <p
           role="status"
+          data-no-translate={typeof message !== "string" || undefined}
           className="mt-4 rounded-xl bg-light-gray p-3 text-xs text-charcoal"
         >
-          {message}
+          {typeof message === "string" ? message : t("Pickup reservation {reference}: {status}.")
+            .replace("{reference}", message.reference)
+            .replace("{status}", t(pickupStatusLabels[message.pickupStatus] || message.pickupStatus))}
         </p>
       ) : null}
       {mode === "finance" ? (
@@ -246,8 +257,8 @@ export default function SalonProductOrders({
                   <b className="block text-sm text-charcoal">
                     {formatCurrency(Number(order.total_amount || 0))}
                   </b>
-                  <span className="text-[10px] font-bold text-teal">
-                    {displayStatus}
+                  <span data-no-translate={isReservation || undefined} className="text-[10px] font-bold text-teal">
+                    {isReservation ? t(pickupStatusLabels[displayStatus] || displayStatus) : displayStatus}
                   </span>
                 </div>
               </div>
@@ -291,6 +302,7 @@ export default function SalonProductOrders({
                       <button
                         type="button"
                         key={status}
+                        data-no-translate={isReservation || undefined}
                         disabled={Boolean(busy)}
                         onClick={() => void advance(order, status)}
                         className={`rounded-lg px-3 py-2 text-[10px] font-bold gc-disabled-control ${
@@ -299,9 +311,9 @@ export default function SalonProductOrders({
                             : "bg-teal text-white"
                         }`}
                       >
-                        {busy === `${order.id}:${status}`
-                          ? "Saving…"
-                          : status}
+                        {isReservation
+                          ? t(busy === `${order.id}:${status}` ? "Saving…" : pickupStatusLabels[status] || status)
+                          : busy === `${order.id}:${status}` ? "Saving…" : status}
                       </button>
                     ))}
                 </div>

@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { test } from './helpers/hydration';
 import { BUSINESS_DEMO_SCENARIOS, demoSummary } from '../../src/components/dashboard/demo/businessDemoScenarios';
@@ -6,6 +6,13 @@ import { BUSINESS_DEMO_COPY } from '../../src/i18n/business-demo-copy';
 import { intlLocale } from '../../src/i18n/catalog';
 
 test.use({ serviceWorkers: 'block' });
+
+async function expectTouchTarget(control: Locator) {
+  await expect(control).toBeVisible();
+  const box = await control.boundingBox();
+  expect(box, 'The visible control must have a rendered bounding box').not.toBeNull();
+  expect(box?.height).toBeGreaterThanOrEqual(44);
+}
 
 async function isolate(page: Page, locale: string, baseURL: string) {
   const unexpected: string[] = [];
@@ -41,19 +48,22 @@ for (const [locale, width, height, index] of [['en', 390, 844, 0], ['fr', 768, 1
     await expect(page.getByRole('heading', { name: scenario.name, exact: true })).toBeVisible();
     await expect(page.getByRole('note')).toContainText(copy.readOnly);
     await expect(page.getByRole('note')).toContainText(copy.period);
-    const explanation = page.locator('details').filter({ has: page.locator('summary').filter({ hasText: copy.details }) }), explainControl = explanation.locator('summary');
+    // Streamed Next markup can retain a hidden copy of the workspace. Interact
+    // with the accessible main, not the hidden server segment's CSS matches.
+    const explanation = page.getByRole('main').locator('details').filter({ has: page.locator('summary').filter({ hasText: copy.details }) }), explainControl = explanation.locator('summary');
     await explainControl.focus();await page.keyboard.press('Enter');await expect(explanation).toHaveAttribute('open','');
     for (const text of [copy.notice,copy.disclaimer,copy.names,copy.calendarNote])await expect(explanation).toContainText(text);
-    expect((await explainControl.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await expectTouchTarget(explainControl);
     await page.keyboard.press('Space');await expect(explanation).not.toHaveAttribute('open','');
-    const chooser = page.getByLabel(copy.choose, { exact: true });
+    const chooser = page.getByRole('combobox', { name: copy.choose, exact: true });
     await expect(chooser).toHaveValue(scenario.id);
     await expect(chooser.locator('option')).toHaveCount(4);
     const summary = page.getByRole('region', { name: copy.totals, exact: true });
     await expect(summary).toContainText(new Intl.NumberFormat(intlLocale(locale), { style: 'currency', currency: 'USD' }).format(demoSummary(scenario).valueCents / 100));
     await expect(summary).toContainText(copy.valueNote);
     const nav = page.getByRole('navigation', { name: copy.pages, exact: true });
-    for (const control of [chooser, ...await nav.getByRole('button').all()]) expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await expect(nav.getByRole('button')).toHaveCount(4);
+    for (const control of [chooser, ...await nav.getByRole('button').all()]) await expectTouchTarget(control);
 
     await nav.getByRole('button', { name: copy.services, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`scenario=${scenario.id}&view=services$`));
@@ -84,7 +94,7 @@ for (const [locale, width, height, index] of [['en', 390, 844, 0], ['fr', 768, 1
     await page.reload();
     await expect(page.getByRole('heading', { name: scenario.name, exact: true })).toBeVisible();
     await expect(nav.getByRole('button', { name: copy.calendar, exact: true })).toHaveAttribute('aria-pressed', 'true');
-    if(width<1024){const more=page.getByRole('complementary').locator('summary').filter({hasText:copy.more});await more.focus();await page.keyboard.press('Enter');expect((await more.boundingBox())!.height).toBeGreaterThanOrEqual(44);}
+    if(width<1024){const more=page.getByRole('complementary').locator('summary').filter({hasText:copy.more});await more.focus();await page.keyboard.press('Enter');await expectTouchTarget(more);}
     await expect(page.getByRole('link', { name: copy.marketplace, exact: true })).toHaveAttribute('href', '/site-access');
     for (const link of await page.getByRole('link', { name: copy.account, exact: true }).all()) await expect(link).toHaveAttribute('href', '/salon/login');
     expect(unexpected).toEqual([]);
@@ -95,7 +105,7 @@ test('Business demo scenarios keep browser history and invalid links inside the 
   const unexpected = await isolate(page, 'en', baseURL!);
   const copy = BUSINESS_DEMO_COPY.en;
   await page.goto('/site-access/business-demo?scenario=braiding-team&view=services');
-  const chooser = page.getByLabel(copy.choose, { exact: true });
+  const chooser = page.getByRole('combobox', { name: copy.choose, exact: true });
   await expect(page.getByRole('heading', { name: 'Braiding Collective', exact: true })).toBeVisible();
   await chooser.selectOption('occasion-hair');
   await expect(page.getByRole('heading', { name: 'Occasion Hair Team', exact: true })).toBeVisible();
@@ -128,7 +138,9 @@ for(const [locale,width,height,index]of [['en',390,844,0],['zh-CN',844,390,3]]as
   const calendarGeometry=await client.evaluate(el=>{const name=el.getBoundingClientRect();return{top:name.top,bottom:name.bottom,viewport:innerHeight,scrollY};});
   await info.attach('initial-calendar-geometry',{body:JSON.stringify(calendarGeometry),contentType:'application/json'});await page.screenshot({path:info.outputPath(`demo-initial-calendar-${locale}.png`)});
   expect(calendarGeometry.scrollY).toBe(0);expect(calendarGeometry.top).toBeGreaterThanOrEqual(0);expect(calendarGeometry.bottom).toBeLessThanOrEqual(calendarGeometry.viewport);
-  for(const control of [page.getByLabel(copy.choose,{exact:true}),page.getByRole('combobox',{name:copy.professional,exact:true}),page.getByRole('button',{name:copy.resetDate,exact:true}),...await page.getByRole('navigation',{name:copy.pages,exact:true}).getByRole('button').all()])expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  const navigation = page.getByRole('navigation', { name: copy.pages, exact: true });
+  await expect(navigation.getByRole('button')).toHaveCount(4);
+  for(const control of [page.getByRole('combobox',{name:copy.choose,exact:true}),page.getByRole('combobox',{name:copy.professional,exact:true}),page.getByRole('button',{name:copy.resetDate,exact:true}),...await navigation.getByRole('button').all()])await expectTouchTarget(control);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);expect(unexpected).toEqual([]);
  });
 }

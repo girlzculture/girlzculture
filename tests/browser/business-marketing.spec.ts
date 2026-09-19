@@ -7,6 +7,63 @@ import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catal
 import { untranslatedOwnerCopy } from './helpers/ownerLocaleCoverage';
 import AxeBuilder from '@axe-core/playwright';
 import { draftMarketingCopies, marketingDestinations, MARKETING_LOCALES, type MarketingPost, type MarketingSnapshot } from '../../src/lib/businessMarketing';
+
+test.describe('Business marketing offer dates',()=>{
+ test.use({timezoneId:'America/Los_Angeles'});
+ for(const [locale,width,height,staff] of [['en',390,844,false],['fr',768,1000,false],['es',1440,1000,true],['zh-CN',844,390,true]] as const){
+  test(`Business marketing offer dates preserve instants and recover saved drafts in ${locale}`,async({page},info)=>{
+   const f=await p0OwnerFixture(page,{locale,populated:true,role:staff?'salon_team':'salon_owner'});
+   if(staff)await page.route('**/api/salon/workspace',route=>route.fulfill({json:{salon:f.business,isOwner:false,isTeamMember:true,permissions:{promotions:true},records:f.records}}));
+   const own={id:'17500000-0000-4000-8000-000000000071',salon_id:f.business.id,title:'Own dated offer',public_headline:'Own dated offer',promotion_type:'percentage',discount_value:10,discount_label:'10%',description:'Own retained description',status:'Draft',is_active:false,paused_at:null as string|null,target_scope:'salon',target_ids:[],starts_at:'2026-10-20T17:00:12.345Z',ends_at:'2026-11-15T22:00:00.000Z',timezone:'America/New_York',restrictions:{minimum_subtotal:40,new_customers_only:true,usage_limit:20,per_customer_limit:1,terms:'Own retained terms'}};
+   f.records.salon_promotions=[own];const posts:Record<string,unknown>[]=[];const pageErrors:string[]=[];page.on('pageerror',error=>pageErrors.push(error.message));
+   const failureId='17500000-0000-4000-8000-000000000072';let release!:()=>void,observe!:()=>void;const held=new Promise<void>(resolve=>release=resolve),observed=new Promise<void>(resolve=>observe=resolve);
+   await page.route('**/api/salon/records/save',async route=>{
+    expect(route.request().headers().authorization).toBe(`Bearer ${f.session.access_token}`);const input=route.request().postDataJSON();expect(input.table).toBe('salon_promotions');expect(input.id).toBe(own.id);posts.push(input.values);
+    const expectedStatus=['Draft','Draft','Draft','Active','Paused'][posts.length-1];expect(expectedStatus).toBeTruthy();
+    expect(input.values).toMatchObject({promotion_type:'percentage',discount_value:'10',status:expectedStatus,is_active:expectedStatus==='Active',target_scope:'salon',target_ids:[],restrictions:own.restrictions,timezone:'America/New_York'});
+    if(expectedStatus==='Paused')expect(input.values.paused_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);else expect(input.values.paused_at).toBeNull();
+    if(posts.length===1){observe();await held;return route.fulfill({status:503,json:{error:'Could not save the offer.',request_id:failureId}});}
+    Object.assign(own,input.values);return route.fulfill({json:{record:own,verified:true}});
+   });
+   await page.setViewportSize({width,height});await page.goto(`/salon/dashboard/promotions/${own.id}`);
+   const editor=page.locator('#promotion-editor'),title=editor.locator('[name="title"]'),start=editor.locator('[name="starts_at"]'),end=editor.locator('[name="ends_at"]');
+   const status=editor.locator('[name="status"]');for(const value of ['Draft','Active','Paused'])await expect(status.getByRole('option',{name:text(locale,value),exact:true})).toHaveAttribute('value',value);await expect(status).toHaveValue('Draft');
+   await expect(start).toHaveValue('2026-10-20T13:00');await expect(end).toHaveValue('2026-11-15T17:00');await expect(editor.locator('[name="timezone"]')).toHaveValue('America/New_York');
+   await title.fill('Edited own offer');const save=editor.getByRole('button',{name:text(locale,'Save promotion'),exact:true});await save.click();await observed;
+   const saveAndWaitForRouteResponse=async()=>{
+    // A verified save calls router.replace. Require its successful response
+    // and saved UI before reloading; a streaming RSC body need not close.
+    const transitioned=page.waitForResponse(response=>{const url=new URL(response.url()),request=response.request(),headers=request.headers();return request.method()==='GET'&&url.pathname===`/salon/dashboard/promotions/${own.id}`&&url.searchParams.has('_rsc')&&headers.rsc==='1'&&headers['next-router-prefetch']!=='1';});
+    await save.click();const response=await transitioned;expect(response.status()).toBe(200);expect(response.headers()['content-type']).toContain('text/x-component');await expect(page.getByText(text(locale,'Saved and verified.'),{exact:true})).toBeVisible();
+   };
+   try{await expect(title).toHaveValue('Edited own offer');expect(posts[0]).toMatchObject({starts_at:'2026-10-20T17:00:12.345Z',ends_at:'2026-11-15T22:00:00.000Z'});expect(own.title).toBe('Own dated offer');}finally{release();}
+   await expect(page.getByText(new RegExp(failureId))).toBeVisible();await expect(title).toHaveValue('Edited own offer');await expect(start).toHaveValue('2026-10-20T13:00');expect(own.title).toBe('Own dated offer');
+   const failureNotice=page.getByRole('alert').filter({hasText:failureId});await failureNotice.getByRole('button',{name:text(locale,'Dismiss message'),exact:true}).click();await expect(failureNotice).toHaveCount(0);
+   await saveAndWaitForRouteResponse();await expect.poll(()=>own.title).toBe('Edited own offer');await expect(title).toHaveValue('Edited own offer');expect(posts).toHaveLength(2);expect(own.starts_at).toBe('2026-10-20T17:00:12.345Z');expect(own.ends_at).toBe('2026-11-15T22:00:00.000Z');
+   await page.reload();await expect(title).toHaveValue('Edited own offer');await expect(start).toHaveValue('2026-10-20T13:00');await expect(end).toHaveValue('2026-11-15T17:00');
+   await start.fill('2026-10-23T15:45');await saveAndWaitForRouteResponse();await expect.poll(()=>own.starts_at).toBe('2026-10-23T19:45:00.000Z');expect(posts).toHaveLength(3);expect(own.ends_at).toBe('2026-11-15T22:00:00.000Z');expect(own.discount_value).toBe('10');expect(own.status).toBe('Draft');
+   await page.reload();await expect(start).toHaveValue('2026-10-23T15:45');await expect(title).toHaveValue('Edited own offer');
+   for(const next of ['Active','Paused']){
+    await status.selectOption(next);await expect(status).toHaveValue(next);const submittedAt=Date.now();await saveAndWaitForRouteResponse();await expect.poll(()=>own.status).toBe(next);await expect(page.getByText(text(locale,'Saved and verified.'),{exact:true})).toBeVisible();
+    expect(own.is_active).toBe(next==='Active');if(next==='Paused'){expect(Date.parse(own.paused_at!)).toBeGreaterThanOrEqual(submittedAt);expect(Date.parse(own.paused_at!)).toBeLessThanOrEqual(Date.now());}else expect(own.paused_at).toBeNull();
+    expect(own.starts_at).toBe('2026-10-23T19:45:00.000Z');expect(own.ends_at).toBe('2026-11-15T22:00:00.000Z');expect(own.discount_value).toBe('10');expect(own.restrictions).toEqual({minimum_subtotal:40,new_customers_only:true,usage_limit:20,per_customer_limit:1,terms:'Own retained terms'});
+    await page.reload();await expect(status).toHaveValue(next);await expect(title).toHaveValue('Edited own offer');await expect(start).toHaveValue('2026-10-23T15:45');await expect(end).toHaveValue('2026-11-15T17:00');
+   }
+   expect(posts.map(row=>row.status)).toEqual(['Draft','Draft','Draft','Active','Paused']);
+   const header=await page.locator('.gc-owner-header').evaluate(element=>element.getBoundingClientRect().bottom);await start.evaluate((element,offset)=>window.scrollBy(0,element.getBoundingClientRect().top-offset),header+16);await page.screenshot({path:info.outputPath(`offer-dates-${locale}-${width}.png`)});
+   expect(pageErrors).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);expect(f.actions).toEqual([]);expect(f.unexpected).toEqual([]);
+  });
+ }
+ test('Business marketing offer dates reject unavailable wall times before saving',async({page})=>{
+  const f=await p0OwnerFixture(page,{populated:true});await page.goto('/salon/dashboard/promotions/new');const editor=page.locator('#promotion-editor');
+  await editor.locator('[name="title"]').fill('Own draft');await editor.locator('[name="public_headline"]').fill('Own draft');await editor.locator('[name="timezone"]').fill('America/New_York');
+  const start=editor.locator('[name="starts_at"]'),save=editor.getByRole('button',{name:'Create promotion',exact:true});
+  for(const [value,message] of [['2026-03-08T02:30',"That time does not exist in the offer's time zone. Choose another time."],['2026-11-01T01:30',"That time occurs twice in the offer's time zone. Choose a time outside the repeated hour."]]){
+   await start.fill(value);await save.click();await expect(editor.getByRole('alert')).toHaveText(message);await expect(start).toHaveValue(value);expect(f.actions).toEqual([]);
+  }
+  expect(f.records.salon_promotions).toEqual([]);expect(f.unexpected).toEqual([]);
+ });
+});
 test.use({ serviceWorkers: 'block' });
 const promotion='17500000-0000-4000-8000-000000000002';
 const text=(locale:string,value:string)=>DASHBOARD_SOURCE_MESSAGES[locale]?.[value]||messages[locale]?.[value]||value;
