@@ -18,12 +18,14 @@ import { businessRebookingAdviceSummary } from "@/lib/businessRebookingAdvice";
 import { businessAppointmentPatterns } from "@/lib/businessAppointmentPatterns";
 import { readAssistantPromotions } from "@/lib/assistantPromotionRead";
 import { assertAssistantProductsReadAccess, readAssistantProductOperations } from "@/lib/assistantProductOperations";
+import { assertCommunicationScope, assertCurrentCommunicationBookings, ownCommunicationRows } from "@/lib/assistantCommunicationScope";
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
 
 export async function readOwnerOperation(context: Context, tool: AssistantTool, args: Row): Promise<unknown> {
   const { admin, salon } = context;
   const assigned = assistantAssignedProfessional(context);
+  if (["get_booking_messages", "get_customers", "get_reviews"].includes(tool)) await assertCommunicationScope(context, tool === "get_reviews" ? "reviews" : "bookings");
   if (tool === "get_promotions") return readAssistantPromotions(context);
   if (tool === "get_products") await assertAssistantProductsReadAccess(context);
   if (tool === "get_earnings_summary") {
@@ -83,19 +85,25 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     return { profile_completion: profileCompletion(salon, counts[0].count || 0, counts[1].count || 0) };
   }
   if (tool === "get_booking_messages") {
-    let query = admin.from("bookings").select("id,booking_origin,customer_id").eq("salon_id", salon.id).eq("id", args.booking_id);
+    let query = admin.from("bookings").select("id,salon_id,stylist_id,booking_origin,customer_id").eq("salon_id", salon.id).eq("id", args.booking_id);
     if (assigned) query = query.eq("stylist_id", assigned);
     const booking = await query.maybeSingle();
     if (booking.error) throw booking.error;
     if (!booking.data) throw new AssistantError("ASSISTANT_RECORD_NOT_FOUND", 404);
-    const messages = await admin.from("booking_messages").select("id,original_body,body,source_locale,sender_role,created_at", { count: "exact" }).eq("salon_id", salon.id).eq("booking_id", args.booking_id).order("created_at", { ascending: false }).limit(100);
+    ownCommunicationRows([booking.data], salon.id, assigned ? { field: "stylist_id", value: assigned } : undefined);
+    if (booking.data.id !== args.booking_id) throw new AssistantError("ASSISTANT_SERVICE_UNAVAILABLE", 503);
+    const messages = await admin.from("booking_messages").select("id,salon_id,booking_id,original_body,body,source_locale,sender_role,created_at", { count: "exact" }).eq("salon_id", salon.id).eq("booking_id", args.booking_id).order("created_at", { ascending: false }).order("id").limit(100);
     if (messages.error) throw messages.error;
-    return { messages: messages.data, total: messages.count, capped_at: 100, customer_participant: Boolean(booking.data.customer_id) };
+    const rows = ownCommunicationRows(messages.data, salon.id, { field: "booking_id", value: args.booking_id });
+    if (!Number.isSafeInteger(messages.count) || messages.count! < rows.length || rows.length > 100) throw new AssistantError("ASSISTANT_SERVICE_UNAVAILABLE", 503);
+    await assertCurrentCommunicationBookings(context, [String(args.booking_id)], assigned);
+    await assertCommunicationScope(context, "bookings");
+    return { messages: rows.map(row => Object.fromEntries(["id", "original_body", "body", "source_locale", "sender_role", "created_at"].map(key => [key, row[key]]))), total: messages.count, capped_at: 100, customer_participant: Boolean(booking.data.customer_id) };
   }
   const lists: Partial<Record<AssistantTool, { table: string; fields: string; key: string; name?: string }>> = {
     get_professionals: { table: "stylists", fields: "id,name,bio,specialties,years_experience,is_active,is_draft,availability", key: "professionals", name: "name" },
     get_products: { table: "salon_products", fields: "id,name,description,price,sale_price,inventory_quantity,track_inventory,low_stock_threshold,product_status,is_visible,pickup_enabled,pickup_prep_minutes,shipping_enabled,in_person_only", key: "products", name: "name" },
-    get_reviews: { table: "reviews", fields: "id,rating_overall,written_review,salon_reply,display_name,moderation_status,created_at", key: "reviews" },
+    get_reviews: { table: "reviews", fields: "id,salon_id,rating_overall,written_review,salon_reply,display_name,moderation_status,created_at", key: "reviews" },
   };
   const list = lists[tool];
   if (list) {
@@ -106,6 +114,12 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     if (tool === "get_reviews") query = query.gte("created_at", args.start).lt("created_at", args.end);
     const result = await query.order("created_at", { ascending: false }).limit(100);
     if (result.error) throw result.error;
+    if (tool === "get_reviews") {
+      const rows = ownCommunicationRows(result.data, salon.id);
+      if (!Number.isSafeInteger(result.count) || result.count! < rows.length || rows.length > 100) throw new AssistantError("ASSISTANT_SERVICE_UNAVAILABLE", 503);
+      await assertCommunicationScope(context, "reviews");
+      return { reviews: rows.map(row => Object.fromEntries(["id", "rating_overall", "written_review", "salon_reply", "display_name", "moderation_status", "created_at"].map(key => [key, row[key]]))), total: result.count, capped_at: 100 };
+    }
     if(tool === "get_products") {
       const stock=await admin.rpc("read_business_stock",{p_salon:salon.id,p_user:context.user.id});
       if(stock.error)throw stock.error;
@@ -139,7 +153,9 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     async function readPeriod(start: unknown, end: unknown, summaryOnly = false) {
       const records: Row[] = [];
       for (let offset = 0; ; offset += 1000) {
-        let query = summaryOnly
+        let query = tool === "get_customers"
+          ? admin.from("bookings").select("id,salon_id,stylist_id,guest_name,booking_origin")
+          : summaryOnly
           ? admin.from("bookings").select("status,estimated_total,booking_origin")
           : tool === "get_earnings_summary"
             ? admin.from("bookings").select("id,appointment_datetime,status,estimated_total,booking_origin,payment_mode,payment_verified_at,stripe_charge_id,deposit_status,deposit_amount,stripe_processing_fee,platform_fee,net_amount_owed_salon,refund_status,refund_amount,refund_completed_at,stripe_refund_id,transfer_status,stripe_transfer_id")
@@ -147,6 +163,7 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
         if (assigned) query = query.eq("stylist_id", assigned);
         const result = await query.eq("salon_id", salon.id).gte("appointment_datetime", start).lt("appointment_datetime", end).order("id").range(offset, offset + 999);
         if (result.error) throw result.error;
+        if (tool === "get_customers") ownCommunicationRows(result.data, salon.id, assigned ? { field: "stylist_id", value: assigned } : undefined);
         records.push(...result.data || []);
         if ((result.data || []).length < 1000) break;
         if (offset >= 99000) throw new AssistantError("ASSISTANT_RANGE_TOO_LARGE", 409);
@@ -154,8 +171,13 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
       return records;
     }
     const bookings = await readPeriod(args.start, args.end);
+    if (tool === "get_customers") {
+      ownCommunicationRows(bookings, salon.id, assigned ? { field: "stylist_id", value: assigned } : undefined);
+      if (assigned) await assertCurrentCommunicationBookings(context, bookings.map(row => String(row.id)), assigned);
+      await assertCommunicationScope(context, "bookings");
+      return { customers: bookings.map(row => ({ name: row.guest_name, booking_id: row.id, booking_origin: row.booking_origin })), total: bookings.length, scope: "customers_of_these_bookings" };
+    }
     const metrics = ownerBusinessMetrics(bookings);
-    if (tool === "get_customers") return { customers: bookings.map(row => ({ name: row.guest_name, booking_id: row.id, customer_id: row.customer_id, booking_origin: row.booking_origin })), scope: "customers_of_these_bookings" };
     if (tool === "get_upcoming_appointments") return { total: metrics.upcoming.length, bookings: metrics.upcoming.map(row => Object.fromEntries(Object.entries(row).filter(([key]) => key !== "guest_email"))), time_zone: salon.time_zone };
     const currentPeriod = assistantPeriodMetrics(bookings);
     const start = Date.parse(String(args.start)), end = Date.parse(String(args.end));

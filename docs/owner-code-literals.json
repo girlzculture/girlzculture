@@ -482,6 +482,14 @@
         {
           "file": "src/lib/businessReviews.ts",
           "context": "8cb289686f3d6a36e3d70618c2371d62f728284468eca326f9b7cb2f40b4ecb4"
+        },
+        {
+          "file": "src/lib/businessPriceContext.ts",
+          "context": "d36bc546918616eaec26098b0163dbe261191e9ae63b5933b44da7729717154d"
+        },
+        {
+          "file": "src/lib/businessPriceContext.ts",
+          "context": "3dd2ab940dc7d41ee771e9aac39c8d924eee8c7e15cead919a11b89282411442"
         }
       ]
     },
@@ -696,6 +704,10 @@
         {
           "file": "src/components/owner/BusinessServiceContribution.tsx",
           "context": "0f87449f5e6d1c61177ac476c3af7cdac51031c926816d80bf3f08ea652513fa"
+        },
+        {
+          "file": "src/components/BookingInbox.tsx",
+          "context": "a8d8ca005aa0829d7f80bd861d0ae582ed62717f4a0bd5627a4cd1c8f99105da"
         }
       ]
     },
@@ -1461,6 +1473,10 @@
         },
         {
           "file": "src/components/owner/BusinessServiceContribution.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/owner/BusinessReusableReplies.tsx",
           "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
         }
       ]
@@ -2486,6 +2502,14 @@
         {
           "file": "src/components/owner/BusinessServiceCapacity.tsx",
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessReusableReplies.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessPriceContext.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
         }
       ]
     },
@@ -2612,6 +2636,10 @@
         {
           "file": "src/components/owner/BusinessCustomerCampaigns.tsx",
           "context": "eff2a56c4cf4d94d77ec4417b30b42b6736b024e7b5e215acc23967c32731227"
+        },
+        {
+          "file": "src/lib/businessReusableReplies.ts",
+          "context": "08ef39bc1e56d1a533a48256f8542e154b5db31663be966b133c2b30676def8e"
         }
       ]
     },
@@ -2746,6 +2774,10 @@
         {
           "file": "src/components/owner/BusinessServiceCapacity.tsx",
           "context": "ee438f03a37e0174ac2370c0b74c8d256b341acb3fd0a5a9389ac0a5a1747234"
+        },
+        {
+          "file": "src/components/owner/BusinessReusableReplies.tsx",
+          "context": "cecd1c09bff12e3375d06246706e96bd03093ce95d4d751b85e8c85de8fd4dbc"
         }
       ]
     },
@@ -3398,6 +3430,10 @@
         {
           "file": "src/components/owner/BusinessCustomerCampaigns.tsx",
           "context": "60ad23e5bba98fef73c99c84717ac037dba2380fc3a4d7e2e571421126c3947d"
+        },
+        {
+          "file": "src/components/owner/BusinessPriceContext.tsx",
+          "context": "60ad23e5bba98fef73c99c84717ac037dba2380fc3a4d7e2e571421126c3947d"
         }
       ]
     },
@@ -3874,6 +3910,76 @@
         {
           "file": "src/components/owner/SalonProductOrders.tsx",
           "context": "af28058a8a11068923436888b28f270970be48dc36bd00a190e5463b96330306"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-body",
+      "reason": "DOM identifier linking the separately translated Message label and textarea.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessReusableReplies.tsx",
+          "context": "2ee8a879d82e38ac812c99f04b252d76143fdc01b1ea734155111d4878165c4b"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-locale",
+      "reason": "DOM identifier linking the separately translated Original language label and select.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessReusableReplies.tsx",
+          "context": "36d47e070ef08a0e0f9fe6f2c819debeb00333b8f4a7b25c92e0136fd6ba98a9"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-search",
+      "reason": "DOM identifier linking the separately translated Search replies label and input.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessReusableReplies.tsx",
+          "context": "624157bb30be60573b9013ac2a8e7a07953db8ba6d509248f3286e99cd1304ce"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-title",
+      "reason": "DOM identifier linking the separately translated Title label and input.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessReusableReplies.tsx",
+          "context": "c7fe4684b0a0548683eb7f401c1e395efffa4c4046176ab045e4e99d32f721a5"
+        }
+      ]
+    },
+    {
+      "source": "{value0}-01T12:00:00Z",
+      "reason": "Internal UTC date construction passed to the existing locale formatter; never displayed literally.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessPriceContext.tsx",
+          "context": "9fd52e0dccdb68d45c7caeeb57536f8d2d1c0ee8ebf08ab06ab4a7016fc991a6"
+        }
+      ]
+    },
+    {
+      "source": "U.S. Bureau of Labor Statistics",
+      "reason": "Fixed statistical-source identity for provenance validation. The separate visible Source label is explicitly translated in all four supported locales.",
+      "contexts": [
+        {
+          "file": "src/lib/businessPriceContext.ts",
+          "context": "465a03648498f776124bbae72f51d38c6a86ba46a32c39793e0dfca9cc1738d0"
+        }
+      ]
+    },
+    {
+      "source": "Data unavailable due to the 2025 lapse in appropriations",
+      "reason": "Exact provider footnote used only to validate the reviewed missing observation. It is not UI text; the displayed missing-month explanation has four explicit translations.",
+      "contexts": [
+        {
+          "file": "src/lib/businessPriceContext.ts",
+          "context": "e2a2bf7603d82d8183a578db855ecf26ce20be4dc430e0dc61c239ec8aedde4c"
         }
       ]
     }

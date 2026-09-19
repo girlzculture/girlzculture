@@ -1,0 +1,51 @@
+export const REUSABLE_REPLY_COPY_ROWS = [
+ ["Reusable replies", "Réponses réutilisables", "Respuestas reutilizables", "常用回复"],
+ ["Private replies shared with your business team. Choosing one only fills an editable draft.", "Réponses privées partagées avec votre équipe. En choisir une remplit uniquement un brouillon modifiable.", "Respuestas privadas compartidas con tu equipo. Elegir una solo rellena un borrador editable.", "仅供本商家团队使用的私密回复。选择后只会填入可编辑的草稿。"],
+ ["New reply", "Nouvelle réponse", "Nueva respuesta", "新建回复"],
+ ["Active replies", "Réponses actives", "Respuestas activas", "可用回复"],
+ ["Archived replies", "Réponses archivées", "Respuestas archivadas", "已归档回复"],
+ ["Search replies", "Rechercher des réponses", "Buscar respuestas", "搜索回复"],
+ ["Search", "Rechercher", "Buscar", "搜索"],
+ ["Refresh", "Actualiser", "Actualizar", "刷新"],
+ ["Loading reusable replies…", "Chargement des réponses…", "Cargando respuestas…", "正在加载常用回复…"],
+ ["No reusable replies match this view.", "Aucune réponse ne correspond à cette vue.", "No hay respuestas que coincidan con esta vista.", "此视图中没有匹配的回复。"],
+ ["Title", "Titre", "Título", "标题"],
+ ["Message", "Message", "Mensaje", "消息"],
+ ["Original language", "Langue d’origine", "Idioma original", "原文语言"],
+ ["Unspecified", "Non précisée", "Sin especificar", "未指定"],
+ ["Save reply", "Enregistrer la réponse", "Guardar respuesta", "保存回复"],
+ ["Discard edits", "Abandonner les modifications", "Descartar cambios", "放弃修改"],
+ ["Keep edits in a new reply", "Conserver les modifications dans une nouvelle réponse", "Conservar los cambios en una nueva respuesta", "将修改保留为新回复"],
+ ["Reply changed. Your edits are preserved. Keep them in a new reply, or discard them and reopen the current reply.", "La réponse a changé. Vos modifications sont conservées. Gardez-les dans une nouvelle réponse, ou abandonnez-les et rouvrez la réponse actuelle.", "La respuesta cambió. Tus cambios se conservan. Guárdalos en una nueva respuesta, o descártalos y vuelve a abrir la respuesta actual.", "回复已变更。您的修改已保留。可将其保留为新回复，或放弃修改后重新打开当前回复。"],
+ ["Use as draft", "Utiliser comme brouillon", "Usar como borrador", "用作草稿"],
+ ["Edit reply", "Modifier la réponse", "Editar respuesta", "编辑回复"],
+ ["Archive reply", "Archiver la réponse", "Archivar respuesta", "归档回复"],
+ ["Archive this reply?", "Archiver cette réponse ?", "¿Archivar esta respuesta?", "归档此回复？"],
+ ["Archived replies cannot be inserted. Existing message drafts stay unchanged.", "Les réponses archivées ne peuvent plus être insérées. Les brouillons existants restent inchangés.", "Las respuestas archivadas no se pueden insertar. Los borradores existentes no cambian.", "已归档回复无法再插入。现有消息草稿不受影响。"],
+ ["Confirm archive", "Confirmer l’archivage", "Confirmar archivo", "确认归档"],
+ ["Cancel", "Annuler", "Cancelar", "取消"],
+ ["Replace current draft?", "Remplacer le brouillon actuel ?", "¿Reemplazar el borrador actual?", "替换当前草稿？"],
+ ["Your current draft will be replaced. Nothing is sent.", "Votre brouillon actuel sera remplacé. Aucun message n’est envoyé.", "Se reemplazará tu borrador actual. No se envía nada.", "当前草稿将被替换。不会发送任何消息。"],
+ ["Replace draft", "Remplacer le brouillon", "Reemplazar borrador", "替换草稿"],
+ ["Reply inserted. Review and send it yourself.", "Réponse insérée. Vérifiez-la, puis envoyez-la vous-même.", "Respuesta insertada. Revísala y envíala tú mismo.", "回复已插入。请自行检查并发送。"],
+ ["Reply saved.", "Réponse enregistrée.", "Respuesta guardada.", "回复已保存。"],
+ ["Reply archived.", "Réponse archivée.", "Respuesta archivada.", "回复已归档。"],
+ ["Reply changed. Refresh the library before trying again.", "La réponse a changé. Actualisez la liste avant de réessayer.", "La respuesta cambió. Actualiza la lista antes de intentarlo de nuevo.", "回复已变更。请刷新列表后重试。"],
+ ["Your draft changed. Review it before choosing a reply.", "Votre brouillon a changé. Vérifiez-le avant de choisir une réponse.", "Tu borrador cambió. Revísalo antes de elegir una respuesta.", "草稿已变更。请选择回复前先检查草稿。"],
+ ["You no longer have access to these business replies.", "Vous n’avez plus accès aux réponses de cette entreprise.", "Ya no tienes acceso a las respuestas de este negocio.", "您已无权访问该商家的回复。"],
+ ["Enter a title of up to 80 characters and a message of up to 2,000 characters.", "Saisissez un titre de 80 caractères maximum et un message de 2 000 caractères maximum.", "Escribe un título de hasta 80 caracteres y un mensaje de hasta 2.000 caracteres.", "请输入不超过80个字符的标题和不超过2,000个字符的消息。"],
+ ["Reusable replies are temporarily unavailable.", "Les réponses réutilisables sont temporairement indisponibles.", "Las respuestas reutilizables no están disponibles temporalmente.", "常用回复暂时不可用。"],
+ ["Please sign in again.", "Veuillez vous reconnecter.", "Inicia sesión de nuevo.", "请重新登录。"],
+ ["Wait a moment before trying again.", "Patientez un instant avant de réessayer.", "Espera un momento antes de volver a intentarlo.", "请稍候再试。"],
+ ["Previous", "Précédent", "Anterior", "上一页"],
+ ["Next", "Suivant", "Siguiente", "下一页"],
+ ["Showing {from}–{to} of {total}", "Affichage de {from} à {to} sur {total}", "Mostrando {from}–{to} de {total}", "显示第{from}–{to}项，共{total}项"],
+ ["Reference: {id}", "Référence : {id}", "Referencia: {id}", "参考编号：{id}"],
+] as const;
+type Source = typeof REUSABLE_REPLY_COPY_ROWS[number][0];
+export function reusableReplyCopy(locale: string, source: Source, values: Record<string, string> = {}) {
+ const row = REUSABLE_REPLY_COPY_ROWS.find(item => item[0] === source)!;
+ let output: string = row[locale === "fr" ? 1 : locale === "es" ? 2 : locale === "zh-CN" ? 3 : 0];
+ for (const [key, value] of Object.entries(values)) output = output.replaceAll(`{${key}}`, value);
+ return output;
+}

@@ -1,0 +1,60 @@
+\set ON_ERROR_STOP on
+begin;
+create function pg_temp.reply_assert(ok boolean,label text) returns void language plpgsql as $$begin if ok is not true then raise exception 'Reusable reply assertion failed: %',label;end if;end$$;
+create function pg_temp.reply_reject(command text,code text) returns void language plpgsql as $$declare rejected boolean:=false;begin begin execute command;exception when others then if position(code in sqlerrm)>0 then rejected:=true;else raise;end if;end;perform pg_temp.reply_assert(rejected,code);end$$;
+do $$
+declare oa uuid:=gen_random_uuid();ob uuid:=gen_random_uuid();staff uuid:=gen_random_uuid();customer uuid:=gen_random_uuid();a uuid:=gen_random_uuid();b uuid:=gen_random_uuid();r uuid:=gen_random_uuid();other uuid:=gen_random_uuid();request uuid:=gen_random_uuid();action jsonb;out jsonb;again jsonb;changed jsonb;archived jsonb;n integer;
+begin
+ insert into auth.users(id,email,encrypted_password,email_confirmed_at,raw_user_meta_data) values
+ (oa,'reply-owner-a@example.test','',now(),'{"role":"salon_owner"}'),(ob,'reply-owner-b@example.test','',now(),'{"role":"salon_owner"}'),
+ (staff,'reply-staff@example.test','',now(),'{"role":"salon_team"}'),(customer,'reply-customer@example.test','',now(),'{"role":"customer"}');
+ update public.platform_identities set primary_role='salon_team' where user_id=staff;
+ insert into public.salons(id,user_id,name,slug,email,status) values(a,oa,'Reply A','reply-library-a','reply-owner-a@example.test','Pending'),(b,ob,'Reply B','reply-library-b','reply-owner-b@example.test','Pending');
+ insert into public.salon_team_members(salon_id,user_id,email,name,role,status,permissions) values(a,staff,'reply-staff@example.test','Reply staff','Stylist','Active','{"bookings":true}');
+ action:=jsonb_build_object('action','save','id',r,'request_id',request,'expected_revision',null,'title','Préparation','body',E'Bonjour !\nGardez votre texte original <b>ici</b>.','source_locale','fr');
+ perform set_config('request.jwt.claim.role','service_role',true);set local role service_role;
+ out:=public.save_business_reusable_reply(a,oa,action);again:=public.save_business_reusable_reply(a,oa,action);
+ perform pg_temp.reply_assert(out=again and (out->>'revision')::int=1,'retry has one saved revision');
+ perform pg_temp.reply_assert(out->>'body'=action->>'body' and out->>'source_locale'='fr' and not(out ? 'created_by') and not(out ? 'last_request'),'original text and private projection');
+ perform public.save_business_reusable_reply(b,ob,jsonb_build_object('action','save','id',other,'request_id',gen_random_uuid(),'expected_revision',null,'title','Private foreign title','body','Foreign private reply','source_locale','en'));
+ out:=public.business_reusable_replies_workspace(a,oa);
+ perform pg_temp.reply_assert((out->>'total')::int=1 and jsonb_array_length(out->'rows')=1 and out::text not like '%Foreign private reply%','own complete library only');
+ perform pg_temp.reply_reject(format('select public.business_reusable_replies_workspace(%L,%L)',a,ob),'REPLY_FORBIDDEN');
+ perform pg_temp.reply_reject(format('select public.business_reusable_replies_workspace(%L,%L)',a,customer),'REPLY_FORBIDDEN');
+ perform pg_temp.reply_reject(format('select public.save_business_reusable_reply(%L,%L,%L::jsonb)',b,oa,action),'REPLY_FORBIDDEN');
+ perform pg_temp.reply_reject(format('select public.save_business_reusable_reply(%L,%L,%L::jsonb)',a,oa,action||'{"body":"Changed under reused ID"}'::jsonb),'REPLY_REQUEST_REUSED');
+ changed:=action||jsonb_build_object('title','Save','body','Shared original staff reply','source_locale','en','expected_revision',1,'request_id',gen_random_uuid());
+ out:=public.save_business_reusable_reply(a,staff,changed);
+ perform pg_temp.reply_assert(out->>'title'='Save' and (out->>'revision')::int=2,'authorized team edit uses same own-business library');
+ perform pg_temp.reply_reject(format('select public.save_business_reusable_reply(%L,%L,%L::jsonb)',a,oa,action||jsonb_build_object('expected_revision',1,'request_id',gen_random_uuid())),'REPLY_STALE');
+ perform pg_temp.reply_reject(format('select public.save_business_reusable_reply(%L,%L,%L::jsonb)',a,oa,changed||jsonb_build_object('id',other,'request_id',gen_random_uuid())),'REPLY_NOT_FOUND');
+ archived:=jsonb_build_object('action','archive','id',r,'request_id',gen_random_uuid(),'expected_revision',2,'confirm',true);
+ perform pg_temp.reply_reject(format('select public.save_business_reusable_reply(%L,%L,%L::jsonb)',a,oa,archived||'{"confirm":null}'::jsonb),'REPLY_INVALID');
+ out:=public.save_business_reusable_reply(a,oa,archived);again:=public.save_business_reusable_reply(a,oa,archived);
+ perform pg_temp.reply_assert(out=again and (out->>'revision')::int=3 and out->>'archived_at' is not null,'archive is confirmed and retry-safe');
+ out:=public.business_reusable_replies_workspace(a,oa,0,false,'',r);perform pg_temp.reply_assert((out->>'total')::int=0 and out->'rows'='[]'::jsonb,'archived reply cannot be selected for new draft');
+ out:=public.business_reusable_replies_workspace(a,staff,0,true,'Save');perform pg_temp.reply_assert((out->>'total')::int=1 and out->'rows'->0->>'body'='Shared original staff reply','own archived library remains readable');
+ perform pg_temp.reply_reject(format('select public.save_business_reusable_reply(%L,%L,%L::jsonb)',a,oa,changed||jsonb_build_object('expected_revision',3,'request_id',gen_random_uuid())),'REPLY_NOT_FOUND');
+ for n in 1..26 loop perform public.save_business_reusable_reply(a,oa,jsonb_build_object('action','save','id',gen_random_uuid(),'request_id',gen_random_uuid(),'expected_revision',null,'title','Reply '||n,'body','Original '||n,'source_locale','unknown'));end loop;
+ out:=public.business_reusable_replies_workspace(a,oa);again:=public.business_reusable_replies_workspace(a,oa,25);
+ perform pg_temp.reply_assert((out->>'total')::int=26 and jsonb_array_length(out->'rows')=25 and (again->>'total')::int=26 and jsonb_array_length(again->'rows')=1,'exact count and complete second page');
+ perform pg_temp.reply_assert(not exists(select 1 from jsonb_array_elements(out->'rows') x where x->>'id'=again->'rows'->0->>'id'),'stable paging has no duplicate');
+ perform pg_temp.reply_reject(format('select public.save_business_reusable_reply(%L,%L,%L::jsonb)',a,oa,action||jsonb_build_object('customer_id',customer)),'REPLY_INVALID');
+ perform pg_temp.reply_reject(format('select public.save_business_reusable_reply(%L,%L,null)',a,oa),'REPLY_INVALID');
+ reset role;update public.salon_team_members set permissions='{}' where salon_id=a and user_id=staff;set local role service_role;
+ perform pg_temp.reply_reject(format('select public.business_reusable_replies_workspace(%L,%L)',a,staff),'REPLY_FORBIDDEN');
+ perform pg_temp.reply_reject(format('select public.save_business_reusable_reply(%L,%L,%L::jsonb)',a,staff,changed),'REPLY_FORBIDDEN');
+ reset role;update public.platform_identities set status='Disabled' where user_id=oa;set local role service_role;
+ perform pg_temp.reply_reject(format('select public.business_reusable_replies_workspace(%L,%L)',a,oa),'REPLY_FORBIDDEN');reset role;
+ perform pg_temp.reply_assert((select relrowsecurity from pg_class where oid='public.business_reusable_replies'::regclass),'RLS enabled');
+ perform pg_temp.reply_assert(not has_table_privilege('anon','public.business_reusable_replies','SELECT') and not has_table_privilege('authenticated','public.business_reusable_replies','SELECT') and not has_table_privilege('authenticated','public.business_reusable_replies','UPDATE'),'direct browser roles have no table access');
+ perform pg_temp.reply_assert(not has_function_privilege('anon','public.business_reusable_replies_workspace(uuid,uuid,integer,boolean,text,uuid)','EXECUTE') and not has_function_privilege('authenticated','public.save_business_reusable_reply(uuid,uuid,jsonb)','EXECUTE'),'browser cannot impersonate arbitrary actor RPC');
+ perform pg_temp.reply_assert(not exists(select 1 from pg_proc where pronamespace='public'::regnamespace and proname in('business_reusable_reply_json','business_reusable_replies_workspace','save_business_reusable_reply') and prosecdef),'new functions use invoker');
+end $$;
+set local role anon;
+do $$begin begin perform 1 from public.business_reusable_replies;raise exception 'Anonymous reply read unexpectedly allowed';exception when insufficient_privilege then null;end;end$$;
+reset role;
+set local role authenticated;
+do $$begin begin perform public.business_reusable_replies_workspace(gen_random_uuid(),gen_random_uuid());raise exception 'Authenticated reply RPC unexpectedly allowed';exception when insufficient_privilege then null;end;end$$;
+reset role;
+rollback;

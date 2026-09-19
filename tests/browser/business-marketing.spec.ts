@@ -175,3 +175,106 @@ for(const width of [390,1440])test(`Business marketing workspace viewport at ${w
   await page.screenshot({path:info.outputPath(`marketing-workspace-${width}-review.png`)});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
 });
+
+const promotionLayoutTypeOptions = [
+  ['percentage', 'Percentage discount'], ['fixed', 'Fixed discount'],
+  ['free_addon', 'Free eligible add-on'], ['free_service', 'Free eligible service'],
+  ['descriptive', 'Descriptive offer'],
+] as const;
+const promotionLayoutScopeOptions = [
+  ['salon', 'All eligible services'], ['services', 'Selected services'],
+  ['service_groups', 'Selected service groups'], ['master_styles', 'Selected styles'],
+  ['products', 'Selected products'], ['addons', 'Selected add-ons'],
+] as const;
+
+for (const locale of ['en', 'fr', 'es', 'zh-CN'] as const) {
+  for (const width of [320, 390, 768, 1440]) {
+    test(`Business marketing offer selections show every full choice in ${locale} at ${width}`, async ({ page }, info) => {
+      const f = await p0OwnerFixture(page, { locale, populated: true });
+      const own = {
+        id: '17500000-0000-4000-8000-000000000081', salon_id: f.business.id,
+        title: 'Own layout offer', public_headline: 'Own layout offer',
+        promotion_type: 'percentage', discount_value: 10, discount_label: '10%',
+        status: 'Draft', is_active: false, paused_at: null,
+        target_scope: 'salon', target_ids: [], starts_at: null, ends_at: null,
+        timezone: 'America/New_York', restrictions: {},
+      };
+      f.records.salon_promotions = [own];
+      const original = JSON.stringify(own), errors: string[] = [];
+      page.on('pageerror', error => errors.push(error.message));
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 1000 });
+      await page.goto(`/salon/dashboard/promotions/${own.id}`);
+      await expect(page.locator('html')).toHaveAttribute('lang', locale);
+      const editor = page.locator('#promotion-editor');
+      const offerType = editor.getByRole('combobox', { name: text(locale, 'Offer type'), exact: true });
+      const appliesTo = editor.getByRole('combobox', { name: text(locale, 'Applies to'), exact: true });
+      await expect(offerType).toHaveValue('percentage');
+      await expect(appliesTo).toHaveValue('salon');
+      await page.evaluate(() => document.fonts.ready);
+      if (width === 1440) {
+        // Preserve the real reduced workspace width; do not close the dock.
+        const dock = page.getByRole('dialog', { name: 'GC Assistant', exact: true });
+        await expect(dock).toBeVisible();
+        await expect(dock).toHaveAttribute('aria-modal', 'false');
+        expect(await page.locator('main[data-owner-workspace]').evaluate(node => parseFloat(getComputedStyle(node).marginRight))).toBeGreaterThanOrEqual(336);
+      }
+      const controls = [
+        { name: 'Offer type', select: offerType, options: promotionLayoutTypeOptions },
+        { name: 'Applies to', select: appliesTo, options: promotionLayoutScopeOptions },
+      ];
+      const geometry = [];
+      for (const control of controls) {
+        await expect(control.select.locator('option')).toHaveCount(control.options.length);
+        const choices = [];
+        for (const [value, source] of control.options) {
+          await expect(control.select.locator(`option[value="${value}"]`)).toHaveText(text(locale, source));
+          await control.select.selectOption(value);
+          await expect(control.select).toHaveValue(value);
+          choices.push(await control.select.evaluate(node => {
+            const select = node as HTMLSelectElement, style = getComputedStyle(select);
+            const context = document.createElement('canvas').getContext('2d');
+            if (!context) throw new Error('Native select text measurement requires a canvas context.');
+            context.font = style.font;
+            const label = select.selectedOptions[0].textContent || '', spacing = parseFloat(style.letterSpacing) || 0;
+            const rect = select.getBoundingClientRect();
+            return {
+              value: select.value, label, font: style.font, fontSize: parseFloat(style.fontSize),
+              textWidth: context.measureText(label).width + Math.max(0, label.length - 1) * spacing,
+              // Same conservative native-arrow allowance used by Products geometry.
+              usableWidth: select.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 20,
+              left: rect.left, right: rect.right, height: rect.height,
+            };
+          }));
+        }
+        geometry.push({ control: control.name, choices });
+        const longest = choices.reduce((best, choice) => choice.textWidth > best.textWidth ? choice : best);
+        await control.select.selectOption(longest.value);
+        const label = control.select.locator('..');
+        const headerBottom = await page.locator('.gc-owner-header').evaluate(node => node.getBoundingClientRect().bottom);
+        // Align the label, not just the input, beneath the real sticky header.
+        await label.evaluate((node, offset) => window.scrollBy(0, node.getBoundingClientRect().top - offset), headerBottom + 16);
+        await page.screenshot({ path: info.outputPath(`offer-select-${control.name === 'Offer type' ? 'type' : 'scope'}-${locale}-${width}.png`) });
+      }
+      await info.attach('offer-select-geometry', { body: JSON.stringify({ locale, width, geometry }, null, 2), contentType: 'application/json' });
+      for (const control of geometry) for (const choice of control.choices) {
+        const detail = JSON.stringify({ control: control.control, ...choice });
+        expect.soft(choice.textWidth, detail).toBeLessThanOrEqual(choice.usableWidth);
+        expect.soft(choice.height, detail).toBeGreaterThanOrEqual(44);
+        expect.soft(choice.fontSize, detail).toBeGreaterThanOrEqual(13);
+        expect.soft(choice.left, detail).toBeGreaterThanOrEqual(0);
+        expect.soft(choice.right, detail).toBeLessThanOrEqual(width);
+      }
+      await offerType.selectOption('percentage');
+      await appliesTo.selectOption('salon');
+      await expect(offerType).toHaveValue('percentage');
+      await expect(appliesTo).toHaveValue('salon');
+      await expect(editor.locator('[name="discount_value"]')).toHaveValue('10');
+      await expect(editor.locator('[name="status"]')).toHaveValue('Draft');
+      expect(JSON.stringify(own)).toBe(original);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+      expect(errors).toEqual([]);
+      expect(f.actions).toEqual([]);
+      expect(f.unexpected).toEqual([]);
+    });
+  }
+}

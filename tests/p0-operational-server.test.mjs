@@ -110,7 +110,8 @@ test('operating earnings use verified receipts and exclude foreign or invented m
 });
 function fixture(overrides = {}) {
   const calls = [];
-  const tables = { subscriptions: [{ salon_id: business, status: 'active',tier: 'Premium' }], gc_assistant_requests: [], styles: [{ id: service, salon_id: business, name: 'Medium knotless', duration_min_hours: 1, duration_max_hours: 1, buffer_minutes: 15, is_draft: false, archived_at: null }], stylists: [], bookings: [], salon_products: [], product_orders: [], salon_promotions: [], ...overrides.tables };
+  const teamMember = overrides.teamMember ? { id: professional, ...overrides.teamMember } : undefined;
+  const tables = { salons: [{ id: business, user_id: teamMember ? service : actor, time_zone: 'America/New_York' }], salon_team_members: teamMember ? [{ ...teamMember, salon_id: business, user_id: actor, status: 'Active' }] : [], subscriptions: [{ salon_id: business, status: 'active',tier: 'Premium' }], gc_assistant_requests: [], styles: [{ id: service, salon_id: business, name: 'Medium knotless', duration_min_hours: 1, duration_max_hours: 1, buffer_minutes: 15, is_draft: false, archived_at: null }], stylists: [], bookings: [], salon_products: [], product_orders: [], salon_promotions: [], ...overrides.tables };
   const admin = { async rpc(name,args) { calls.push({ name, args }); if (name === 'p0_actor_has_permission') return { data: overrides.allowed !== false && !(overrides.denied || []).includes(args.p_permission) }; if (name === 'business_finance_scope') return overrides.ownFinance ? {data:{kind:'own',stylist_id:professional}} : {error:{message:'FINANCE_ACCESS_DENIED'}};
     if(name==='read_business_stock'){assert.equal(args.p_salon,business);assert.equal(args.p_user,actor);return {data:{products:tables.salon_products.filter(row=>row.salon_id===business),supplies:(tables.business_supplies||[]).filter(row=>row.salon_id===business)}};}
     if (name === 'read_business_finance') {
@@ -128,7 +129,7 @@ function fixture(overrides = {}) {
     '@/lib/businessScheduleOpportunitiesServer': { readBusinessScheduleOpportunities: async context => { assert.equal(context.salon.id,business);throw Error('SCHEDULE_HOURS_UNAVAILABLE'); } },
     '@/lib/bookingAvailabilityServer': { calendarAvailability: async input => { calls.push({ calendar:input }); return { time_zone:'America/New_York', gaps: overrides.conflict ? [] : [{ start:'2030-09-24T13:00:00Z',end:'2030-09-24T23:00:00Z',stylist_id: overrides.professional || null }] }; } } });
   const server = load('src/lib/gcAssistantServer.ts');
-  const context = { admin, salon: { id: business, subscription_status:'active',time_zone:'America/New_York',profile_views:29 }, user:{id:actor},isOwner:!overrides.teamMember, teamMember:overrides.teamMember };
+  const context = { admin, salon: { id: business, subscription_status:'active',time_zone:'America/New_York',profile_views:29 }, user:{id:actor},isOwner:!teamMember, teamMember };
   return { calls, load, run:(tool,args)=>server.executeAssistantTool(context,{tool,args,locale:'en',requestId:professional}) };
 }
 test('manual preparation derives duration and buffer from authoritative service and does not write a booking',async()=>{

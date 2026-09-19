@@ -4,7 +4,8 @@
 import BookingPriceEvidence from "@/components/booking/BookingPriceEvidence";
 import BookingAttendance from "@/components/booking/BookingAttendance";
 import CommunicationPreferences from "@/components/booking/CommunicationPreferences";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import BusinessReusableReplies from "@/components/owner/BusinessReusableReplies";
+import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { bookingConversationWindow, conversationUnread } from "@/lib/bookingConversation";
@@ -37,6 +38,7 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
   const params = useSearchParams();
   const drafts = useRef(new Map<string, { text: string; locale: string }>());
   const [conversationLoading, setConversationLoading] = useState(false);
+  const [conversationAuthorized, setConversationAuthorized] = useState(false);
   const [clock, setClock] = useState(() => Date.now());
   const query = params.get("messageSearch") || "";
   const filter = params.get("messageView") || "all";
@@ -61,6 +63,7 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
   const [sending, setSending] = useState(false);
   const sendAttempt = useRef<{ bookingId: string; body: string; sourceLocale: string; id: string } | null>(null);
   const conversationGeneration = useRef(0);
+  const conversationAuthorization = useRef<{ actor: number; bookingId: string; generation: number } | null>(null);
   const actor = useRef<string | null>(null);
   const actorGeneration = useRef(0);
   const [actorId, setActorId] = useState<string | null | undefined>(undefined);
@@ -68,6 +71,7 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
   const previewGeneration = useRef(0);
   const operation = useRef(0);
   const busy = useRef(false);
+  const composerContext = useRef({ actorId: actorId, bookingId: selectedId, businessId: "", role: "", loading: true });
   function showFailure(error: unknown, fallback: string) {
     const messages: Record<string, string> = { AUTH_REQUIRED: "Please sign in again to view messages.", MESSAGE_ACCESS_DENIED: "You do not have access to this booking conversation.", MESSAGE_NOT_FOUND: "This booking conversation is unavailable.", MESSAGE_RATE_LIMIT: "Too many requests. Please try again shortly.", MESSAGE_CONTENT_REVIEW_REQUIRED: "Please revise the message to remove abusive, hateful, threatening, or unsafe language.", MESSAGE_INVALID: "Enter a message of up to 2,000 characters.", MESSAGE_CONVERSATION_CLOSED: "This conversation is closed. Its history is still available.", MESSAGE_CUSTOMER_PARTICIPANT_REQUIRED: "This appointment has no customer account participant." };
     setReference(error instanceof OwnerActionError ? error.reference : "");
@@ -96,11 +100,13 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
 
   async function loadConversation(bookingId: string, identity: number) {
     const generation = ++conversationGeneration.current;
+    conversationAuthorization.current = null; setConversationAuthorized(false);
     if (!bookingId) { setMessages([]); return; }
     const headers = await authHeaders(identity);
     const response = await fetch(`/api/messages?booking_id=${encodeURIComponent(bookingId)}`, { headers, cache: "no-store" });
     const body = await readOwnerResponse(response, "MESSAGE_UNAVAILABLE");
     if (generation !== conversationGeneration.current || identity !== actorGeneration.current) return;
+    conversationAuthorization.current = { actor: identity, bookingId, generation }; setConversationAuthorized(true);
     setClock(Date.now());
     setMessages(Array.isArray(body.messages) ? body.messages : []);
     setWelcome(body.welcome?.facts || null);
@@ -115,6 +121,7 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
       const nextActor = session?.user.id || null;
       if (nextActor !== actor.current) {
         actorGeneration.current++; conversationGeneration.current++; operation.current++;
+        conversationAuthorization.current = null; setConversationAuthorized(false);
         draftGeneration.current++; previewGeneration.current++; actor.current = nextActor; busy.current = false;
         drafts.current.clear(); setThreads([]); setMessages([]); setWelcome(null); setRole(""); setSelectedId("");
         setDraft(""); setMessageLocale(currentLocale.current); setTranslationPreview(null); sendAttempt.current = null;
@@ -156,7 +163,7 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
     void loadConversation(selectedId, identity).catch(error => { if (live && identity === actorGeneration.current) showFailure(error, "Unable to load this conversation."); }).finally(() => { if(live && identity===actorGeneration.current) setConversationLoading(false); });
     // Invalidate the latest request when the selected conversation is left.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    return () => { live = false; conversationGeneration.current++; };
+    return () => { live = false; conversationGeneration.current++; conversationAuthorization.current = null; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, actorId]);
 
@@ -245,6 +252,28 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
 
   const selected = threads.find(thread => thread.booking.id === selectedId);
   const windowState = bookingConversationWindow(selected?.booking || {}, clock);
+  useLayoutEffect(() => {
+    composerContext.current = { actorId, bookingId: selectedId, businessId: selected?.booking.salon_id || "", role, loading: conversationLoading };
+  }, [actorId, selectedId, selected?.booking.salon_id, role, conversationLoading]);
+  function getDraftVersion() {
+    return `${actorGeneration.current}:${conversationGeneration.current}:${draftGeneration.current}:${previewGeneration.current}`;
+  }
+  function useReusableDraft(reply: { body: string; locale: string }, expectedText: string, expectedVersion: string) {
+    const context = composerContext.current;
+    const authorization = conversationAuthorization.current;
+    // Recheck after the library's fresh authorized read, including a conversation
+    // switch committed before passive effects have invalidated pending requests.
+    if (scope !== "salon" || context.role !== "salon" || context.loading || busy.current ||
+      !actorId || actor.current !== actorId || context.actorId !== actorId ||
+      context.bookingId !== selectedId || context.businessId !== selected?.booking.salon_id ||
+      !authorization || authorization.actor !== actorGeneration.current || authorization.bookingId !== selectedId || authorization.generation !== conversationGeneration.current ||
+      getDraftVersion() !== expectedVersion || (drafts.current.get(selectedId)?.text || "") !== expectedText ||
+      !bookingConversationWindow(selected?.booking || {}, Date.now()).open) return false;
+    draftGeneration.current++; previewGeneration.current++;
+    drafts.current.set(selectedId, { text: reply.body, locale: reply.locale });
+    setDraft(reply.body); setMessageLocale(reply.locale); setTranslationPreview(null); sendAttempt.current = null;
+    return true;
+  }
   useEffect(() => {
     if (!windowState.open || !windowState.closesAt) return;
     // Refresh at the deadline, not on an arbitrary polling interval.
@@ -295,6 +324,7 @@ export default function BookingInbox({ scope, initialBookingId = "", focused = f
           {!conversationLoading && !messages.length && <p className="py-8 text-center text-sm gc-text-secondary">{t("No messages yet. Ask a question about this appointment.")}</p>}
         </div>
         <div className="border-t border-slate-200 p-4 text-xs gc-text-secondary"><p>{t(windowState.open ? "Replies close 24 hours after the appointment ends. A confirmed reschedule updates the deadline; cancellation closes replies immediately." : "This conversation is closed. Its history is still available.")}</p>{windowState.closesAt && windowState.reason!=="cancelled" && <p className="mt-1">{t("Conversation deadline")}: {formatDate(windowState.closesAt,{dateStyle:"medium",timeStyle:"short",timeZone:selected.booking.salon?.time_zone||"America/New_York"})}</p>}</div>
+        {windowState.open && scope==="salon" && role==="salon" && actorId && selected.booking.salon_id && <div className="p-4"><BusinessReusableReplies businessId={selected.booking.salon_id} actorId={actorId} conversationId={selectedId} currentDraft={draft} disabled={sending||conversationLoading||!conversationAuthorized} getDraftVersion={getDraftVersion} onUseDraft={useReusableDraft}/></div>}
         {scope!=="admin" && windowState.open && <form onSubmit={send} className="space-y-3 border-t p-4">
           <label className="block text-xs">{t("Message language")}<select value={messageLocale} onChange={event => { previewGeneration.current++; setTranslationPreview(null); setMessageLocale(event.target.value); drafts.current.set(selectedId,{text:draft,locale:event.target.value}); }} className="ml-2 min-h-11 rounded-lg border bg-white px-2">{["en","fr","es","zh-CN"].map(code=><option key={code} value={code} data-no-translate>{LOCALE_NAMES[code]}</option>)}<option value="unknown">{t("Mixed or unknown language")}</option></select></label>
           <label htmlFor="booking-message" className="sr-only">{t("Message")}</label><div className="flex gap-2"><textarea id="booking-message" value={draft} disabled={conversationLoading} onChange={event => editDraft(event.target.value.slice(0,2000))} rows={3} placeholder={t("Type a private booking message…")} className="min-w-0 flex-1 resize-y rounded-xl border p-3 text-sm"/><button disabled={sending||conversationLoading||!draft.trim()} className="grid min-h-11 w-12 shrink-0 place-items-center rounded-xl bg-magenta text-white gc-disabled-control" aria-label={t(translationPreview ? "Send original and previewed translation" : "Send message")}><Send size={19}/></button></div>

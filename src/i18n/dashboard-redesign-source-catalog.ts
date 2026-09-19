@@ -20,7 +20,11 @@ import { BUSINESS_PRODUCTS_SOURCE_MESSAGES } from "./business-products-source-ca
 import { BUSINESS_CATALOG_SOURCE_MESSAGES } from "./business-catalog-source-catalog";
 import { BUSINESS_CLIENT_SOURCE_MESSAGES } from "./business-client-source-catalog";
 import { SERVICE_CAPACITY_COPY_ROWS } from "./business-service-capacity-copy";
+import { REUSABLE_REPLY_COPY_ROWS } from "./business-reusable-reply-copy";
+import { BUSINESS_PRICE_CONTEXT_COPY_ROWS } from "./business-price-context-copy";
 const rows: readonly (readonly [string, string, string, string])[] = [
+  ...BUSINESS_PRICE_CONTEXT_COPY_ROWS,
+  ...REUSABLE_REPLY_COPY_ROWS,
   ...SERVICE_CAPACITY_COPY_ROWS,
   ["Open Settings", "Ouvrir les réglages", "Abrir configuración", "打开设置"],
   ["The proposal was saved, but a notification could not be delivered.", "La proposition a été enregistrée, mais une notification n’a pas pu être envoyée.", "La propuesta se guardó, pero no se pudo entregar una notificación.", "提议已保存，但有一条通知未能送达。"],

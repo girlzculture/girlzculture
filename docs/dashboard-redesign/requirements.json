@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IN PROGRESS; scoped assistant reads and demo/mobile corrections verified locally; profile/settings and permitted-source onboarding implementation active; release unpublished",
+  "status": "IN PROGRESS; checkpoint332a716 required CI passed but its original release-candidate prelaunch gate remains failed; build199/BLS and test-only readiness correction pass locally, pending updated-commit CI/protected migrations/provider/hosted/public visual acceptance; release unpublished",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -3986,7 +3986,14 @@
         "tests/p0-assistant-profile-settings.test.mjs",
         "supabase/migrations/20260919134859_assistant_profile_settings_read.sql",
         "scripts/sql/verify-assistant-profile-settings.sql",
-        "docs/dashboard-redesign/ASSISTANT-PROFILE-SETTINGS-ACCEPTANCE.md"
+        "docs/dashboard-redesign/ASSISTANT-PROFILE-SETTINGS-ACCEPTANCE.md",
+        "src/lib/assistantCommunicationScope.ts",
+        "tests/p0-assistant-communication-scope.test.mjs",
+        "docs/dashboard-redesign/ASSISTANT-COMMUNICATION-READ-ACCEPTANCE.md",
+        "src/lib/assistantServiceCalculation.ts",
+        "src/lib/assistantBookingPriceRead.ts",
+        "src/lib/bookingServiceSelection.ts",
+        "docs/dashboard-redesign/ASSISTANT-AUTHORITATIVE-MONEY-ACCEPTANCE.md"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
@@ -3996,7 +4003,9 @@
         "Saved promotion targets, restrictions and canonical active-date state now use a fresh own-business read. Target names require independent styles/products permission; foreign targets are not disclosed. Terms and target excerpts are explicit. Planner/answer follow-ups refresh facts and discard stale derived prose. This read does not calculate or claim customer eligibility or a monetary quote.",
         "Products read now includes saved pickup/shipping/in-person settings and bounded own-order/pickup status, dates, public references and item snapshots. Products permission is checked before/after; item parents and non-null product references must resolve within this business. Customer identity/contact/address, payment amounts and provider details are not selected. All-time order counts remain separate from a catalog search, with exact/unknown excerpt metadata and fresh follow-ups.",
         "Services read now includes exact own saved description/group identities, base/display bounds, generic required options, price/duration adjustments, included items and assigned material choices. Fresh styles authorization and material-parent rechecks precede model disclosure. Malformed legacy choices are explicitly unsupported/incomplete; bounded choices retain counts and flags, and model projections preserve required choices without claiming a final price quote.",
-        "Current profile and Settings facts now use fresh own-business/own-user reads with before/after role checks: exact authorized business contacts, complete saved address, spoken-language count/excerpt, distinct publication states, optional notification choices, explicit avatar defaults and saved interface locale. Two-field business-contact restoration requires fresh WeakMap result identity; global customer redaction stays intact. Follow-ups refresh current facts and preserve valid unchanged context when only the known server observation clock changes. No account/security mutations or user-wide draft reads were added."
+        "Current profile and Settings facts now use fresh own-business/own-user reads with before/after role checks: exact authorized business contacts, complete saved address, spoken-language count/excerpt, distinct publication states, optional notification choices, explicit avatar defaults and saved interface locale. Two-field business-contact restoration requires fresh WeakMap result identity; global customer redaction stays intact. Follow-ups refresh current facts and preserve valid unchanged context when only the known server observation clock changes. No account/security mutations or user-wide draft reads were added.",
+        "The existing conversation, review and customer reads now reach planning and answering through dedicated bounded projections instead of null results. Fresh own-business membership/section grants and assigned booking scope are checked before/after queries; mixed rows and changed assignments fail closed. Follow-ups refresh authorized facts. Original message/review text is untrusted quoted data; exact totals/excerpts remain visible, customer account/contact IDs and private notes stay excluded, and customer results remain booking associations rather than a distinct-client count.",
+        "The previously tracked context-complete money gap now has the bounded DATA-02 paths: canonical selected-service arithmetic and immutable own-booking terms/current verified balance are separate reads. They never accept model-supplied subtotal/history or substitute the operator for a customer; incomplete customer eligibility remains explicitly unknown."
       ],
       "verification": [
         "162-migration clean database replay and two-business inventory SQL; real reserve/release retries, stale import, failed and duplicate offline sales, permissions. 24/24 inventory+finance browser cases across EN/FR/ES/zh-CN, Chromium/WebKit; 33 Node finance/core/route cases and 20 operational assistant cases. Build/types/lint pass.",
@@ -4004,7 +4013,9 @@
         "AUTOMATED ONLY: promotion original read failures reproduced, then85 focused/existing Node cases passed; normalization and long-terms failures separately reproduced and corrected. TypeScript/lint and independent boundary review passed. Logs: ../redesign-evidence/assistant-promotions-final-node.log, assistant-promotions-final-types.log, assistant-promotions-final-lint.log. Hosted assistant/public checkout acceptance is not established by this read slice.",
         "AUTOMATED ONLY: product BEFORE1pass/7fail plus stale-follow-up failure; AFTER13 new actual-read cases plus21 existing operational cases34/34, and1 actual planner/answer refresh case covering both phases. Two-business/product-only staff, revocation, forbidden columns, foreign references, count/cap/failure semantics verified. TypeScript/lint and independent review passed. Logs: ../redesign-evidence/assistant-products-operational-final.log, assistant-products-planner-final.log, assistant-products-final-types.log, assistant-products-final-lint.log. No hosted or deployment claim.",
         "AUTOMATED ONLY: service BEFORE2pass/4fail; AFTER88/88 new/existing service/execution/planning tests passed, including15 new detail cases. Actual planner/answer uses the actual reader;15 options retain12 shown plus exact15 count/excerpt, and revoked/stale facts are excluded. Full TypeScript/scoped lint and independent review passed. Evidence: ../redesign-evidence/assistant-service-details-final.log and docs/dashboard-redesign/ASSISTANT-SERVICE-READ-ACCEPTANCE.md. Hosted acceptance remains pending.",
-        "ASSISTANT-PROFILE-SETTINGS-ACCEPTANCE.md: original9 baseline cases failed; initial integrated112/113 passed, the hardcoded deny-all fixture was corrected to include all current tool permissions and passed its unchanged rejection assertion. Final profile/settings/planning/language79/79 passed (16 focused profile/settings cases), including16 timestamp-phase/change combinations. TypeScript/lint and root independent review passed. Actual-role local185 audit save/replay and foreign/revoked permission checks passed on an isolated verified183 clone; this is183+185 incremental evidence, not full184–185 or production acceptance. Evidence: ../redesign-evidence/assistant-profile-settings-final.log and assistant-profile-settings-sql.log. No live model/browser/provider call occurred."
+        "ASSISTANT-PROFILE-SETTINGS-ACCEPTANCE.md: original9 baseline cases failed; initial integrated112/113 passed, the hardcoded deny-all fixture was corrected to include all current tool permissions and passed its unchanged rejection assertion. Final profile/settings/planning/language79/79 passed (16 focused profile/settings cases), including16 timestamp-phase/change combinations. TypeScript/lint and root independent review passed. Actual-role local185 audit save/replay and foreign/revoked permission checks passed on an isolated verified183 clone; this is183+185 incremental evidence, not full184–185 or production acceptance. Evidence: ../redesign-evidence/assistant-profile-settings-final.log and assistant-profile-settings-sql.log. No live model/browser/provider call occurred.",
+        "ASSISTANT-COMMUNICATION-READ-ACCEPTANCE.md: actual before projection0/6 and scope0/10 failures retained. Final assistant-communication-integrated-final.log100/100 passes, zero failed/skipped,129.4s, including actual reader/dispatcher/planning/answer serialization with simulated database/model transport, fresh revocation/reassignment/two-business guards,1,001 associations and excerpt markers. Whole-tree types/scoped lint and independent source review pass. Build198 includes this source; no live-model/hosted acceptance is claimed.",
+        "The DATA-02 source/test and incremental186 SQL evidence is recorded in ASSISTANT-AUTHORITATIVE-MONEY-ACCEPTANCE.md. Build198 compiles the current registrations; a compilation is not actual hosted assistant/checkout acceptance."
       ],
       "live_evidence": [],
       "detailed_clause": "DATA-01 — Connect the assistant to the same authoritative business records used by the dashboard, using authorized lookups on demand and maintained Girlz Culture product guidance. A responding model does not itself establish complete access to application data. The implementation needs an explicit inventory of reads, calculations and permitted actions for every module; do not rely on a static prompt containing a partial snapshot.",
@@ -4018,7 +4029,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Promotion, product, service and current profile/settings reads have bounded scoped local evidence. Finish the complete module/action inventory and context-complete monetary questions; verify final-source build/required checks, reviewed full migration chain and authorized hosted owner/staff reads and unavailable states. No whole-assistant or live acceptance is claimed.",
+      "remaining": "Finish the exact module/action inventory and authorized hosted owner/staff questions, follow-ups and unavailable/permission-loss states on the final candidate; current-source CI/main, reviewed clean migration chain and protected deployment remain. Service/promotion/product/profile/settings, bounded monetary and the three communication/review/customer reads now have local implementation evidence; no whole-assistant or live acceptance is claimed.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -5672,7 +5683,8 @@
       "verification": [
         "AUTOMATED ONLY: 38 Node checks; 18 Chromium/WebKit billing cases across four locales/viewports including reproduced catalog-hydration duplicate-submit regression; full173 local migration snapshot plus SQL assertions; TypeScript/build/lint and2516/2516 release-language inventory pass. Evidence: SUBSCRIPTION-PAYMENT-METHOD-ACCEPTANCE.md. Live Stripe acceptance remains blocked by the existing association.",
         "Latest AUTOMATED ONLY:40 Node tests;24 Chromium/WebKit payment-method browsers; build and scoped lint PASS. Three terminal-return cases failed on the old build and pass after correction; translation-hydration regressions remain covered. EN/FR/ES/zh-CN each2517/2517. Full173 checkpoint local SQL passed (final2 assertions resumed after local DB-name correction). See SUBSCRIPTION-PAYMENT-METHOD-ACCEPTANCE.md. No real payment-method update passed yet.",
-        "Status reconciliation 2026-09-19: Implemented / unverified. Repaired setup-only card workflow, durable association/stages, masked readback and recognized inherited/explicit schedules are coded; migration187 and128 focused tests pass. Actual Stripe sandbox acceptance/configuration remains blocking verification. Evidence: docs/dashboard-redesign/SUBSCRIPTION-PAYMENT-METHOD-ACCEPTANCE.md; docs/dashboard-redesign/PAYMENT-SCHEDULE-ACCEPTANCE.md. This records implementation only; existing provider, hosted, visual, CI, migration and release blockers remain. No product completion or live acceptance is claimed."
+        "Status reconciliation 2026-09-19: Implemented / unverified. Repaired setup-only card workflow, durable association/stages, masked readback and recognized inherited/explicit schedules are coded; migration187 and128 focused tests pass. Actual Stripe sandbox acceptance/configuration remains blocking verification. Evidence: docs/dashboard-redesign/SUBSCRIPTION-PAYMENT-METHOD-ACCEPTANCE.md; docs/dashboard-redesign/PAYMENT-SCHEDULE-ACCEPTANCE.md. This records implementation only; existing provider, hosted, visual, CI, migration and release blockers remain. No product completion or live acceptance is claimed.",
+        "This reconciliation corrects the stale implication that scheduled-agreement support has no implementation: PAYMENT-SCHEDULE-ACCEPTANCE.md and SUBSCRIPTION-PAYMENT-METHOD-ACCEPTANCE.md record recognized inherited178/explicit187 source and focused local evidence. It does not upgrade the existing status or provider/live evidence. Protected sandbox secret, event-routing and bounded actual provider acceptance remain outstanding."
       ],
       "live_evidence": [
         "Read-only Stripe request log req_C4uqPzlk0YSOjl, 2026-09-17 22:17:21 UTC: POST /v1/billing_portal/sessions HTTP400, resource_missing, invalid_request_error, param customer. The referenced customer is absent from the connected account; direct subscription lookup also reports no such subscription. This establishes the provider failure, not the correct replacement association. No provider or production database write.",
@@ -5690,7 +5702,7 @@
       },
       "progress_status": "Implemented / unverified",
       "release_status": "NOT RELEASED",
-      "remaining": "Configure isolated existing sandbox verification; prove setup/cancel/readback and unchanged commercial terms. Safely support scheduled agreements, apply reviewed migration and pass final release gates. Production unchanged.",
+      "remaining": "Reuse the identified existing Stripe sandbox once its protected secret and event-routing review are configured; verify setup/cancel/fresh masked readback and unchanged commercial terms. Recognized inherited178 and explicit187 scheduled-agreement handling is implemented, while BILL-02–04 current/future effectiveness, phase transition and invoice acceptance remain provider/hosted gates. Unknown, ambiguous and unsupported one-off schedules still refuse safely. Apply reviewed migrations through protected release controls and finish current CI/hosted checks; production is not claimed changed.",
       "external_blocker": "Confirmed exact existing customer/subscription in separate Girlz Culture sandbox; failed live-account request cannot access sandbox objects. Isolated sandbox runtime/credential configuration and actual provider acceptance are outstanding; no production credential or association was changed.",
       "requirement_kind": "product",
       "assessment": "partial",
@@ -6231,7 +6243,12 @@
         "docs/dashboard-redesign/ASSISTANT-PROMOTION-READ-ACCEPTANCE.md",
         "src/lib/gcAssistantPlanningServer.ts",
         "src/lib/gcAssistantPlannerProtocol.ts",
-        "tests/p0-assistant-planning.test.mjs"
+        "tests/p0-assistant-planning.test.mjs",
+        "src/lib/promotionDateTime.ts",
+        "src/i18n/business-marketing-source-catalog.ts",
+        "tests/p0-promotion-dates.test.mjs",
+        "tests/browser/business-marketing.spec.ts",
+        "docs/dashboard-redesign/PROMOTION-DATE-ACCEPTANCE.md"
       ],
       "state": "IMPLEMENTED",
       "acceptance": "AUTOMATED ONLY",
@@ -6240,14 +6257,16 @@
         "Versioned owner-set deposits use the highest applicable rate once; price thresholds and verified own-business incidents only. Immutable booking snapshots preserve old terms. Offers calculate on the eligible pre-discount service subtotal and cap savings at the unpaid balance.",
         "Reviewed attendance events support corrections and customer/secure-guest review requests; disputed incidents are excluded from increased deposits. Assigned staff and guest token scope enforced before reads and writes.",
         "Checkout requires exact current total/deposit acknowledgment; revised terms retain guest details but clear financial consent. Zero-deposit genuine bookings are live records with origin snapshot, without creating a charge.",
-        "Saved promotion targets, restrictions and canonical active-date state now use a fresh own-business read. Target names require independent styles/products permission; foreign targets are not disclosed. Terms and target excerpts are explicit. Planner/answer follow-ups refresh facts and discard stale derived prose. This read does not calculate or claim customer eligibility or a monetary quote."
+        "Saved promotion targets, restrictions and canonical active-date state now use a fresh own-business read. Target names require independent styles/products permission; foreign targets are not disclosed. Terms and target excerpts are explicit. Planner/answer follow-ups refresh facts and discard stale derived prose. This read does not calculate or claim customer eligibility or a monetary quote.",
+        "Owner offer edits now round-trip the declared business time zone and retain unchanged saved instants including seconds and an existing repeated DST occurrence. New invalid/nonexistent/ambiguous local times reject before saving; failed saves retain the draft, and successful saves no longer access a cleared React event. Explicit canonical Draft/Active/Paused values survive translated labels. Responsive offer/scope controls retain full labels,44px height,13px font and the desktop assistant dock; calculations and authorization remain unchanged."
       ],
       "verification": [
         "158 migrations passed from empty local PostgreSQL database; rollback-only two-business/customer/assigned-staff/guest-token and privilege assertions pass in scripts/sql/verify-business-deposits.sql.",
         "Deposit-family Node tests: 21 pass after adding public saving-label case.",
         "Chromium/WebKit deposit/attendance 10 cases pass; protected price-change review 4 cases pass on production acceptance build. Current rerun also covers mobile nav changes.",
         "AUTOMATED ONLY: promotion original read failures reproduced, then85 focused/existing Node cases passed; normalization and long-terms failures separately reproduced and corrected. TypeScript/lint and independent boundary review passed. Logs: ../redesign-evidence/assistant-promotions-final-node.log, assistant-promotions-final-types.log, assistant-promotions-final-lint.log. Hosted assistant/public checkout acceptance is not established by this read slice.",
-        "Status reconciliation 2026-09-19: Implemented / unverified. Exact saved targets, conditions and activation are implemented in management and freshly authorized assistant projections. Evidence: src/components/owner/SalonPromotionsManager.tsx; docs/dashboard-redesign/ASSISTANT-PROMOTION-READ-ACCEPTANCE.md. This records implementation only; existing provider, hosted, visual, CI, migration and release blockers remain. No product completion or live acceptance is claimed."
+        "Status reconciliation 2026-09-19: Implemented / unverified. Exact saved targets, conditions and activation are implemented in management and freshly authorized assistant projections. Evidence: src/components/owner/SalonPromotionsManager.tsx; docs/dashboard-redesign/ASSISTANT-PROMOTION-READ-ACCEPTANCE.md. This records implementation only; existing provider, hosted, visual, CI, migration and release blockers remain. No product completion or live acceptance is claimed.",
+        "PROMOTION-DATE-ACCEPTANCE.md:7 focused Node cases pass;10 unique date/recovery browser cases have passing build195/196 composite evidence. Build197 adds32/32 measured native-label cases across four locales and320/390/768/1440 widths in both engines (combined-197-replies-offers-browser.log); the mixed command remains34pass/7fail, with its separate reply failures later corrected18/18. Actual French320/Spanish1440 captures were inspected. No full public-offer/checkout, provider or hosted persistence acceptance is inferred."
       ],
       "live_evidence": [],
       "detailed_clause": "PROMO-01 — A promotion can target selected styles/services, a service group or the business's eligible services as a whole. Save the exact targets, percentage and applicable dates/conditions. Define how a business-wide scope applies to services versus products rather than extending it to subscriptions or unrelated payments automatically.",
@@ -6258,7 +6277,7 @@
       },
       "progress_status": "Implemented / unverified",
       "release_status": "NOT RELEASED",
-      "remaining": "Eligible-subtotal calculation, protected deposit, unpaid-balance cap and immutable booked terms retain existing local coverage. Assistant saved target/condition/activity reads now have independent local coverage, without quoting incomplete financial context. Finish full owner-management/public-offer/checkout consistency and hosted acceptance; this read slice does not establish those journeys.",
+      "remaining": "Owner offer date/status/save/recovery and selected-label readability now have bounded local evidence. Complete remaining whole-page/reference states, final-candidate public business/service/booking offer consistency and authorized hosted persistence/eligibility acceptance. Preserve eligible-service percentage calculation, fixed applicable deposit, unpaid-balance cap and immutable booked terms; these local editor checks do not verify all customer contexts.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -10555,7 +10574,17 @@
         "src/components/owner/BookingChangeProposal.tsx",
         "src/lib/bookingRescheduleServer.ts",
         "src/lib/guestBookingAccess.ts",
-        "supabase/migrations/20260918160921_booking_professional_substitution.sql"
+        "supabase/migrations/20260918160921_booking_professional_substitution.sql",
+        "src/lib/businessReusableReplies.ts",
+        "src/lib/businessReusableReplyServer.ts",
+        "src/app/api/salon/reusable-replies/route.ts",
+        "src/components/owner/BusinessReusableReplies.tsx",
+        "src/i18n/business-reusable-reply-copy.ts",
+        "supabase/migrations/20260919181855_business_reusable_replies.sql",
+        "scripts/sql/verify-business-reusable-replies.sql",
+        "tests/p0-business-reusable-replies.test.mjs",
+        "tests/browser/business-reusable-replies.spec.ts",
+        "docs/dashboard-redesign/REUSABLE-REPLIES-ACCEPTANCE.md"
       ],
       "state": "IMPLEMENTED",
       "acceptance": "AUTOMATED ONLY",
@@ -10565,7 +10594,8 @@
         "Current confirmed appointment end+24h controls replies; confirmed reschedule changes deadline, proposed date does not; cancellation closes immediately without deleting history. Existing marketplace guest secure-management notifications preserved; unlinked manual appointments stay restricted.",
         "Scope and professional assignment enforced before conversation/translation reads, database inserts and private notification previews. Support remains read-only. Assistant refuses closed-message proposals before saving. Explicit pagination replaces100/1000 silent caps.",
         "Explicit same-time professional substitution uses the existing customer approval mechanism. Own-business/current assignment guards run before proposals, retries deduplicate, booked duration/price/deposit remain fixed, decline preserves appointment, and acceptance rechecks availability and stale snapshots. Notification retries reuse a secure signed management link and the existing per-channel delivery claims. Accepted proposals use their own confirmation delivery event.",
-        "Existing internal booking conversation remains the primary business/customer channel. Revision-aware reminders, optional own-business communication preferences and completed-appointment follow-ups use existing scoped messaging/delivery records; no WhatsApp booking workflow was introduced."
+        "Existing internal booking conversation remains the primary business/customer channel. Revision-aware reminders, optional own-business communication preferences and completed-appointment follow-ups use existing scoped messaging/delivery records; no WhatsApp booking workflow was introduced.",
+        "Private same-business reusable replies support create/edit/search/pagination/archive and explicit insertion into the current authorized unsent composer. Original saved text/language is preserved; fresh revision and exact actor/business/conversation/draft generation checks reject stale or revoked insertion. Replacing a draft requires confirmation; library controls never submit or send a message. Failed saves retain drafts and stable retry identities; archived replies cannot be newly inserted."
       ],
       "verification": [
         "Local Messages core/assistant/recipient suite51/51; closed and assigned-access regressions reproduced before fix. Actual two-business owner/staff RLS, fresh permission, retained originals, window and in-app notification isolation tested with rollback-only SQL.",
@@ -10574,7 +10604,8 @@
         "substitution-browser-final.log:18/18 Chromium+WebKit cases, including four locale/viewport owner flows, failed draft/exact incident/same-ID retry, refreshed proposal, actual professional label, customer accept/decline/conflict/expiry and existing public professional assignment regression. Production build substitution-verified-build.log and lint substitution-lint-corrected.log pass.",
         "Server/API/token5 tests pass (substitution-server-final.log); availability5 tests pass (substitution-core-final.log). Two-business/assigned-role SQL validates immutable terms, retry, changed assignment/conflict, stale acceptance and secure token reuse. Full166migration chain passed substitution-clean-final.log; subsequent issuance-audit addition reapplied and all substitution assertions pass substitution-audit-final.log.",
         "Previously verified evidence reused: reminder-server-final.log17/17 and fresh167 SQL; communication preferences10 browser cases and fresh168 SQL; followup-finance-core-final.log26/26 and fresh169 SQL. These are local automated checks, not actual message delivery or final hosted acceptance. See historical CHECKPOINT reminder/communication/post-visit entries.",
-        "Status reconciliation 2026-09-19: Implemented / unverified. Two-way translated booking conversations, welcome/context, closed history and customer-approved professional substitution are implemented;16 message and18 substitution browsers have retained evidence. Evidence: src/lib/bookingConversation.ts; src/lib/bookingRescheduleServer.ts; docs/dashboard-redesign/CUSTOMER-CAMPAIGNS-ACCEPTANCE.md. This records implementation only; existing provider, hosted, visual, CI, migration and release blockers remain. No product completion or live acceptance is claimed."
+        "Status reconciliation 2026-09-19: Implemented / unverified. Two-way translated booking conversations, welcome/context, closed history and customer-approved professional substitution are implemented;16 message and18 substitution browsers have retained evidence. Evidence: src/lib/bookingConversation.ts; src/lib/bookingRescheduleServer.ts; docs/dashboard-redesign/CUSTOMER-CAMPAIGNS-ACCEPTANCE.md. This records implementation only; existing provider, hosted, visual, CI, migration and release blockers remain. No product completion or live acceptance is claimed.",
+        "REUSABLE-REPLIES-ACCEPTANCE.md:12 focused Node cases pass; migration188 and actual service-role two-business/revocation/CAS/replay/archive/private-grant assertions pass on disposable girlzculture_reply_review cloned from verified187, with fixtures rolled back. combined-197-replies-corrected-browser.log18/18 Chromium/WebKit passes in55.7s after correcting semantic test locators; original mixed command34pass/7fail remains preserved. Four locales,403 conversation denial, late response/draft switching and zero implicit-send assertions pass. This is local fixture/SQL evidence, not hosted login/cross-device persistence or delivery."
       ],
       "live_evidence": [],
       "detailed_clause": "COMMS-02 — Create the two-way booking conversation automatically when a booking is made. Translate both directions through DeepL so business and customer each use their chosen language. Include automatic welcome messages, questions, confirmations and the stylist-substitution flow. The requested active window ends 24 hours after the appointment; define how rescheduling/cancellation affects that window and distinguish closing a chat from deleting its history.",
@@ -10588,7 +10619,7 @@
       },
       "progress_status": "Implemented / unverified",
       "release_status": "NOT RELEASED",
-      "remaining": "Complete final-candidate and hosted two-way conversation/DeepL/substitution/window acceptance. Revision-aware reminders, customer-controlled preferences and post-visit follow-ups are already implemented with local evidence; do not restart them. Remaining reusable-reply/attachment clauses are tracked separately in PAGE-09.",
+      "remaining": "Complete final-candidate and hosted two-way conversation/DeepL/customer-approved substitution/window acceptance. Revision-aware reminders, customer-controlled preferences, post-visit follow-ups, reviewed campaigns and reusable replies are implemented with local evidence. PAGE-09 retains final visual/hosted/persistence boundaries and the requirement to state actual attachment support without implying unsupported controls work.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -10823,7 +10854,8 @@
         "communication-focused.log: 26/26 communication, reminder and coverage tests; communication-session-focused-final.log: 26/26 consent/session/coverage regressions; communication-preferences-sql-verified.log: real isolated PostgreSQL two-business/guest/revision/opt-out checks; communication-clean-database.log: complete 168-migration chain and assertions pass. Production untouched. Browser acceptance still running at this snapshot.",
         "pr80-focused-browser-corrections.log: all 10 communication-preference cases passed in Chromium/WebKit across EN/FR/ES/zh-CN, including failed-save retention, retry, refresh and explicit opt-out. Synthetic customer sessions; no live communication sent.",
         "CUSTOMER-CAMPAIGNS-ACCEPTANCE.md:10 focused Node tests, local181 actual-role SQL and18 Chromium/WebKit production-build cases pass. Coverage includes four languages, saved refresh/cross-context readback, lost response identity reuse, uncertain attempt no-retry, fresh opt-out skip, partial cancellation and authorization denial. Actual email provider delivery and hosted acceptance remain unverified.",
-        "Status reconciliation 2026-09-19: Implemented / unverified. Own-client campaign editor, recipient selection, multilingual review, approval, durable dispatch latch, consent and readback now have10 Node and18 browser passes; remaining text wrongly calls the editor absent. Evidence: docs/dashboard-redesign/CUSTOMER-CAMPAIGNS-ACCEPTANCE.md. This records implementation only; existing provider, hosted, visual, CI, migration and release blockers remain. No product completion or live acceptance is claimed."
+        "Status reconciliation 2026-09-19: Implemented / unverified. Own-client campaign editor, recipient selection, multilingual review, approval, durable dispatch latch, consent and readback now have10 Node and18 browser passes; remaining text wrongly calls the editor absent. Evidence: docs/dashboard-redesign/CUSTOMER-CAMPAIGNS-ACCEPTANCE.md. This records implementation only; existing provider, hosted, visual, CI, migration and release blockers remain. No product completion or live acceptance is claimed.",
+        "CUSTOMER-CAMPAIGNS-ACCEPTANCE.md retains10/10 Node, actual-role181 incremental SQL and18/18 Chromium/WebKit campaign cases within the54/54 corrected build181 run. These remain local transport/fixture checks; the previous remaining-work statement that the editor/selection/dispatch code was absent was stale."
       ],
       "live_evidence": [],
       "detailed_clause": "COMMS-04 — Let the business send promotions/updates to its own eligible client list, translated to customer languages. Use the existing permissions and messaging consent/preferences, with clear recipient selection and send behavior. This requirement describes a product feature; it is not an instruction to send any real campaign during requirements capture.",
@@ -10834,7 +10866,7 @@
       },
       "progress_status": "Implemented / unverified",
       "release_status": "NOT RELEASED",
-      "remaining": "Implement the own-business campaign editor, explicit eligible recipient selection, translation previews and consent-aware dispatch workflow. Customer consent, unsubscribe capability and the database delivery gate are now implemented and locally verified; no campaign has been sent.",
+      "remaining": "The own-business campaign editor, eligible recipient selection, four-language copy review, explicit approval and consent-aware durable dispatch workflow are implemented and locally verified. Complete current clean-chain/required CI, protected migration, authorized hosted consent/opt-out/role/persistence checks and specifically approved provider delivery after sender configuration. A provider acceptance is not a delivered/read claim; no real campaign send is established by fixtures.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -10943,7 +10975,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Preserve the explicit retention/rebooking and internal-chat clauses. The separate full Booking Conversation document is absent; do not invent additional requirements. Final-candidate and hosted acceptance of specified workflows remains; consent-aware campaign code is being verified separately.",
+      "remaining": "Preserve the explicit retention/rebooking and internal-chat clauses. The separate full Booking Conversation document is absent; do not invent additional requirements. Specified reminders/preferences/post-visit follow-ups, reviewed campaigns and reusable replies have local implementation evidence; final-candidate and authorized hosted acceptance remain. Actual attachment/channel support must be described truthfully.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -11813,7 +11845,9 @@
       ],
       "verification": [
         "Legacy-gate browser suite:22 passed plus corrected real-route assertion2/2 Chromium/WebKit; focused Browse Styles restoration, mobile hydration and grouped navigation3/3; fresh-server public-policy suite6/6. Node marketplace-boundary9/9, site-access/navigation/category5/5.",
-        "Status reconciliation 2026-09-19: Implemented / unverified. Approved root coming-soon and existing marketplace /site-access routing are implemented; latest software-first rules keep ordinary discovery closed. Final hosted routing/cache verification remains. Evidence: src/proxy.ts; src/app/site-access/page.tsx; src/lib/marketplaceLaunchCore.ts. This records implementation only; existing provider, hosted, visual, CI, migration and release blockers remain. No product completion or live acceptance is claimed."
+        "Status reconciliation 2026-09-19: Implemented / unverified. Approved root coming-soon and existing marketplace /site-access routing are implemented; latest software-first rules keep ordinary discovery closed. Final hosted routing/cache verification remains. Evidence: src/proxy.ts; src/app/site-access/page.tsx; src/lib/marketplaceLaunchCore.ts. This records implementation only; existing provider, hosted, visual, CI, migration and release blockers remain. No product completion or live acceptance is claimed.",
+        "Exact332a716 release run35461160051: all three dashboard browser shards/localization passed, but final prelaunch was27 pass/1 failure in WebKit390x844: tests/browser/p0-prelaunch.spec.ts, demonstration navigation and session retention at390x844, initial /site-access horizontal overflow. Original trace/artifact and ci-332a716-release-gate.log are retained. Root repeated the exact local case once and it passed; loading geometry investigation remains, without a claimed cause, correction or full public acceptance. Required verification35461160203 separately passed1337 broad cases/5 skipped plus20+5+23+56 focused cases at the same head. This does not establish production routing, final uncommitted-source acceptance or a deploy.",
+        "The actual readiness boundary was reproduced on unchanged application source: with the real stylesheet import held, WebKit390 measured document width1608 before loading completed. The smallest correction is test-only: await the current document load, existing menu hydration signal and loaded fonts, retaining the exact width assertion. It adds no width polling, sleeps, retries, overflow hiding or application styling. All30 prelaunch cases then passed across Chromium/WebKit in3.2min (ci-332a716-prelaunch-full-after.log), with independent review. The original27pass/1failed CI result and trace remain unchanged; the exact runtime initiator of its replacement navigation was not proven. New-commit CI still must verify the correction."
       ],
       "live_evidence": [],
       "detailed_clause": "PUBLIC-02 — /site-access must provide the complete working customer homepage/marketplace entry and access to its other public pages. It must not strand visitors in a demo-only presentation. Keep the customer navigation and Home destinations coherent with this entry. Inventory and preserve valid existing salon, style, booking and shared-business deep links instead of inventing an incompatible duplicate route tree.",
@@ -11824,7 +11858,7 @@
       },
       "progress_status": "Implemented / unverified",
       "release_status": "NOT RELEASED",
-      "remaining": "Keep /site-access as the special unindexed founder demonstration entry using the existing access mechanism. It is not normal public marketplace navigation. Code includes real /site-access entry, removal of public demo gates/banner, supported-category/navigation corrections and component polish. Complete every detailed public clause, full booking path, matched responsive before/after review and production cache/banner/route checks; root landing/content must remain.",
+      "remaining": "Keep /site-access as the special unindexed founder demonstration entry using the existing access mechanism. It is not normal public marketplace navigation. Code includes real /site-access entry, removal of public demo gates/banner, supported-category/navigation corrections and component polish. Complete every detailed public clause, full booking path, matched responsive before/after review and production cache/banner/route checks; root landing/content must remain. The loading-readiness boundary now has a reviewed test-only correction and30/30 local prelaunch passes with the original width assertion. Updated-commit CI must verify it; the original332a716 release job remains failed. Final hosted/production route and responsive visual acceptance remain outstanding.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -13271,7 +13305,9 @@
       ],
       "verification": [
         "PUBLIC-LOADING-ACCEPTANCE.md: original390px vertical stack reproduced (901.5px spread). Corrected6 Chromium +6 WebKit local development-server cases pass at320/390/768/1440, including real destination construction, retained fixture prices, results-grid geometry, explicit error recovery, empty states and no page overflow. Loading/loaded phone screenshots inspected. Targeted lint/design source pass. Final combined production build, CI and hosted acceptance remain.",
-        "Combined corrected production build also passes all12 Chromium/WebKit public loading cases (combined-181-corrected-browser.log). Layout/error/empty/real destination assertions remain intact; this is local production-server acceptance, not deployed public acceptance."
+        "Combined corrected production build also passes all12 Chromium/WebKit public loading cases (combined-181-corrected-browser.log). Layout/error/empty/real destination assertions remain intact; this is local production-server acceptance, not deployed public acceptance.",
+        "Exact332a716 release run35461160051: all three dashboard browser shards/localization passed, but final prelaunch was27 pass/1 failure in WebKit390x844: tests/browser/p0-prelaunch.spec.ts, demonstration navigation and session retention at390x844, initial /site-access horizontal overflow. Original trace/artifact and ci-332a716-release-gate.log are retained. Root repeated the exact local case once and it passed; loading geometry investigation remains, without a claimed cause, correction or full public acceptance. Required verification35461160203 separately passed1337 broad cases/5 skipped plus20+5+23+56 focused cases at the same head. This does not establish production routing, final uncommitted-source acceptance or a deploy.",
+        "The actual readiness boundary was reproduced on unchanged application source: with the real stylesheet import held, WebKit390 measured document width1608 before loading completed. The smallest correction is test-only: await the current document load, existing menu hydration signal and loaded fonts, retaining the exact width assertion. It adds no width polling, sleeps, retries, overflow hiding or application styling. All30 prelaunch cases then passed across Chromium/WebKit in3.2min (ci-332a716-prelaunch-full-after.log), with independent review. The original27pass/1failed CI result and trace remain unchanged; the exact runtime initiator of its replacement navigation was not proven. New-commit CI still must verify the correction."
       ],
       "live_evidence": [],
       "detailed_clause": "PUBLIC-16 — Desktop and mobile each require intentional layouts. Verify the new component shapes, tabs, search, cards, menus and booking controls at representative narrow phone, wider phone, tablet and desktop sizes, with translated labels and mobile keyboard behavior. Avoid horizontal page overflow, clipped text, hidden primary actions and decorative controls that do not work.",
@@ -13282,7 +13318,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Code includes real /site-access entry, removal of public demo gates/banner, supported-category/navigation corrections and component polish. Complete every detailed public clause, full booking path, matched responsive before/after review and production cache/banner/route checks; root landing/content must remain.",
+      "remaining": "Code includes real /site-access entry, removal of public demo gates/banner, supported-category/navigation corrections and component polish. Complete every detailed public clause, full booking path, matched responsive before/after review and production cache/banner/route checks; root landing/content must remain. The loading-readiness boundary now has a reviewed test-only correction and30/30 local prelaunch passes with the original width assertion. Updated-commit CI must verify it; the original332a716 release job remains failed. Final hosted/production route and responsive visual acceptance remain outstanding.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -14805,7 +14841,23 @@
         "src/components/owner/BookingChangeProposal.tsx",
         "src/lib/bookingRescheduleServer.ts",
         "src/lib/guestBookingAccess.ts",
-        "supabase/migrations/20260918160921_booking_professional_substitution.sql"
+        "supabase/migrations/20260918160921_booking_professional_substitution.sql",
+        "src/lib/assistantCommunicationScope.ts",
+        "src/lib/ownerReadServer.ts",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "tests/p0-assistant-communication-scope.test.mjs",
+        "tests/p0-assistant-planning.test.mjs",
+        "docs/dashboard-redesign/ASSISTANT-COMMUNICATION-READ-ACCEPTANCE.md",
+        "src/lib/businessReusableReplies.ts",
+        "src/lib/businessReusableReplyServer.ts",
+        "src/app/api/salon/reusable-replies/route.ts",
+        "src/components/owner/BusinessReusableReplies.tsx",
+        "src/i18n/business-reusable-reply-copy.ts",
+        "supabase/migrations/20260919181855_business_reusable_replies.sql",
+        "scripts/sql/verify-business-reusable-replies.sql",
+        "tests/p0-business-reusable-replies.test.mjs",
+        "tests/browser/business-reusable-replies.spec.ts",
+        "docs/dashboard-redesign/REUSABLE-REPLIES-ACCEPTANCE.md"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
@@ -14814,7 +14866,9 @@
         "URL-backed inbox search/unread/active/closed categories; split desktop and phone inbox/detail; original-language records, retained per-conversation draft in memory, explicit translation preview, booking/policy context. Failed sends retain draft/request ID and exact incident reference.",
         "Current confirmed appointment end+24h controls replies; confirmed reschedule changes deadline, proposed date does not; cancellation closes immediately without deleting history. Existing marketplace guest secure-management notifications preserved; unlinked manual appointments stay restricted.",
         "Scope and professional assignment enforced before conversation/translation reads, database inserts and private notification previews. Support remains read-only. Assistant refuses closed-message proposals before saving. Explicit pagination replaces100/1000 silent caps.",
-        "Explicit same-time professional substitution uses the existing customer approval mechanism. Own-business/current assignment guards run before proposals, retries deduplicate, booked duration/price/deposit remain fixed, decline preserves appointment, and acceptance rechecks availability and stale snapshots. Notification retries reuse a secure signed management link and the existing per-channel delivery claims. Accepted proposals use their own confirmation delivery event."
+        "Explicit same-time professional substitution uses the existing customer approval mechanism. Own-business/current assignment guards run before proposals, retries deduplicate, booked duration/price/deposit remain fixed, decline preserves appointment, and acceptance rechecks availability and stale snapshots. Notification retries reuse a secure signed management link and the existing per-channel delivery claims. Accepted proposals use their own confirmation delivery event.",
+        "The existing conversation, review and customer reads now reach planning and answering through dedicated bounded projections instead of null results. Fresh own-business membership/section grants and assigned booking scope are checked before/after queries; mixed rows and changed assignments fail closed. Follow-ups refresh authorized facts. Original message/review text is untrusted quoted data; exact totals/excerpts remain visible, customer account/contact IDs and private notes stay excluded, and customer results remain booking associations rather than a distinct-client count.",
+        "Private same-business reusable replies support create/edit/search/pagination/archive and explicit insertion into the current authorized unsent composer. Original saved text/language is preserved; fresh revision and exact actor/business/conversation/draft generation checks reject stale or revoked insertion. Replacing a draft requires confirmation; library controls never submit or send a message. Failed saves retain drafts and stable retry identities; archived replies cannot be newly inserted."
       ],
       "verification": [
         "Local Messages core/assistant/recipient suite51/51; closed and assigned-access regressions reproduced before fix. Actual two-business owner/staff RLS, fresh permission, retained originals, window and in-app notification isolation tested with rollback-only SQL.",
@@ -14822,13 +14876,15 @@
         "Final Messages browser matrix16/16passed in Chromium/WebKit: four required locales/viewports, phone unread-on-open, history filters/back/reload, retained failed-send draft, exact request reference, same-ID retry, closed originals, existingcustomer/team/support policy/translation/a11y and composer regressions. messages-browser-final.log; no live provider/message-send claim.",
         "substitution-browser-final.log:18/18 Chromium+WebKit cases, including four locale/viewport owner flows, failed draft/exact incident/same-ID retry, refreshed proposal, actual professional label, customer accept/decline/conflict/expiry and existing public professional assignment regression. Production build substitution-verified-build.log and lint substitution-lint-corrected.log pass.",
         "Server/API/token5 tests pass (substitution-server-final.log); availability5 tests pass (substitution-core-final.log). Two-business/assigned-role SQL validates immutable terms, retry, changed assignment/conflict, stale acceptance and secure token reuse. Full166migration chain passed substitution-clean-final.log; subsequent issuance-audit addition reapplied and all substitution assertions pass substitution-audit-final.log.",
-        "Build185 focused owner UI:4/4 new low-height geometry cases plus50/50 unchanged functional/language cases pass across Chromium/WebKit, including full stylist name above bottom navigation, Messages content,44px controls, retained drafts and existing save/recovery assertions. combined-185-geometry.log and combined-185-advice-workflows.log; these are bounded local states, not all14-section hosted acceptance."
+        "Build185 focused owner UI:4/4 new low-height geometry cases plus50/50 unchanged functional/language cases pass across Chromium/WebKit, including full stylist name above bottom navigation, Messages content,44px controls, retained drafts and existing save/recovery assertions. combined-185-geometry.log and combined-185-advice-workflows.log; these are bounded local states, not all14-section hosted acceptance.",
+        "ASSISTANT-COMMUNICATION-READ-ACCEPTANCE.md: actual before projection0/6 and scope0/10 failures retained. Final assistant-communication-integrated-final.log100/100 passes, zero failed/skipped,129.4s, including actual reader/dispatcher/planning/answer serialization with simulated database/model transport, fresh revocation/reassignment/two-business guards,1,001 associations and excerpt markers. Whole-tree types/scoped lint and independent source review pass. Build198 includes this source; no live-model/hosted acceptance is claimed.",
+        "REUSABLE-REPLIES-ACCEPTANCE.md:12 focused Node cases pass; migration188 and actual service-role two-business/revocation/CAS/replay/archive/private-grant assertions pass on disposable girlzculture_reply_review cloned from verified187, with fixtures rolled back. combined-197-replies-corrected-browser.log18/18 Chromium/WebKit passes in55.7s after correcting semantic test locators; original mixed command34pass/7fail remains preserved. Four locales,403 conversation denial, late response/draft switching and zero implicit-send assertions pass. This is local fixture/SQL evidence, not hosted login/cross-device persistence or delivery."
       ],
       "live_evidence": [],
       "detailed_clause": "| PAGE-09 | Messages | Inbox/conversation layout, booking/customer context, translation, approved reply/send flows, reminders and client communications. |",
       "detailed_clause_line": 506,
       "remaining_clauses": [
-        "Stylist substitution review/confirmation flow, communication automation/campaign clauses and final live evidence remain to complete; no claim that these references are functioning controls."
+        "Canonical customer-approved professional substitution, revision-aware reminders, consent preferences/post-visit follow-ups, reviewed own-client campaigns and reusable replies are implemented with local evidence. Final-candidate/hosted role, conversation-window, translation, explicit-send/delivery and persistence acceptance remains. Determine and state actual attachment support as the founder requested; no attachment control or unsupported channel is advertised as working. Retained excerpts do not establish complete conversation analysis."
       ],
       "previous_tracking": {
         "state": "IN_PROGRESS",
@@ -14836,7 +14892,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Complete this page and all its detail/edit/dialog states against the reference, four languages and actual feature clauses; component passes alone do not close the page requirement.",
+      "remaining": "Complete remaining reference-specific visual states and authorized hosted owner/staff/customer conversation, translation, substitution, consent, approved campaign and reusable-reply recovery/persistence acceptance on the final candidate. Existing local feature evidence does not close the whole Messages page, native keyboard, real delivery or cross-device requirements.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -14980,16 +15036,25 @@
         "src/lib/businessReviews.ts",
         "src/app/api/salon/workspace/route.ts",
         "src/app/api/salon/reviews/[id]/reply/route.ts",
-        "supabase/migrations/20260918142356_business_review_reply_revisions.sql"
+        "supabase/migrations/20260918142356_business_review_reply_revisions.sql",
+        "src/lib/assistantCommunicationScope.ts",
+        "src/lib/ownerReadServer.ts",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "tests/p0-assistant-communication-scope.test.mjs",
+        "tests/p0-assistant-planning.test.mjs",
+        "docs/dashboard-redesign/ASSISTANT-COMMUNICATION-READ-ACCEPTANCE.md"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
       "changes": [
-        "Reviews: public-only actual rating average/distribution/month trend, hidden/disputed history retained, searchable/filterable paged inbox with selected desktop detail and phone route; original customer words retained. Guarded reply revisions, moderation hold, private history, retry deduplication, stale-draft recovery and exact support reference. Authorized query pagination removes the 1000-review silent cap."
+        "Reviews: public-only actual rating average/distribution/month trend, hidden/disputed history retained, searchable/filterable paged inbox with selected desktop detail and phone route; original customer words retained. Guarded reply revisions, moderation hold, private history, retry deduplication, stale-draft recovery and exact support reference. Authorized query pagination removes the 1000-review silent cap.",
+        "The existing conversation, review and customer reads now reach planning and answering through dedicated bounded projections instead of null results. Fresh own-business membership/section grants and assigned booking scope are checked before/after queries; mixed rows and changed assignments fail closed. Follow-ups refresh authorized facts. Original message/review text is untrusted quoted data; exact totals/excerpts remain visible, customer account/contact IDs and private notes stay excluded, and customer results remain booking associations rather than a distinct-client count.",
+        "Review projections preserve own-business moderation state, original rating/text/response and exact record selection. Held/hidden history is not silently counted as public rating evidence; review history is freshly reauthorized on previousRequestIds-only follow-ups."
       ],
       "verification": [
-        "Local:reviews-browser.log10/10 across Chromium/WebKit four locales; reviews-concurrency-pagination-final.log4/4; reviews-core-final.log10/10; two-business/revoked-role/idempotency/CAS/queue SQL passes. Clean164chain passed, later current-queue replay projection verified by focused SQL. reviews-existing-final.log passes current projection/notification safeguards. Live acceptance and final CI pending."
+        "Local:reviews-browser.log10/10 across Chromium/WebKit four locales; reviews-concurrency-pagination-final.log4/4; reviews-core-final.log10/10; two-business/revoked-role/idempotency/CAS/queue SQL passes. Clean164chain passed, later current-queue replay projection verified by focused SQL. reviews-existing-final.log passes current projection/notification safeguards. Live acceptance and final CI pending.",
+        "ASSISTANT-COMMUNICATION-READ-ACCEPTANCE.md: actual before projection0/6 and scope0/10 failures retained. Final assistant-communication-integrated-final.log100/100 passes, zero failed/skipped,129.4s, including actual reader/dispatcher/planning/answer serialization with simulated database/model transport, fresh revocation/reassignment/two-business guards,1,001 associations and excerpt markers. Whole-tree types/scoped lint and independent source review pass. Build198 includes this source; no live-model/hosted acceptance is claimed."
       ],
       "live_evidence": [],
       "detailed_clause": "| PAGE-10 | Reviews | Real summaries and filters, review/detail/response management and contextual assistant behavior. |",
@@ -15298,15 +15363,23 @@
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/owner/OwnerDashboardShell.tsx",
         "tests/browser/p0-owner-inventory.spec.ts",
-        "src/components/owner/SalonPromotionsManager.tsx"
+        "src/components/owner/SalonPromotionsManager.tsx",
+        "src/lib/promotionDateTime.ts",
+        "src/i18n/business-marketing-source-catalog.ts",
+        "tests/p0-promotion-dates.test.mjs",
+        "tests/browser/business-marketing.spec.ts",
+        "docs/dashboard-redesign/PROMOTION-DATE-ACCEPTANCE.md"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
       "changes": [
-        "Protected offer computation integrated; promotion page/editor reference correction remains."
+        "Protected offer computation is integrated; declared-zone dates, localized canonical statuses and selected-label readability now have bounded editor corrections and local evidence. Complete public/checkout/hosted and whole-page visual acceptance remains.",
+        "Owner offer edits now round-trip the declared business time zone and retain unchanged saved instants including seconds and an existing repeated DST occurrence. New invalid/nonexistent/ambiguous local times reject before saving; failed saves retain the draft, and successful saves no longer access a cleared React event. Explicit canonical Draft/Active/Paused values survive translated labels. Responsive offer/scope controls retain full labels,44px height,13px font and the desktop assistant dock; calculations and authorization remain unchanged."
       ],
-      "verification": [],
+      "verification": [
+        "PROMOTION-DATE-ACCEPTANCE.md:7 focused Node cases pass;10 unique date/recovery browser cases have passing build195/196 composite evidence. Build197 adds32/32 measured native-label cases across four locales and320/390/768/1440 widths in both engines (combined-197-replies-offers-browser.log); the mixed command remains34pass/7fail, with its separate reply failures later corrected18/18. Actual French320/Spanish1440 captures were inspected. No full public-offer/checkout, provider or hosted persistence acceptance is inferred."
+      ],
       "live_evidence": [],
       "detailed_clause": "| PAGE-12 | Promotions | Real targets, draft/preview/activation, eligibility/dates, public evidence and approved deposit-preserving calculations. |",
       "detailed_clause_line": 509,
@@ -15316,7 +15389,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Complete this page and all its detail/edit/dialog states against the reference, four languages and actual feature clauses; component passes alone do not close the page requirement.",
+      "remaining": "Owner offer date/status/save/recovery and selected-label readability now have bounded local evidence. Complete remaining whole-page/reference states, final-candidate public business/service/booking offer consistency and authorized hosted persistence/eligibility acceptance. Preserve eligible-service percentage calculation, fixed applicable deposit, unpaid-balance cap and immutable booked terms; these local editor checks do not verify all customer contexts.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -20079,16 +20152,23 @@
       "implementation_paths": [
         "src/components/i18n/LocaleProvider.tsx",
         "src/lib/deeplServer.ts",
-        "src/lib/assistantLanguage.ts"
+        "src/lib/assistantLanguage.ts",
+        "src/i18n/business-terminology.ts",
+        "src/lib/gcAssistantPlanningServer.ts",
+        "tests/p0-business-terminology.test.mjs",
+        "tests/p0-assistant-planning.test.mjs",
+        "docs/dashboard-redesign/BUSINESS-TERMINOLOGY-ACCEPTANCE.md"
       ],
       "changes": [
-        "Newly committed interface DOM translates in the mutation microtask before paint; original business content and text input excluded. Replaces deferred whole-document animation-frame scan."
+        "Newly committed interface DOM translates in the mutation microtask before paint; original business content and text input excluded. Replaces deferred whole-document animation-frame scan.",
+        "Reviewed26-term EN/FR/ES/zh-CN business/beauty terminology is connected only to the assistant answer system instructions through fixed authorized-tool domains, with a bounded single-summary literal-page fallback. Original names, quotes and saved values take precedence. Mixed/unknown contexts, planning and Wolof omit the block. Existing byte/cost reservations, permissions, model and both25-dollar caps are unchanged; DeepL has no new hook."
       ],
       "verification": [
-        "localization-paint-before.log reproduces English title/placeholder on original code; localization-finance-final.log26/26 Chromium/WebKit including failed zh-CN export case, four languages, input persistence, roles and account sign-out/new-device isolation; build/tsc/lint pass."
+        "localization-paint-before.log reproduces English title/placeholder on original code; localization-finance-final.log26/26 Chromium/WebKit including failed zh-CN export case, four languages, input persistence, roles and account sign-out/new-device isolation; build/tsc/lint pass.",
+        "BUSINESS-TERMINOLOGY-ACCEPTANCE.md:8 module tests and the final100-case assistant integration suite pass, including four-locale captured answer requests, planning/Wolof/mixed-domain omission and unchanged original facts. This is not100 live translations or native-speaker certification. Independent meaning/source/hook review passed. combined-198-localization-strict.log covers2808/2808 owner strings in each of EN/FR/ES/zh-CN; Wolof remains separately deferred."
       ],
       "live_evidence": [],
-      "remaining": "Complete the detailed clauses through the existing module, including entry, durable outcome, dependent views, return/repeat and recovery. Current tests are foundations, not whole-journey release acceptance.",
+      "remaining": "Verify final hosted per-user/employee language isolation, supported customer communication translation, fallback and actual provider/native language quality through the existing foundations. The reviewed glossary is connected to assistant answers; separate DeepL context preparation remains disconnected until its trusted source-locale/domain contract and acceptance exist. Required four-locale source coverage is not whole-journey language acceptance; no new Wolof claim.",
       "external_blocker": null,
       "wire_coverage": [
         {
@@ -20391,14 +20471,26 @@
         "src/lib/businessServiceContributionServer.ts",
         "src/lib/assistantServiceContribution.ts",
         "src/components/owner/BusinessServiceContribution.tsx",
-        "supabase/migrations/20260919101239_business_service_contribution_reviews.sql"
+        "supabase/migrations/20260919101239_business_service_contribution_reviews.sql",
+        "src/lib/businessServiceCapacityServer.ts",
+        "src/components/owner/BusinessServiceCapacity.tsx",
+        "docs/dashboard-redesign/SERVICE-CAPACITY-ACCEPTANCE.md",
+        "src/lib/businessPriceContext.ts",
+        "scripts/refresh-business-price-context.mjs",
+        "src/data/business-price-context.v1.json",
+        "src/components/owner/BusinessPriceContext.tsx",
+        "src/i18n/business-price-context-copy.ts",
+        "tests/browser/business-money-insights.spec.ts",
+        "docs/dashboard-redesign/BLS-PRICE-CONTEXT-ACCEPTANCE.md"
       ],
       "changes": [
         "Deterministic own-business finance explanations, equal-day trends, bounded recorded price samples, appointment-cohort current states and linked receipts, and saved-offer attribution. Useful period-preserving links reuse existing Finances views.",
         "Own-business seven-day capacity evidence now unions canonical booked/held/blocked intervals, excludes unavailable/draft resources, ranks up to six dated professional opportunities, and opens that exact Calendar scope for review. It is not a historical demand, service-fit, profit or market-price claim. The assistant receives a complete bounded projection rather than depth-truncated interval objects.",
         "The existing authorized business-summary read now exposes historical completed-appointment patterns by local weekday and six-hour period. It excludes partial/future days, compares only nonzero observed periods over sufficient local calendar days, and explicitly does not infer opening hours, demand, zero-capacity periods or forecasts. No new data query or identity projection is introduced.",
         "Bookings and the assistant expose same-business regular-client absence evidence using explicit canonical identities, at least three completed visits from 365 local calendar days before today through the current check time (including today), last visit at least 42 local calendar days ago and no active current/future appointment. No other business history, name/email matching, inferred demand or contact permission is used. Assigned staff receive only their authorized professional scope.",
-        "Finances allows an owner to allocate existing canonical operating expense/wage evidence to a completed service period. A fresh reviewed contribution, compared with fewer completed appointments in an equal prior local-day period, supports service/calendar review. It is not verified net profit, capacity or demand. The same bounded safe facts reach business and earnings assistant summaries, with fresh earnings/bookings/styles grants, exact period binding and no review notes/client/source identities."
+        "Finances allows an owner to allocate existing canonical operating expense/wage evidence to a completed service period. A fresh reviewed contribution, compared with fewer completed appointments in an equal prior local-day period, supports service/calendar review. It is not verified net profit, capacity or demand. The same bounded safe facts reach business and earnings assistant summaries, with fresh earnings/bookings/styles grants, exact period binding and no review notes/client/source identities.",
+        "Service-specific capacity now reuses canonical duration, required options/material selections, buffer and authorized availability; overlapping starts are alternatives, not additive free appointments or demand. Missing source/choice/permission evidence remains unavailable. The Money panel also presents the public national personal-care CPI context separately from own-business recorded prices; build198 honestly showed unavailable numeric source evidence. A later raw-source recovery now has reviewed parsing and an exact31-numeric-month snapshot with one explicit October2025 absence;18 focused cases pass. Build199/browser acceptance remains pending, and this national index does not establish a local service-price benchmark.",
+        "The verified BLS snapshot now has compiled local fresh/stale browser evidence. Each required locale shows the explicit source gap and index/geography/period qualifications; expired values disappear while the gap remains. Original own-business names, money facts and period-linked actions stay separate."
       ],
       "verification": [
         "MoneyInsights8 focused plus15 finance regressions pass. Booking-cohort/referral/localization combined43 pass; malformed-date before/after evidence and actual local service_role projection verified.",
@@ -20406,10 +20498,13 @@
         "SCHEDULE-OPPORTUNITIES-ACCEPTANCE.md: focused core/authorization/count/DST/projection regressions and14 Chromium/WebKit cases now pass on the combined production build. Fresh-grant and assigned-professional isolation, failed refresh, unavailable hours, exact incident references and dated navigation are covered. Hosted records and remaining historical/profit advice remain unverified.",
         "APPOINTMENT-PATTERNS-ACCEPTANCE.md: five core cases and actual own-reader→planner→answer integration passed within55 focused regressions. Independent source review passed. Final hosted question against authorized records remains unverified.",
         "RETURNING-CLIENT-ADVICE-ACCEPTANCE.md: 13 focused core cases, 46 planner regressions and actual-role 182 SQL pass. All 14 returning-client Chromium/WebKit cases passed in combined-183-final-advice-products-browser.log. The overall run was 61 passed, 1 WebKit Subscription reload failure and 4 not run, with a separate runner error; that run is not a complete pass. Five-thousand-record cutoff, fresh grants, identity and prior-transcript revocation are covered. Hosted records and actual approved communication remain unverified.",
-        "SERVICE-CONTRIBUTION-ACCEPTANCE.md: 12 core/server/API tests, 66 integrated assistant regressions and actual-role 183 SQL pass. The reproduced 409 refresh draft-loss defect is corrected and its before trace retained. All 20 contribution Chromium/WebKit cases passed in combined-183-final-advice-products-browser.log; the overall run remains incomplete at 61 passed, 1 WebKit Subscription reload failure and 4 not run, with a separate runner error. Combined 181-to-183 SQL and local advisors pass with no new findings. This supports owner-reviewed recorded contribution, not verified net profit or spare capacity; final hosted financial/provider acceptance remains unverified."
+        "SERVICE-CONTRIBUTION-ACCEPTANCE.md: 12 core/server/API tests, 66 integrated assistant regressions and actual-role 183 SQL pass. The reproduced 409 refresh draft-loss defect is corrected and its before trace retained. All 20 contribution Chromium/WebKit cases passed in combined-183-final-advice-products-browser.log; the overall run remains incomplete at 61 passed, 1 WebKit Subscription reload failure and 4 not run, with a separate runner error. Combined 181-to-183 SQL and local advisors pass with no new findings. This supports owner-reviewed recorded contribution, not verified net profit or spare capacity; final hosted financial/provider acceptance remains unverified.",
+        "SERVICE-CAPACITY-ACCEPTANCE.md:13 unique new Node cases and70 existing regressions have passing composite evidence; build19114/14 capacity browser cases pass across both engines, with actual saved viewport inspection and documented whole-run/visual limits. combined-198-money-browser.log10/10 Money cases pass in33.5s across Chromium/WebKit, preserving measured periods/actions and refusing whole-business advice from a professional-only ledger. Build198 source digest/848-file identity is recorded above; BLS source validation subsequently passed18 focused cases with31 numeric months and one explicit missing month; later snapshot build199/browser acceptance remains pending and is not covered by build198.",
+        "BLS-PRICE-CONTEXT-ACCEPTANCE.md and bls-missing-month-final.log:18/18 focused source/transport/copy cases pass, including byte-identical actual public raw response/hash, full snapshot equality, exact missing-note allowlist, no interpolation, freshness and failed-fetch no-write. bls-reviewed-snapshot-write.log records generation from retained bytes without another network call. This corrects the historical unavailable/transport status; later build199/browser/visual acceptance and the final release remain pending.",
+        "AUTOMATED ONLY: build199 passed with848 files and identical before/after digest 9de5b16cf654634f56fda74cda1d3fe9eba3922ff2c49c5fc1dc238aae8d29f8 (combined-199-build.log; combined-199-source-before.json; combined-199-source-after.json). BLS18 focused Node cases and12 unique compiled browser cases pass:11 in combined-199-money-browser.log39.4s plus the separately selected missing WebKit stale case in combined-199-money-stale.log9.5s. Scoped price-context lint exits0; strict EN/FR/ES/zh-CN inventory is2809/2809 each. This does not imply native language-quality, hosted or provider acceptance."
       ],
       "live_evidence": [],
-      "remaining": "Finish capacity/opportunity and richer action journeys, bounded real-record hosted acceptance, complete visual review and required release checks. Recorded prices are own-business samples, not geographic market benchmarks or prescribed prices; booked offer usage does not prove incremental revenue.",
+      "remaining": "Complete updated-commit CI/main, authorized hosted Money/assistant workflows and remaining visual acceptance. The national BLS snapshot has18 source checks and12 unique compiled browser passes; maintain its explicit missing-period/provenance/freshness qualifications. Own prices are own-business samples; national CPI is not a local price recommendation, and offer usage does not establish incremental revenue. Current Stripe/Meta setup, protected migrations and final release gates remain separate.",
       "external_blocker": null,
       "wire_coverage": [
         {
@@ -25163,7 +25258,7 @@
     }
   ],
   "progress_audit": {
-    "at": "2026-09-19T14:05:39.541Z",
+    "at": "2026-09-19T20:04:58.887Z",
     "counts": {
       "In progress": 102,
       "Implemented / unverified": 90,
@@ -25175,8 +25270,8 @@
     "live_product_requirements": 0,
     "pr": "https://github.com/girlzculture/girlzculture/pull/80",
     "uncommitted": true,
-    "uncommitted_summary": "Own-business service/promotion/product reads, four isolated demos, advice disclosures and low-height owner corrections verified locally. Profile/settings reads and official permitted-source onboarding are being implemented; new185 local migrations include two not yet verified/applied.",
-    "production_checked_at": "2026-09-19 (read-only; exact time not retained)",
+    "uncommitted_summary": "Checkpoint332a716 plus the uncommitted reusable-reply188, scoped assistant/terminology, verified BLS snapshot/Money and test-only prelaunch readiness batch. Build199 and the bounded local checks pass; current-commit release/main and hosted/provider verification are still required.",
+    "production_checked_at": "2026-09-19 approximately19:58Z (fresh read-only deployment/lock confirmation; exact timestamp was not retained)",
     "production_commit": "d37cbf4ef3954063797946b7508352470653a739",
     "production_deployment": "6aac503fa5eacb00089c6d87",
     "production_locked": true,
@@ -25187,10 +25282,12 @@
       "Completed / verified": 1
     },
     "total": 201,
-    "current_work": "Complete current profile/settings and permitted-source onboarding slices, review local SQL, freeze final source and run applicable required CI. Reuse14 demo and54 owner UI passes where their source remains unchanged. Required9fe CI is failed, not running.",
-    "parent_commit": "8e89743b48274ce4acdb2515f31a62ec3fc9a300",
-    "checkpoint": "The containing commit will identify the next checkpoint. Local build labels185/186/187 are evidence labels, not migration counts. No PR80 product change is claimed live.",
-    "commit": "9fe15bd056e407da3c477b68d31e5addd255544e"
+    "current_work": "Freeze and commit the reviewed batch, then obtain updated-commit required/release CI and protected main/release checks. The BLS source and compiled12-case browser acceptance now pass; the reproduced prelaunch loading boundary has a reviewed test-only correction and30/30 local passes. Preserve the original332a716 release-gate failure until new-commit checks run. Complete protected reviewed migrations, existing Stripe secret/event-routing and Meta setup, and authorized hosted/dashboard/public visual acceptance.",
+    "parent_commit": "0af98ff91c6f42d4c5504ade40e098ec1ed78d56",
+    "checkpoint": "Committed checkpoint332a716; the next batch remains uncommitted. Build199 is a local build label, not a migration number. Its848-file source digest is 9de5b16cf654634f56fda74cda1d3fe9eba3922ff2c49c5fc1dc238aae8d29f8. No PR80 product change is claimed live.",
+    "commit": "332a716b50034807ea05e28d2147d1dfc930647c",
+    "ci_status": "Fresh read at2026-09-19T19:35Z for exact332a716b50034807ea05e28d2147d1dfc930647c: required verification run35461160203 PASS, with1337 broad browser passes/5 skipped in54.6min and focused20+5+23+56 passes. Release run35461160051 passed all three browser shards and owner localization, but its final release-candidate job FAILED: prelaunch27 passed/1 WebKit390x844 failure at the initial /site-access horizontal-overflow assertion. Evidence: ci-332a716-required-verify.log, ci-332a716-release-gate.log and ci-332a716-final-check-rollup.json. Subsequent deterministic loading-boundary evidence and the reviewed test-only readiness correction have30/30 local passes. The original CI failure is preserved and updated-commit CI is pending; local success does not change that job result. These exact-head checks do not verify the later uncommitted batch. Protected billing and production migration jobs remained skipped; no production application is implied.",
+    "local_evidence": "AUTOMATED ONLY: build199 passed with848 files and identical before/after digest 9de5b16cf654634f56fda74cda1d3fe9eba3922ff2c49c5fc1dc238aae8d29f8 (combined-199-build.log; combined-199-source-before.json; combined-199-source-after.json). BLS18 focused Node cases and12 unique compiled browser cases pass:11 in combined-199-money-browser.log39.4s plus the separately selected missing WebKit stale case in combined-199-money-stale.log9.5s. Scoped price-context lint exits0; strict EN/FR/ES/zh-CN inventory is2809/2809 each. This does not imply native language-quality, hosted or provider acceptance. Retain prior100 assistant,18 reusable-reply and32 offer browser case evidence for unchanged relevant source. The actual readiness boundary was reproduced on unchanged application source: with the real stylesheet import held, WebKit390 measured document width1608 before loading completed. The smallest correction is test-only: await the current document load, existing menu hydration signal and loaded fonts, retaining the exact width assertion. It adds no width polling, sleeps, retries, overflow hiding or application styling. All30 prelaunch cases then passed across Chromium/WebKit in3.2min (ci-332a716-prelaunch-full-after.log), with independent review. The original27pass/1failed CI result and trace remain unchanged; the exact runtime initiator of its replacement navigation was not proven. New-commit CI still must verify the correction."
   },
   "latest_authority": {
     "source": "founder-software-first-2026-09-18.md",
@@ -25201,12 +25298,15 @@
     "rules": "Latest explicit decisions, then Appendix A, then compatible original 140. Implementation, verification and release are separate."
   },
   "reconciliation": {
-    "at": "2026-09-19T14:05:39.542Z",
-    "head": "9fe15bd056e407da3c477b68d31e5addd255544e plus current uncommitted corrections",
+    "at": "2026-09-19T20:04:58.887Z",
+    "head": "332a716b50034807ea05e28d2147d1dfc930647c plus current uncommitted batch",
     "production_unchanged": "6aac503fa5eacb00089c6d87 / d37cbf4ef3954063797946b7508352470653a739",
     "not_completion_percentage": true,
-    "provider_access": "Live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification. OAuth/secure per-business storage/disconnect/sync implementation and simulated tests remain required. Live controls and background sync disabled; do not retry zero-quota API or request another profile.",
-    "local_checkpoint": "14 demo browser cases pass on187;54 advice/owner UI cases pass on185; exact previously failed French WebKit populated case passes locally with original assertions. Required9fe run35441485908 remains1208passed/1failed/5skipped; release35441485912 passes except protected billing-sandbox skip. No unchanged workflow rerun. Final current-source CI, protected pending migrations and hosted acceptance remain.",
-    "pending_migrations": "Last production comparison:151 applied/183 repository/32 pending/0remote missing. Two further local migration files for Instagram onboarding and assistant settings are implementation work, not reviewed production applications."
+    "provider_access": "Google Business Profile: live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification. Existing per-business OAuth/storage/disconnect/synchronization code and simulated evidence do not establish live activation; live actions/background synchronization remain disabled. Reuse the identified Stripe sandbox, but its protected existing secret and reviewed event routing remain required for provider acceptance; Meta configuration/provider acceptance remains separate. No repeated Google zero-quota attempt is required.",
+    "local_checkpoint": "AUTOMATED ONLY: build199 passed with848 files and identical before/after digest 9de5b16cf654634f56fda74cda1d3fe9eba3922ff2c49c5fc1dc238aae8d29f8 (combined-199-build.log; combined-199-source-before.json; combined-199-source-after.json). BLS18 focused Node cases and12 unique compiled browser cases pass:11 in combined-199-money-browser.log39.4s plus the separately selected missing WebKit stale case in combined-199-money-stale.log9.5s. Scoped price-context lint exits0; strict EN/FR/ES/zh-CN inventory is2809/2809 each. This does not imply native language-quality, hosted or provider acceptance. The separately reviewed readiness correction has30/30 local prelaunch passes; original332a716 release CI remains failed until updated-commit checks.188 isolated-clone actual-role SQL remains local, not production application or whole clean-chain acceptance.",
+    "pending_migrations": "Last fresh read-only production comparison at2026-09-19T15:51:23Z:151 remote applied/187 repository/36 pending/0 remote missing (production-migration-comparison-187.json). Repository now has188 migrations, including reusable replies with isolated-clone SQL proof.188 minus last-observed151 implies37 pending if remote state is unchanged;37 is an arithmetic inference, not a fresh remote comparison. Protected review/application and final clean-chain CI remain outstanding.",
+    "benchmark_status": "The historical transport failure is recovered. Actual retained public BLS v2 bytes supply31 numeric months plus the explicit October2025 missing observation, with exact provenance and no fabricated/interpolated values.18 focused Node checks pass; the saved snapshot is generated from retained bytes without another network call. Build199 and12 unique compiled Money/BLS browser cases now pass, including fixed-time fresh numbers and expired-number absence while the missing month remains visible. Independent UI/copy/test review and scoped lint pass. The national US-city-average personal-care-services CPI is an index, not a local service price, recommended dollar amount, own profit or competitor dataset. Final new-commit CI and hosted/remaining visual acceptance stay separate.",
+    "current_ci": "Fresh read at2026-09-19T19:35Z for exact332a716b50034807ea05e28d2147d1dfc930647c: required verification run35461160203 PASS, with1337 broad browser passes/5 skipped in54.6min and focused20+5+23+56 passes. Release run35461160051 passed all three browser shards and owner localization, but its final release-candidate job FAILED: prelaunch27 passed/1 WebKit390x844 failure at the initial /site-access horizontal-overflow assertion. Evidence: ci-332a716-required-verify.log, ci-332a716-release-gate.log and ci-332a716-final-check-rollup.json. Subsequent deterministic loading-boundary evidence and the reviewed test-only readiness correction have30/30 local passes. The original CI failure is preserved and updated-commit CI is pending; local success does not change that job result. These exact-head checks do not verify the later uncommitted batch. Protected billing and production migration jobs remained skipped; no production application is implied.",
+    "production_confirmation": "Fresh read-only tool observation approximately2026-09-19T19:58Z confirms deployment6aac503fa5eacb00089c6d87, commitd37cbf4ef3954063797946b7508352470653a739 and production_locked=true. Exact timestamp was not retained. This deployment/lock confirmation is separate from the last15:51:23Z migration metadata comparison; it does not refresh the inferred37 pending migration count."
   }
 }

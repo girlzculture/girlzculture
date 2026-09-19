@@ -10,8 +10,8 @@
     "wo": "Founder explicitly deferred Wolof; not release-verified."
   },
   "scope": "All inventoried owner graph copy, including dynamic labels, error literals and templates. Only documented proper names and reviewed non-copy source contexts are excluded. Source coverage is not linguistic review or full browser workflow acceptance.",
-  "candidate_count": 3079,
-  "excluded_code_count": 244,
+  "candidate_count": 3134,
+  "excluded_code_count": 251,
   "intentional_untranslated": [
     "Girlz Culture",
     "Girlz",
@@ -99,21 +99,21 @@
   ],
   "locales": {
     "en": {
-      "source_count": 2761,
-      "covered": 2761,
+      "source_count": 2809,
+      "covered": 2809,
       "missing_count": 0,
       "missing": []
     },
     "fr": {
-      "source_count": 2761,
-      "covered": 2761,
+      "source_count": 2809,
+      "covered": 2809,
       "missing_count": 0,
       "missing": []
     },
     "wo": {
-      "source_count": 2761,
+      "source_count": 2809,
       "covered": 1728,
-      "missing_count": 1033,
+      "missing_count": 1081,
       "missing": [
         {
           "source": "{completed} completed · {cancelled} cancelled · {noShow} no-show · {other} other current states",
@@ -209,7 +209,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 36,
+              "line": 37,
               "kind": "localized-source",
               "context": "4b6fb3ac06eb2d383ce0f60092fca8d15eb988d05c13fa74ee828bb27d1acb7f"
             }
@@ -286,7 +286,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 46,
+              "line": 47,
               "kind": "localized-source",
               "context": "f39e1225f00bbc5633aa544ee4fb959aa1938fdb95ec42ec2dba51dd2cd1c8b4"
             }
@@ -297,7 +297,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 37,
+              "line": 38,
               "kind": "localized-source",
               "context": "97a24871da201f84f63d81978baf29e5989f4d412fa67c5bc11d0bd251fc9acb"
             }
@@ -308,7 +308,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 35,
+              "line": 36,
               "kind": "localized-source",
               "context": "bb7fec58e3c6fb39864b738f1cabf5199e2057a74ba864daccf8eb1f9f4b0de2"
             }
@@ -396,7 +396,7 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 273,
+              "line": 302,
               "kind": "literal",
               "context": "35f22a59f4b310943f8e2d67a24d8d4bccaf36ba078dc1b0999d913afae07afe"
             }
@@ -410,6 +410,17 @@
               "line": 120,
               "kind": "localized-source",
               "context": "a2388b735dbccd72c6f5672d2008b649dfa4bb226334de3f9fcb97350ebf6f6f"
+            }
+          ]
+        },
+        {
+          "source": "Active replies",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 92,
+              "kind": "literal",
+              "context": "623ee2c51ca93af96e949e6a21a802d909e4a3b9b62f1f6fe8281cdefd307fd1"
             }
           ]
         },
@@ -1218,6 +1229,17 @@
           ]
         },
         {
+          "source": "Archive reply",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 106,
+              "kind": "literal",
+              "context": "26ed146576c141adcff54ecadde860e63d9d045accb85421f281d765ca842aec"
+            }
+          ]
+        },
+        {
           "source": "Archive supply",
           "occurrences": [
             {
@@ -1231,6 +1253,45 @@
               "line": 76,
               "kind": "localized-source",
               "context": "e23ac1bf543b31006643d752f0c7828b7538a4db992e1e9ed61bb72376d1493f"
+            }
+          ]
+        },
+        {
+          "source": "Archive this reply?",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 102,
+              "kind": "literal",
+              "context": "e88291d084bdbbfd234c5af6cb44cd5f770d4bc1bbab88642570685327b6e3aa"
+            },
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 102,
+              "kind": "literal",
+              "context": "e88291d084bdbbfd234c5af6cb44cd5f770d4bc1bbab88642570685327b6e3aa"
+            }
+          ]
+        },
+        {
+          "source": "Archived replies",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 92,
+              "kind": "literal",
+              "context": "4c2bcd6e4b59340b6b668a0ee18dca4693bd9ba1deef16640f8aa81ec0b5e4de"
+            }
+          ]
+        },
+        {
+          "source": "Archived replies cannot be inserted. Existing message drafts stay unchanged.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 102,
+              "kind": "literal",
+              "context": "080059c3c823aff09a9d1c00214613b5d77377e03868194db61678d70183aa3d"
             }
           ]
         },
@@ -1566,7 +1627,7 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 291,
+              "line": 320,
               "kind": "localized-source",
               "context": "0d45ca2d7cee238d5a84bd80eb231fcaae64b044a826b1d292e9c667470e126f"
             }
@@ -1851,13 +1912,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 19,
+              "line": 20,
               "kind": "localized-source",
               "context": "4dd0701a686a4e42418f9489a355f2ac39b827870d9a4b46c7852f7bfc904b85"
             },
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 20,
+              "line": 21,
               "kind": "localized-source",
               "context": "4dd0701a686a4e42418f9489a355f2ac39b827870d9a4b46c7852f7bfc904b85"
             }
@@ -1989,6 +2050,17 @@
               "line": 42,
               "kind": "localized-source",
               "context": "ed2d6c4799ecda682748c5aa71330f0f1af327e338fc53c46e156a9a8fbf5003"
+            }
+          ]
+        },
+        {
+          "source": "Calculated change from {from} to {to}: {value}%",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 29,
+              "kind": "literal",
+              "context": "220eb107c93c040c850f83183045d65152bebd35b3ec03b027bb75e26db479be"
             }
           ]
         },
@@ -2904,7 +2976,7 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 273,
+              "line": 302,
               "kind": "literal",
               "context": "9dc62f5352290317e3ded6cb282b939219b16a7d479f7c46d4bf46dfbc19a77f"
             }
@@ -3065,7 +3137,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 11,
+              "line": 12,
               "kind": "literal",
               "context": "0a0421af810b05288b35f822d9b26182c3d7920de590a89e6b17a34e9f0fa59c"
             }
@@ -3076,7 +3148,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 26,
+              "line": 27,
               "kind": "localized-source",
               "context": "acd7246540d153c05d4695f3c0fac74430667e8571305779f3f944b59652ad17"
             }
@@ -3234,7 +3306,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 25,
+              "line": 26,
               "kind": "localized-source",
               "context": "1f0fbd7e0aaee3bfa9f0bd9dea5567bbecd04637f3d1de2eeb8042018b7f9407"
             }
@@ -3259,6 +3331,17 @@
               "line": 75,
               "kind": "localized-source",
               "context": "bef795202c68adf2d6fec0aa941b1ece1d95cf97e89beea2fcf9166f4ca88b48"
+            }
+          ]
+        },
+        {
+          "source": "Confirm archive",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 102,
+              "kind": "literal",
+              "context": "4e3d4917baf48d6b91c990d2635d5c1ff3a17733453bb86ddb78a59c7385810e"
             }
           ]
         },
@@ -3344,7 +3427,7 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 268,
+              "line": 297,
               "kind": "localized-source",
               "context": "fe8184756e2b1f5e25ca3d126ef3e1238d6cb0396cc7d6c5580d47958f12d252"
             }
@@ -3399,7 +3482,7 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 297,
+              "line": 326,
               "kind": "localized-source",
               "context": "4d762e05d19628b8847a278594974c9a3b78d287ced0554cf0e1eb3d9d819566"
             }
@@ -3410,7 +3493,7 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 293,
+              "line": 322,
               "kind": "localized-source",
               "context": "87c592dad2d54e57256281cbd36275f5758a8b32068f0d3661c41e73afa9cc78"
             }
@@ -3766,6 +3849,17 @@
           ]
         },
         {
+          "source": "Discard edits",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 100,
+              "kind": "literal",
+              "context": "2997f6bdbf17326a70a193461b02e9d2955dfd905c8de13734310bc876de57f7"
+            }
+          ]
+        },
+        {
           "source": "Disconnect Google profile",
           "occurrences": [
             {
@@ -3803,7 +3897,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 49,
+              "line": 50,
               "kind": "localized-source",
               "context": "eb4663b729c210928e55b7153a27426a7e70d6840b63193c0ba4323dd67fac30"
             }
@@ -3996,6 +4090,18 @@
           "source": "Edit reply",
           "occurrences": [
             {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 95,
+              "kind": "literal",
+              "context": "ab37791d5e86b2e8aaac116fee977b73f409544e14d85db81b946a70957a36ce"
+            },
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 106,
+              "kind": "literal",
+              "context": "fb783e4e53d57f0474e261d425d2615461799a04c1b832b8bd1e2fdf8431eb0c"
+            },
+            {
               "file": "src/components/owner/ReviewsWorkspace.tsx",
               "line": 69,
               "kind": "localized-source",
@@ -4106,6 +4212,17 @@
               "line": 74,
               "kind": "localized-source",
               "context": "34328c5e255301e0aa6b99fe964f514282a75a8c12fa0b0e45fa369544ccdf86"
+            }
+          ]
+        },
+        {
+          "source": "Enter a title of up to 80 characters and a message of up to 2,000 characters.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 46,
+              "kind": "literal",
+              "context": "7abc2b82fee4ab62f9c90390e42157ac07542ee92470c37efd1310c1a213348d"
             }
           ]
         },
@@ -5192,7 +5309,7 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 273,
+              "line": 302,
               "kind": "localized-source",
               "context": "007f2791bc09e618a9fbf99b0cd0d9ffff79c52e571d6436cf2e2358dac0f1dd"
             }
@@ -5328,6 +5445,17 @@
               "line": 94,
               "kind": "literal",
               "context": "385b778bd264fba9f673d3ece340e62698f2f4d9ba2cff686de6ec24c1bfe52d"
+            }
+          ]
+        },
+        {
+          "source": "Keep edits in a new reply",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 100,
+              "kind": "literal",
+              "context": "c6b0b8e6f6576e4b5199953e4937e535d12c1e8382c9e3baefecafaa916e61bf"
             }
           ]
         },
@@ -5583,6 +5711,17 @@
               "line": 35,
               "kind": "literal",
               "context": "5a40860ca7b99cf6b71499e0b647e70abb1fae7240b644802e4732a8d5dab4ae"
+            }
+          ]
+        },
+        {
+          "source": "Loading reusable replies…",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 94,
+              "kind": "literal",
+              "context": "b109a948bb3d3904f420642c4e75315befc6b99a05107f17ff981666322a88d6"
             }
           ]
         },
@@ -5920,7 +6059,7 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 267,
+              "line": 296,
               "kind": "localized-source",
               "context": "a13405074cbc2555880da03c8d8a30c22c12e197219bdfacd89c3ae9751f976a"
             }
@@ -5962,6 +6101,17 @@
               "line": 12,
               "kind": "literal",
               "context": "ff99466ca27340d02c67c9a819787906fe56cf6a4c446f2a86fd56528ca8aa0c"
+            }
+          ]
+        },
+        {
+          "source": "Monthly index · not seasonally adjusted · 1982–1984 = 100",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 26,
+              "kind": "literal",
+              "context": "31fae37eeb1d70a80017d0aad9caf8ad35cda66480cefed8fd0d1b5bffee1cc0"
             }
           ]
         },
@@ -6104,6 +6254,17 @@
           ]
         },
         {
+          "source": "National statistical reference only. This is not a local service price, a recommended price or a measure of your profit.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 24,
+              "kind": "literal",
+              "context": "9bb40255e01300e3f6786ad6a3358ef3f77fbad98a6d32ca3ab6e463b9ee9617"
+            }
+          ]
+        },
+        {
           "source": "Needs setup",
           "occurrences": [
             {
@@ -6119,7 +6280,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 30,
+              "line": 31,
               "kind": "localized-source",
               "context": "d2ea063571d24a2a010163d0ccd7c770248009e350a35a998a8bf3cfa41e8ca5"
             }
@@ -6166,6 +6327,23 @@
               "line": 142,
               "kind": "localized-source",
               "context": "1c594c8f9d18ccee790a36f2bc56ede92ec8d60a90364e6ec684c145cc7fca00"
+            }
+          ]
+        },
+        {
+          "source": "New reply",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 91,
+              "kind": "literal",
+              "context": "7586c9e0b2b6471b1d68917c1c2f666f506a5f92f3c3f858445ae616f8e23977"
+            },
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 95,
+              "kind": "literal",
+              "context": "ab37791d5e86b2e8aaac116fee977b73f409544e14d85db81b946a70957a36ce"
             }
           ]
         },
@@ -6323,7 +6501,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 48,
+              "line": 49,
               "kind": "localized-source",
               "context": "c07ab59905fecdbea3664a9174765e4e81436cae16587d111450528c93a2f700"
             }
@@ -6345,7 +6523,7 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 284,
+              "line": 313,
               "kind": "localized-source",
               "context": "8c328f4dd32cfd2a9532f7561ded227adb67d6e7d9072d65eaeba3ebbb42856a"
             }
@@ -6521,7 +6699,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 24,
+              "line": 25,
               "kind": "localized-source",
               "context": "d4c87f978d260c3d6a9260e2c10da69f714d1927960f7ae4e062e540a7cf4377"
             }
@@ -6590,6 +6768,17 @@
               "line": 47,
               "kind": "localized-source",
               "context": "574dcaf75535534f3833701ac4dca706ca70c146eaa028a8870eb43571566f91"
+            }
+          ]
+        },
+        {
+          "source": "No reusable replies match this view.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 105,
+              "kind": "literal",
+              "context": "e4d6f563b6e4fbc81c725a4cd508218cec28064a7460feac5a364318570ed647"
             }
           ]
         },
@@ -6867,6 +7056,28 @@
               "line": 9,
               "kind": "literal",
               "context": "e9e27d23824cf067c3cda165bd500623f133195e74963d2f9b2c924b891ae8fb"
+            }
+          ]
+        },
+        {
+          "source": "Official index for {month}: {value} index points",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 28,
+              "kind": "literal",
+              "context": "9403d3d6d67dbc304845f525635a1c8ed3400267a790649d69403c38d09bf927"
+            }
+          ]
+        },
+        {
+          "source": "Official series details",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 36,
+              "kind": "literal",
+              "context": "05b8dda6840b1f0b2c7586a6c1578dd4bf25a25184ae348ed67d4f928d90278b"
             }
           ]
         },
@@ -7476,7 +7687,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 29,
+              "line": 30,
               "kind": "localized-source",
               "context": "b4e9bba485b7ef60deb7b519ac35f6c74c39018a2dc9761335fdca813afa27dd"
             }
@@ -7487,7 +7698,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 31,
+              "line": 32,
               "kind": "localized-source",
               "context": "9d99dbea2ef2fd17baf05f2ac0f25b6d7e4de16877519de7011bb014b1b82620"
             }
@@ -7765,6 +7976,12 @@
               "context": "4dc4cfa04ce4ce2574b523d77bc7a3a2036d13c0cddc694735615c8bc80c1700"
             },
             {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 107,
+              "kind": "literal",
+              "context": "a72fcc199d5648e137c11243c4cb22c659db28af8620f94d6ed2ca21075f6bef"
+            },
+            {
               "file": "src/components/owner/ReviewsWorkspace.tsx",
               "line": 94,
               "kind": "localized-source",
@@ -7841,6 +8058,17 @@
               "line": 19,
               "kind": "literal",
               "context": "785191d8ecf1f0557411da4c76bc94e66f5854046709e38e7d4d94ae1508173b"
+            }
+          ]
+        },
+        {
+          "source": "Private replies shared with your business team. Choosing one only fills an editable draft.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 90,
+              "kind": "literal",
+              "context": "a41968ad91bb4238d08302b143e47632003200b7b7154f4a0f778f7d78f8c490"
             }
           ]
         },
@@ -8527,7 +8755,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 38,
+              "line": 39,
               "kind": "localized-source",
               "context": "41f83607d983fdb3a9ffe73e821dab0456d244fdf9f2563647cb2f03e20cae78"
             }
@@ -8626,7 +8854,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 47,
+              "line": 48,
               "kind": "localized-source",
               "context": "629eb22c00f3241efc5656aefdaa00d6a216098c137ce7ca3677a15d1093371d"
             }
@@ -8654,7 +8882,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 23,
+              "line": 24,
               "kind": "localized-source",
               "context": "541f493556e2997a92564e553c292f5385e179302adb5d8cfa49e83b57bc1f96"
             }
@@ -8690,6 +8918,17 @@
               "line": 26,
               "kind": "literal",
               "context": "539c26ce4f65ea393512f18c315f66325fda8b157307159f8b768c16293f3fe6"
+            }
+          ]
+        },
+        {
+          "source": "Reference: {id}",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 94,
+              "kind": "literal",
+              "context": "a16a971f3790ea3a73f8350e2354be881ad60941758db20cbc47bc380ef5d42b"
             }
           ]
         },
@@ -8759,7 +8998,7 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 266,
+              "line": 295,
               "kind": "localized-source",
               "context": "e564dffc4f44f9231da6315692dd0cfc1104a0ca020e7e721339494c3858c459"
             }
@@ -8970,13 +9209,52 @@
           ]
         },
         {
+          "source": "Replace current draft?",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 103,
+              "kind": "literal",
+              "context": "95d032ab8630533ea41bb7920d28956c8f864f74cdda1ab473907c00e53005bf"
+            },
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 103,
+              "kind": "literal",
+              "context": "95d032ab8630533ea41bb7920d28956c8f864f74cdda1ab473907c00e53005bf"
+            }
+          ]
+        },
+        {
+          "source": "Replace draft",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 103,
+              "kind": "literal",
+              "context": "bd16adf556bd3e2f043a8c50ec91857601cde0dca9e3aa9b1a8829a047fc7ad0"
+            }
+          ]
+        },
+        {
           "source": "Replies close 24 hours after the appointment ends. A confirmed reschedule updates the deadline; cancellation closes replies immediately.",
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 297,
+              "line": 326,
               "kind": "literal",
               "context": "b6e6107a9f157c520ce4d2dcdc93e5563e8aafd049e98d513146b353a0a07a1a"
+            }
+          ]
+        },
+        {
+          "source": "Reply archived.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 82,
+              "kind": "literal",
+              "context": "94e6e4746b66881d50121fef8d64d890a4bea961d739743b61342d8a2a35831f"
             }
           ]
         },
@@ -8988,6 +9266,56 @@
               "line": 47,
               "kind": "localized-source",
               "context": "001e609bf937139ed18437029057caf93711f04cadff9e28dccac1c71798d1de"
+            }
+          ]
+        },
+        {
+          "source": "Reply changed. Refresh the library before trying again.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 46,
+              "kind": "literal",
+              "context": "d3e3eccfc916598e6f488e5f7ae636567da93b900c814a135fc0ee4a006c7919"
+            }
+          ]
+        },
+        {
+          "source": "Reply changed. Your edits are preserved. Keep them in a new reply, or discard them and reopen the current reply.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 46,
+              "kind": "literal",
+              "context": "d3e3eccfc916598e6f488e5f7ae636567da93b900c814a135fc0ee4a006c7919"
+            },
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 99,
+              "kind": "literal",
+              "context": "79238e03dfe23fdd5235daa50416792ccae8402cc44def1de9b70697fb2769e4"
+            }
+          ]
+        },
+        {
+          "source": "Reply inserted. Review and send it yourself.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 71,
+              "kind": "literal",
+              "context": "d1557f6aaf4a9c88b4152b791f0786b4acb1b5bee08cfa7493ba1443cea1826b"
+            }
+          ]
+        },
+        {
+          "source": "Reply saved.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 82,
+              "kind": "literal",
+              "context": "94e6e4746b66881d50121fef8d64d890a4bea961d739743b61342d8a2a35831f"
             }
           ]
         },
@@ -9159,6 +9487,34 @@
           ]
         },
         {
+          "source": "Reusable replies",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 88,
+              "kind": "literal",
+              "context": "fa1556838e46aaf4b355ba7ea9f193ea89fb7c83395e9444e32eeaa8b277cf72"
+            },
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 89,
+              "kind": "literal",
+              "context": "fa1556838e46aaf4b355ba7ea9f193ea89fb7c83395e9444e32eeaa8b277cf72"
+            }
+          ]
+        },
+        {
+          "source": "Reusable replies are temporarily unavailable.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 46,
+              "kind": "literal",
+              "context": "e1b6d1a156747e144c7390c511ee19459682435c6d3b84d0038f8329e52d948d"
+            }
+          ]
+        },
+        {
           "source": "Review attendance change",
           "occurrences": [
             {
@@ -9202,7 +9558,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 10,
+              "line": 11,
               "kind": "literal",
               "context": "70809c7960aee32e7be6a77227c0d5cd7eaf8e80447de02d399ae55ff8cff758"
             }
@@ -9357,7 +9713,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 9,
+              "line": 10,
               "kind": "literal",
               "context": "2a400383499f11a83a27564ca922b65551dfbf47c1d08b7c57886cb103ba5726"
             }
@@ -9434,7 +9790,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 8,
+              "line": 9,
               "kind": "literal",
               "context": "fe4d2e2b7151798706c593104b0ab7c84f6395788a8fb778f3eab659c817752e"
             }
@@ -9620,6 +9976,17 @@
               "line": 1,
               "kind": "literal",
               "context": "096131366896571d7d26bece20fb27c3a72ba5925d86b935e94fd5c8506dcd43"
+            }
+          ]
+        },
+        {
+          "source": "Sampling methodology",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 36,
+              "kind": "literal",
+              "context": "60475288bfc5900ee465c1d6b93028458a6f049a3af5da949f5c2dbde6596f49"
             }
           ]
         },
@@ -9876,7 +10243,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 28,
+              "line": 29,
               "kind": "localized-source",
               "context": "2056669fcec90d6a123d64e64f5c17fc2c51aa138d14e0fdfa1cf2eae9e66ac3"
             }
@@ -9937,7 +10304,7 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 274,
+              "line": 303,
               "kind": "localized-source",
               "context": "eeb999a7f8d72e56f633d2228b646ecc4ade96e590bce9c059a69acb81cf70d2"
             }
@@ -9951,6 +10318,17 @@
               "line": 19,
               "kind": "localized-source",
               "context": "e2dd511ee947114e589d6d25c14674ad4d4cb90159c2f0a1db5e51fe20d582c8"
+            }
+          ]
+        },
+        {
+          "source": "Search replies",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 93,
+              "kind": "literal",
+              "context": "09f8676c09534e0870363b81e4e8fdc1e40e5f0d93b893659942cd7bc015c3f7"
             }
           ]
         },
@@ -10438,6 +10816,17 @@
           ]
         },
         {
+          "source": "Showing {from}–{to} of {total}",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 104,
+              "kind": "literal",
+              "context": "feb9e791ad6f5b084f1e13faf75d075d1c93d1b5e5bdc53e8a32d0e61fe302ce"
+            }
+          ]
+        },
+        {
           "source": "Showing the first 200 matches. Narrow your search to find more clients.",
           "occurrences": [
             {
@@ -10674,6 +11063,28 @@
               "line": 114,
               "kind": "literal",
               "context": "14ab33693257b9fc0a24e3e4fe4e74bc422383b4033a657aace83a25e19f774c"
+            }
+          ]
+        },
+        {
+          "source": "Source data is unavailable for {month}; no value is estimated.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 31,
+              "kind": "literal",
+              "context": "2056a78db1c837e1d7ebfdd527a6297b6335bcb3973921aa51246aa69ee650e3"
+            }
+          ]
+        },
+        {
+          "source": "Source: U.S. Bureau of Labor Statistics",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 35,
+              "kind": "literal",
+              "context": "b2c61cb77ac44cf8e1ed786289a786c943ec12f2bcf13ec60e1d29880905e6ea"
             }
           ]
         },
@@ -11301,6 +11712,17 @@
           ]
         },
         {
+          "source": "The BLS uses a weighted sample of areas, outlets and items. The number of observations for this category is not published in this series.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 33,
+              "kind": "literal",
+              "context": "44ddf6d894d273ffa4562e924b2a838165bd8e33a7df0d3ba6dcaba4f8531a0e"
+            }
+          ]
+        },
+        {
           "source": "The business owner manages client updates.",
           "occurrences": [
             {
@@ -11352,6 +11774,17 @@
               "line": 19,
               "kind": "localized-source",
               "context": "75d76ea3a841f13a102f78c2c4da53ac3ef921950b8267eaba210976d00f2077"
+            }
+          ]
+        },
+        {
+          "source": "The matching month one year earlier is missing. A 12-month change cannot be calculated.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 29,
+              "kind": "literal",
+              "context": "d013e4e0d1ced1af26d99b77d6d1f42125d57831f36e002389be38d75d2aedc3"
             }
           ]
         },
@@ -11552,6 +11985,17 @@
           ]
         },
         {
+          "source": "The saved reference is out of date. A current comparison is unavailable until the source is verified again.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 30,
+              "kind": "literal",
+              "context": "6d9fa9e72c0019b3181754e039f06b1f44b20e76c9a83a0c1c7a07b3f3cf1509"
+            }
+          ]
+        },
+        {
           "source": "The source or publication window changed. Edit and review again.",
           "occurrences": [
             {
@@ -11559,6 +12003,17 @@
               "line": 134,
               "kind": "localized-source",
               "context": "b425308b450b79e8d3f14da2e67a9d111dcf6c905814597866befd2a152fec00"
+            }
+          ]
+        },
+        {
+          "source": "The source response does not provide a release timestamp. The retrieval date is not the publication date.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 34,
+              "kind": "literal",
+              "context": "ce81d1c8b14bb6efbb5678f2ed9af138a3800ea48ef166db18c566c20124708d"
             }
           ]
         },
@@ -11607,6 +12062,17 @@
           ]
         },
         {
+          "source": "These published months are separate from your selected finance period and your recorded dollar prices.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 32,
+              "kind": "literal",
+              "context": "8aee0a5748e492674331b29949fa8c128bf18828f72c6c011a0e50d729b06eee"
+            }
+          ]
+        },
+        {
           "source": "These settings control booking behavior. Writing a different time in your policy does not change them.",
           "occurrences": [
             {
@@ -11633,7 +12099,7 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 72,
+              "line": 76,
               "kind": "literal",
               "context": "e69ea327f823380324a7fd1b478c9c9bff708fdd753ff77c37b508dbf07e4c21"
             }
@@ -11655,7 +12121,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 43,
+              "line": 44,
               "kind": "localized-source",
               "context": "629c37739fc0bbd12690b65c3c342e1030e22d2c7188fe2465810248dea1bff1"
             }
@@ -11688,13 +12154,13 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 72,
+              "line": 76,
               "kind": "literal",
               "context": "d379d72d7edb79d3e1083487f432f5c751fdebcc334c0f385f393bd1166d28ee"
             },
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 297,
+              "line": 326,
               "kind": "literal",
               "context": "b6e6107a9f157c520ce4d2dcdc93e5563e8aafd049e98d513146b353a0a07a1a"
             },
@@ -11981,7 +12447,7 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 302,
+              "line": 332,
               "kind": "localized-source",
               "context": "cf1b8324051bf8ceaef085e3ad1df595ac8ccc9ccd3ee78ad07320b762feee17"
             }
@@ -12028,6 +12494,34 @@
               "line": 139,
               "kind": "literal",
               "context": "97f4e3d7fd109f705b1639b8148bd9a47b1889bb092a1e9e2ac7f6d2665ab3bf"
+            }
+          ]
+        },
+        {
+          "source": "U.S. city average · all urban consumers (CPI-U) · personal-care services",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 25,
+              "kind": "literal",
+              "context": "32ad277955acbb812fb60db7d7faeb3c9b28791be679b7acd7195b923f47ff72"
+            }
+          ]
+        },
+        {
+          "source": "U.S. personal-care price context",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 22,
+              "kind": "literal",
+              "context": "5bd81270197636576db68a71974448db2662fc448b1e214cc8359f79fd4d9eea"
+            },
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 23,
+              "kind": "literal",
+              "context": "5bd81270197636576db68a71974448db2662fc448b1e214cc8359f79fd4d9eea"
             }
           ]
         },
@@ -12198,7 +12692,7 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 273,
+              "line": 302,
               "kind": "literal",
               "context": "2fc5ddc038a25642993ff2a40e0bee42cb3433d303494316512818bd00743dae"
             }
@@ -12209,9 +12703,20 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 279,
+              "line": 308,
               "kind": "localized-source",
               "context": "f6711060b668117a9b1620d9083fda17dd76953f920636fab19bf76288729365"
+            }
+          ]
+        },
+        {
+          "source": "Unspecified",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 98,
+              "kind": "literal",
+              "context": "bc250440f9b25f4b759a8c1313a75ce475274b2d92013a5f244f2690247169d1"
             }
           ]
         },
@@ -12300,6 +12805,17 @@
           ]
         },
         {
+          "source": "Use as draft",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 106,
+              "kind": "literal",
+              "context": "948a082dce0e6c286b113d36e4c7e558b1f06cbc35b414efc4a09e331e1259f8"
+            }
+          ]
+        },
+        {
           "source": "Use previous 28 completed days",
           "occurrences": [
             {
@@ -12344,6 +12860,28 @@
           ]
         },
         {
+          "source": "Verified reference data is unavailable. No benchmark or estimated service price is shown.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 30,
+              "kind": "literal",
+              "context": "6d9fa9e72c0019b3181754e039f06b1f44b20e76c9a83a0c1c7a07b3f3cf1509"
+            }
+          ]
+        },
+        {
+          "source": "Verified retrieval: {date}",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessPriceContext.tsx",
+              "line": 34,
+              "kind": "literal",
+              "context": "c9f4126ea5afa09adba0725a871d12d1a8d58d5b431e41400406f483c2833f1d"
+            }
+          ]
+        },
+        {
           "source": "View attendance",
           "occurrences": [
             {
@@ -12359,7 +12897,7 @@
           "occurrences": [
             {
               "file": "src/components/BookingInbox.tsx",
-              "line": 291,
+              "line": 320,
               "kind": "localized-source",
               "context": "b17e97d41ebfff3144cc4292fbe0f91d74e8927140aa4513ab9bb9d724fd0373"
             }
@@ -12502,6 +13040,17 @@
               "line": 52,
               "kind": "literal",
               "context": "d2aceb842f15f82fca992fbfa6765e281ec64d9f0540e75e6c7c793ea148ce09"
+            }
+          ]
+        },
+        {
+          "source": "Wait a moment before trying again.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 46,
+              "kind": "literal",
+              "context": "653d8da6bf2c16dbc85e12ef77eb4850e5e3df42e0f33fef8c610698d3a28649"
             }
           ]
         },
@@ -12711,6 +13260,17 @@
           ]
         },
         {
+          "source": "You no longer have access to these business replies.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 46,
+              "kind": "literal",
+              "context": "a3f0357e8eac3edeaec388826a2a03cf9a4f960b8090f67c8a7fd6bf644c4c92"
+            }
+          ]
+        },
+        {
           "source": "Your assigned appointments only",
           "occurrences": [
             {
@@ -12777,6 +13337,28 @@
           ]
         },
         {
+          "source": "Your current draft will be replaced. Nothing is sent.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 103,
+              "kind": "literal",
+              "context": "c7b2df8df0c366c116239cc12b22aa9d0bd446a63cdddbe96c6bf80d19abf64b"
+            }
+          ]
+        },
+        {
+          "source": "Your draft changed. Review it before choosing a reply.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessReusableReplies.tsx",
+              "line": 46,
+              "kind": "literal",
+              "context": "831468be7bfc343a0a3e6f07d08b4ce191d7a21abd1461f017e4f27162524e5d"
+            }
+          ]
+        },
+        {
           "source": "Your gallery is visible on your public business page.",
           "occurrences": [
             {
@@ -12814,7 +13396,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 21,
+              "line": 22,
               "kind": "localized-source",
               "context": "24e27b4880b879762f201372cb5e20f197f9ad7f8985c939ab32979f7efa7689"
             }
@@ -12836,7 +13418,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessMoneyInsights.tsx",
-              "line": 42,
+              "line": 43,
               "kind": "localized-source",
               "context": "8580d2cdf1b119016415de48c786ba3be796bbf04380612f67e64ff976c7d911"
             }
@@ -12939,14 +13521,14 @@
       ]
     },
     "es": {
-      "source_count": 2761,
-      "covered": 2761,
+      "source_count": 2809,
+      "covered": 2809,
       "missing_count": 0,
       "missing": []
     },
     "zh-CN": {
-      "source_count": 2761,
-      "covered": 2761,
+      "source_count": 2809,
+      "covered": 2809,
       "missing_count": 0,
       "missing": []
     }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 import { businessMoneyInsights, type MoneyRecommendation } from "@/lib/businessMoneyInsights";
 import type { FinancePeriod, OperatingBooks } from "@/lib/businessFinanceCore";
+import BusinessPriceContext from "@/components/owner/BusinessPriceContext";
 
 const actions: Record<MoneyRecommendation["kind"], [string, string]> = {
   balances: ["Review recorded unpaid balances", "transactions"],
@@ -48,5 +49,6 @@ export default function BusinessMoneyInsights({ salonId, books, period }: { salo
       </li>)}</ul> : <p className="mt-2 text-sm">{t("No completed service samples in this period.")}</p>}
       <p className="mt-3 text-xs text-muted">{t("Discounts do not prove a promotion caused a booking. Promotion attribution is not available in these records.")}</p>
     </details>
+    <BusinessPriceContext/>
   </section>;
 }

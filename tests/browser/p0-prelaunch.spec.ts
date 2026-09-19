@@ -1,8 +1,39 @@
-import { expect, test as requestTest } from '@playwright/test';
+import { expect, test as requestTest, type Page } from '@playwright/test';
 import { test, screenshotCaret } from './helpers/hydration';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
+
+// A dev-runtime replacement navigation can begin after goto() has resolved.
+// Read the current document's load state and the existing SSR-disabled menu's
+// hydration signal. No dimensions are polled and persistent overflow still fails.
+async function waitForMarketplaceDocument(page: Page) {
+  await page.waitForLoadState('load');
+  await expect(page.getByRole('button', { name: 'Open navigation menu', exact: true, includeHidden: true })).toBeEnabled();
+  await page.evaluate(async () => { await document.fonts.ready; });
+}
+
+async function marketplaceGeometry(page: Page) {
+  return page.evaluate(() => {
+    const describe = (element: Element) => {
+      const rect = element.getBoundingClientRect(), style = getComputedStyle(element);
+      return { tag: element.tagName, id: element.id, class: element.getAttribute('class'), label: element.getAttribute('aria-label'), left: rect.left, right: rect.right, top: rect.top, width: rect.width, clientWidth: element.clientWidth, scrollWidth: element.scrollWidth, overflowX: style.overflowX, position: style.position, minWidth: style.minWidth, transform: style.transform };
+    };
+    return {
+      fits: document.documentElement.scrollWidth <= innerWidth,
+      viewport: innerWidth, documentWidth: document.documentElement.scrollWidth, bodyWidth: document.body.scrollWidth, scrollX,
+      readyState: document.readyState, fonts: document.fonts.status,
+      outside: [...document.querySelectorAll('body *')].filter(element => {
+        const rect = element.getBoundingClientRect();
+        return element.getClientRects().length > 0 && (rect.right > innerWidth || rect.left < 0);
+      }).map(element => {
+        const ancestors = []; let parent = element.parentElement;
+        while (parent && ancestors.length < 6) { ancestors.push(describe(parent)); parent = parent.parentElement; }
+        return { ...describe(element), ancestors };
+      }),
+    };
+  });
+}
 
 // Software-first founder decision: discovery closed; direct real-business
 // booking and authenticated accounts remain available. Demo entry is unlisted.
@@ -69,7 +100,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
   await expect(page.locator('main[data-homepage-variant]')).toBeVisible();
   expect((await context.cookies()).some(cookie => cookie.name === 'gc_site_access')).toBe(true);
   await expect(page.getByLabel('Marketplace demonstration notice')).toHaveCount(0);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await waitForMarketplaceDocument(page);
+  const initialGeometry = await marketplaceGeometry(page);
+  await info.attach('marketplace-initial-geometry', { body: JSON.stringify(initialGeometry, null, 2), contentType: 'application/json' });
+  expect(initialGeometry.fits).toBe(true);
   let nav = page.getByRole('navigation', { name: 'Main navigation', exact: true });
   if (viewport.width < 1536) {
     const trigger = page.getByRole('button', { name: 'Open navigation menu', exact: true });
@@ -91,6 +125,65 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
   const directory = `docs/screenshots/dashboard-redesign/${info.project.name}`;
   await mkdir(directory, { recursive: true });
   await page.screenshot({ path: `${directory}/marketplace-${viewport.width}.png`, fullPage: true, ...screenshotCaret });
+});
+
+test('demonstration replacement document waits for its stylesheet before geometry at 390x844', async ({ page, context, baseURL, browserName }, info) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await context.addCookies([{ name: 'gc_site_access', value: 'marketplace-demo', url: baseURL! }]);
+  await page.addInitScript(() => localStorage.setItem('girlz-culture-mobile-location-prompt-v1', JSON.stringify({ dismissedAt: Date.now(), outcome: 'dismissed' })));
+  await page.goto('/site-access');
+  await waitForMarketplaceDocument(page);
+
+  let releaseStylesheet!: () => void;
+  let markStylesheetRequested!: () => void;
+  let markStylesheetFinished!: () => void;
+  let stylesheetStarted = false;
+  const stylesheetGate = new Promise<void>(resolve => { releaseStylesheet = resolve; });
+  const stylesheetRequested = new Promise<void>(resolve => { markStylesheetRequested = resolve; });
+  const stylesheetFinished = new Promise<void>(resolve => { markStylesheetFinished = resolve; });
+  // The original trace checked the replacement document while this actual
+  // render-blocking @import from globals.css was still in flight. Hold only
+  // that public stylesheet response, without changing its bytes or page CSS.
+  await page.route('https://fonts.googleapis.com/**', async route => {
+    stylesheetStarted = true;
+    markStylesheetRequested();
+    try {
+      await stylesheetGate;
+      await route.continue();
+    } finally { markStylesheetFinished(); }
+  });
+  try {
+    await page.reload({ waitUntil: 'commit' });
+    await stylesheetRequested;
+    await expect(page.locator('main[data-homepage-variant]')).toBeVisible();
+    const premature = await marketplaceGeometry(page);
+    await info.attach('marketplace-held-stylesheet-geometry', { body: JSON.stringify(premature, null, 2), contentType: 'application/json' });
+    expect(premature.readyState).not.toBe('complete');
+
+    // WebKit lays out intrinsic images before this import arrives; Chromium
+    // can already fit. Both must wait for the current document before judging
+    // final layout. The original WebKit failure and BEFORE source are retained.
+    if (browserName === 'webkit') expect(premature.fits, 'WebKit reproduces the original premature overflow').toBe(false);
+    let ready = false;
+    const currentDocument = waitForMarketplaceDocument(page).then(() => { ready = true; });
+    // A protocol round trip verifies the current document is still loading;
+    // no elapsed-time assumption, sleep, retry or width-based wait is involved.
+    expect(await page.evaluate(() => document.readyState)).not.toBe('complete');
+    expect(ready).toBe(false);
+    releaseStylesheet();
+    await currentDocument;
+    const loaded = await marketplaceGeometry(page);
+    await info.attach('marketplace-loaded-stylesheet-geometry', { body: JSON.stringify(loaded, null, 2), contentType: 'application/json' });
+    expect(loaded.readyState).toBe('complete');
+    expect(loaded.fonts).toBe('loaded');
+    expect(loaded.fits).toBe(true);
+    await page.getByRole('button', { name: 'Open navigation menu', exact: true }).click();
+    await expect(page.getByRole('navigation', { name: 'Mobile navigation', exact: true })).toBeVisible();
+  } finally {
+    releaseStylesheet();
+    if (stylesheetStarted) await stylesheetFinished;
+    await page.unroute('https://fonts.googleapis.com/**');
+  }
 });
 
 test('public account APIs retain authentication rather than a demonstration restriction', async ({ request }) => {

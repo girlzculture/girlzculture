@@ -1262,6 +1262,7 @@ console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-busines
 console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-rebooking-advice.sql")], "Returning-client advice: explicit own-business identities, evidence and current role scope"));
 console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-service-contribution.sql")], "Own-service recorded cost allocation, source limits and immutable finance evidence"));
 console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-marketing.sql")], "Business marketing sources, review, scheduling and public projection isolation"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-reusable-replies.sql")], "Reusable replies: current business permission, stale revisions, idempotence and private draft isolation"));
 console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-referrals.sql")], "Business referral campaign, qualification, evidence and reward isolation"));
 const businessFinanceOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-finances.sql")], "Business finance isolation and reconciliation assertions");
 if (businessFinanceOutput) process.stdout.write(`${businessFinanceOutput}\n`);

@@ -25,6 +25,7 @@ Updated: 2026-09-19. This inventory covers 166 API route files and is enforced b
 | `/api/salon/service-contribution` | GET, POST | protected | Covered |
 | `/api/admin/referral-campaigns` | GET, POST | protected | Covered |
 | `/api/salon/marketing` | GET, POST | protected | Covered |
+| `/api/salon/reusable-replies` | GET, POST | protected | Covered |
 | `/api/salon/marketing/publish-due` | POST | protected | Covered |
 | `/api/salon/onboarding-draft` | GET, POST | protected | Covered |
 | `/api/salon/onboarding-instagram` | GET, POST | provider-backed | Covered |
