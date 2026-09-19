@@ -392,6 +392,10 @@
         {
           "file": "src/components/ImageUpload.tsx",
           "context": "fd05b96ab8c1d98b4bcb22b6505d53a69888c22962a61caa425c9d3e239e0255"
+        },
+        {
+          "file": "src/lib/businessScheduleOpportunities.ts",
+          "context": "29b9b164e788611bec700501927c9d8f001a1b3d33c4d3a2bd115a4b5abc3ffb"
         }
       ]
     },
@@ -636,6 +640,14 @@
         {
           "file": "src/components/booking/AppointmentWaitlist.tsx",
           "context": "651b4093e35443640b1c58e2ab4aa4f32a02bbd37c96989c8dcbf45ba91d729b"
+        },
+        {
+          "file": "src/components/owner/BusinessScheduleOpportunities.tsx",
+          "context": "83d10622ac93ead4fe5e39998782701b6fcb315b50a3e333b829475b7be2b57c"
+        },
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "3e9af128d2873e06bd2c5df4a0c04639078d7e8b92fdf8c46bf3fbf8fbd2e285"
         }
       ]
     },
@@ -978,6 +990,18 @@
         {
           "file": "src/lib/businessMoneyInsights.ts",
           "context": "9bca3dee4629bed5003c952da494b88c3e51b4b7ce20ba1b3334e8c6372759d2"
+        },
+        {
+          "file": "src/components/owner/BusinessScheduleOpportunities.tsx",
+          "context": "c16adf67b59506c1400765afc24b203688607d30df4e1b6e2643b36ab6100ab6"
+        },
+        {
+          "file": "src/lib/businessScheduleOpportunities.ts",
+          "context": "a5dc254a56b1b744fe7234983b58fd0ef839cc609662b906633c0212b96ca1d0"
+        },
+        {
+          "file": "src/lib/businessScheduleOpportunities.ts",
+          "context": "e481b5a66cc3891ae235da9e01879fe56e73d712c18264056da024954bbe93d9"
         }
       ]
     },
@@ -1172,6 +1196,10 @@
         {
           "file": "src/components/owner/BusinessMarketing.tsx",
           "context": "8b99d8b3c5675472fcda6baf8153b74a2ff49f00ea9010008197cbd33bc56f33"
+        },
+        {
+          "file": "src/components/owner/AssistantReschedulePreview.tsx",
+          "context": "da6d94b5ce75628852ed7d88f89c6cc5b5eda402f5b61f5688d42b3a15c64d1f"
         }
       ]
     },
@@ -1397,6 +1425,10 @@
         },
         {
           "file": "src/components/owner/BusinessReferrals.tsx",
+          "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
+        },
+        {
+          "file": "src/components/owner/BusinessCustomerCampaigns.tsx",
           "context": "8ddd218289d4bb72175a2617d14cf1e59ee1276561ff4c19f85225cf1a7c9189"
         }
       ]
@@ -2398,6 +2430,18 @@
         {
           "file": "src/components/owner/AssistantBalances.tsx",
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessCustomerCampaigns.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/AssistantReschedulePreview.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessScheduleOpportunities.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
         }
       ]
     },
@@ -2520,6 +2564,10 @@
         {
           "file": "src/lib/businessMarketing.ts",
           "context": "93ed9887f627f0828af7579fb1eb180c4a82cd1215ddc0463e9ef6c799c3499c"
+        },
+        {
+          "file": "src/components/owner/BusinessCustomerCampaigns.tsx",
+          "context": "eff2a56c4cf4d94d77ec4417b30b42b6736b024e7b5e215acc23967c32731227"
         }
       ]
     },
@@ -2622,6 +2670,10 @@
         {
           "file": "src/lib/businessPolicyCore.ts",
           "context": "6dbfc40df0ba5925437a6b7e1f8198f0d8d1c865bd83fd1f734af94bc192fc12"
+        },
+        {
+          "file": "src/components/owner/BusinessCustomerCampaigns.tsx",
+          "context": "b21fcc0fed3f2af6f99ebe231a63a9cabbbf0e1cef2fc8984207bff020291354"
         }
       ]
     },
@@ -3278,6 +3330,10 @@
         {
           "file": "src/components/owner/BusinessMarketing.tsx",
           "context": "60ad23e5bba98fef73c99c84717ac037dba2380fc3a4d7e2e571421126c3947d"
+        },
+        {
+          "file": "src/components/owner/BusinessCustomerCampaigns.tsx",
+          "context": "60ad23e5bba98fef73c99c84717ac037dba2380fc3a4d7e2e571421126c3947d"
         }
       ]
     },
@@ -3574,6 +3630,46 @@
         {
           "file": "src/components/owner/BusinessFinances.tsx",
           "context": "d5da043e70fc15a3b64db720f1b9d3ce83613556ae6ab0e707e7c2b7e6282a82"
+        }
+      ]
+    },
+    {
+      "source": "{value0}?search={value1}",
+      "reason": "Reviewed same-origin API URL and encoded search query syntax; not displayed copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessCustomerCampaigns.tsx",
+          "context": "8f2b4122a42f8bcecf7a32c2c4725a308b3c206e9a10df596bc0342b125d2366"
+        }
+      ]
+    },
+    {
+      "source": "{value0}T{value1}:{value2}",
+      "reason": "Reviewed local timestamp construction for canonical timezone conversion; ISO/date syntax is not translated.",
+      "contexts": [
+        {
+          "file": "src/lib/businessScheduleOpportunities.ts",
+          "context": "ce82dccb76d9fa9fbaa4ce83c348c63f0506fefbb8e821d3652bcdbcae49edf8"
+        }
+      ]
+    },
+    {
+      "source": "Current remaining schedule for seven local calendar days, including today. Draft/inactive professionals are excluded. Professional-minutes are summed across people, not distinct clock minutes. Capacity is configured intersected business/professional time after closures and blockouts. Bookings take precedence over overlapping holds; intervals count once per professional. Free time excludes active checkout holds. Booked percentage uses capacity, not sales or customer demand. Missing hours are unavailable. No historical utilization, service fit, marketplace eligibility, profit, benchmark, booking or promotion promise is inferred. Calendar review refreshes the source before any action.",
+      "reason": "Reviewed assistant model evidence-definition protocol explaining capacity provenance and limits; this text is never rendered directly. The owner panel has explicit four-language explanatory copy, and the assistant uses its existing response-language contract.",
+      "contexts": [
+        {
+          "file": "src/lib/businessScheduleOpportunities.ts",
+          "context": "79b2e4734d678db1229385921fa1278f19c8ba20a6c60f6684290cbc2fb41bef"
+        }
+      ]
+    },
+    {
+      "source": "noCapacity",
+      "reason": "Reviewed lookup key for the explicit business-schedule-copy four-language dictionary; its translated value is rendered, never this key. Four-language key/placeholder parity and locale browser cases cover the displayed copy.",
+      "contexts": [
+        {
+          "file": "src/components/owner/BusinessScheduleOpportunities.tsx",
+          "context": "35ff0d54f5387a68d510ce6c6517b6c4d69a14cf51de82afab90bf09225d2eee"
         }
       ]
     }

@@ -18,6 +18,7 @@ import { bookingDepositTerms } from "@/lib/businessDepositRules";
 import { readBusinessClientCard } from "@/lib/businessClientServer";
 import { readManualSaleOptions, prepareManualSale } from "@/lib/assistantManualSaleServer";
 import { readAssistantOutstandingBalances } from "@/lib/assistantOutstandingBalances";
+import { prepareAssistantBookingReschedule, assertAssistantRescheduleScope } from "@/lib/assistantBookingReschedule";
 import { assistantAssignedProfessional, assistantRequestedProfessional, assertAssistantProposalScope } from "@/lib/assistantProfessionalScope";
 
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
@@ -177,6 +178,7 @@ export async function readAssistantData(context: Context, tool: AssistantTool, a
 }
 
 async function prepare(context: Context, tool: AssistantTool, args: Row) {
+  if (tool === "prepare_booking_reschedule_proposal") return prepareAssistantBookingReschedule(context, args);
   if (tool === "prepare_manual_service_sale") return prepareManualSale(context, args);
   const { admin, salon } = context;
   const operation = await prepareOwnerOperation(context, tool, args);
@@ -232,6 +234,7 @@ export async function executeAssistantTool(context: Context, input: { requestId:
   const checked = validateTool(input.tool, input.args);
   const effectivePermission = await assertAssistantAccess(context, checked.permission);
   if (checked.risk >= 3) await assertAssistantProposalScope(context, checked.tool, checked.args);
+  if (checked.tool === "prepare_booking_reschedule_proposal") await assertAssistantRescheduleScope(context, checked.args.booking_id);
   const { admin, salon, user } = context;
   const existing = await admin.from("gc_assistant_requests").select("*").eq("id", input.requestId).eq("salon_id", salon.id).eq("requested_by", user.id).maybeSingle();
   if (existing.error) throw existing.error;

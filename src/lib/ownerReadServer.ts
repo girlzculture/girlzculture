@@ -9,6 +9,8 @@ import { readBusinessFinances } from "@/lib/businessFinanceServer";
 import { assistantAssignedProfessional, assistantRequestedProfessional } from "@/lib/assistantProfessionalScope";
 import { productStock } from "@/lib/businessProductInventory";
 import { recordedSubscriptionMonthlyAmount } from "@/lib/subscriptionAgreement";
+import { readBusinessScheduleOpportunities } from "@/lib/businessScheduleOpportunitiesServer";
+import { businessScheduleOpportunitiesSummary } from "@/lib/businessScheduleOpportunities";
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
 
@@ -145,7 +147,7 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     const bookings = await readPeriod(args.start, args.end);
     const metrics = ownerBusinessMetrics(bookings);
     if (tool === "get_customers") return { customers: bookings.map(row => ({ name: row.guest_name, booking_id: row.id, customer_id: row.customer_id, booking_origin: row.booking_origin })), scope: "customers_of_these_bookings" };
-    if (tool === "get_upcoming_appointments") return { bookings: metrics.upcoming.map(row => Object.fromEntries(Object.entries(row).filter(([key]) => key !== "guest_email"))), time_zone: salon.time_zone };
+    if (tool === "get_upcoming_appointments") return { total: metrics.upcoming.length, bookings: metrics.upcoming.map(row => Object.fromEntries(Object.entries(row).filter(([key]) => key !== "guest_email"))), time_zone: salon.time_zone };
     const currentPeriod = assistantPeriodMetrics(bookings);
     const start = Date.parse(String(args.start)), end = Date.parse(String(args.end));
     const comparisonStart = new Date(start - (end - start)).toISOString();
@@ -170,7 +172,16 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     const calendarAccess = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: context.user.id, p_permission: "availability" });
     if (calendarAccess.error) throw calendarAccess.error;
     const calendar = calendarAccess.data === true ? await calendarAvailability({ salonId: salon.id, date: calendarDate, stylistId: assigned }) : null;
-    return { calendar_gaps: calendar, ...metrics, ...currentPeriod, comparison, service_performance: services, professional_performance: professionals, no_show_definition: "Recorded booking status only; a past uncompleted appointment is not evidence of a no-show.", upcoming: metrics.upcoming.length, bookings: bookings.length, by_status: byStatus, profile_views: Number(salon.profile_views || 0), profile_views_period: "all_time", start: args.start, end: args.end, time_zone: salon.time_zone, customer_metric_definition: "Distinct customer identities or guest email addresses in this range", currency: "USD" };
+    let opportunities: unknown = null;
+    if (calendarAccess.data === true) {
+      try { opportunities = businessScheduleOpportunitiesSummary(await readBusinessScheduleOpportunities(context)); }
+      catch (error) {
+        const message = String((error as { message?: string })?.message || "");
+        if (!["SCHEDULE_HOURS_UNAVAILABLE", "SCHEDULE_CHANGED"].includes(message)) throw error;
+        opportunities = { available: false, reason: message, definition: "Current future capacity could not be verified. Unavailable is not zero; do not infer free time or utilization." };
+      }
+    }
+    return { calendar_gaps: calendar, schedule_opportunities: opportunities, ...metrics, ...currentPeriod, comparison, service_performance: services, professional_performance: professionals, no_show_definition: "Recorded booking status only; a past uncompleted appointment is not evidence of a no-show.", upcoming: metrics.upcoming.length, bookings: bookings.length, by_status: byStatus, profile_views: Number(salon.profile_views || 0), profile_views_period: "all_time", start: args.start, end: args.end, time_zone: salon.time_zone, customer_metric_definition: "Distinct customer identities or guest email addresses in this range", currency: "USD" };
   }
   throw new AssistantError("ASSISTANT_UNKNOWN_TOOL");
 }

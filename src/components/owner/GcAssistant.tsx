@@ -6,6 +6,8 @@ import { assistantPageFromPath } from "@/lib/assistantPageContext";
 import { isAssistantLanguage } from "@/lib/assistantLanguage";
 import AssistantDictation from "@/components/owner/AssistantDictation";
 import AssistantSpeech from "@/components/owner/AssistantSpeech";
+import AssistantReschedulePreview from "@/components/owner/AssistantReschedulePreview";
+import {rescheduleAssistantCopy} from "@/i18n/assistant-reschedule-copy";
 import AssistantBalances from "@/components/owner/AssistantBalances";
 import { MEMORY_TOOLS } from "@/lib/assistantMemory";
 import { ArrowUp, Sparkles, X } from "lucide-react";
@@ -302,7 +304,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
       if (generation !== actorGeneration.current) return;
       setTurns(previous => previous.map(item => item.id === turn.id ? { ...item, request: { ...turn.request!, result: result.result, confirmed_at: new Date().toISOString() }, notice: turn.request?.tool === "prepare_manual_service_sale" ? "The received payment was recorded and verified in Finances. No customer charge was made." : "Your change was saved and verified." } : item));
       window.dispatchEvent(new Event("gc-assistant-saved"));
-      if (result.warnings?.length) { setNotice("The message was saved, but a notification could not be delivered."); setReference(result.warnings[0].request_id || ""); }
+      if (result.warnings?.length) { setNotice(turn.request.tool === "prepare_booking_reschedule_proposal" ? "The proposal was saved, but a notification could not be delivered." : "The message was saved, but a notification could not be delivered."); setReference(result.warnings[0].request_id || ""); }
     } catch (error) { if (generation !== actorGeneration.current) return; setReference(error instanceof OwnerActionError ? error.reference : ""); setNotice(errors[error instanceof Error ? error.message : ""] || "The change could not be completed. Review the dashboard before trying again."); }
     finally { if (generation === actorGeneration.current) setBusy(false); }
   }
@@ -397,14 +399,14 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
                   {turn.request.tool === "prepare_manual_service_sale" ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This records payment you already received in Finances. Girlz Culture will not charge the client, send a receipt or create an appointment.")}</p> : null}
                   {turn.request.tool === "prepare_service" ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This service will be saved as a draft. Deposits follow platform rules.")}</p> : null}
                   {turn.request.tool === "prepare_business_profile_update" && ["tiktok_url", "instagram_url"].includes(String(turn.request.arguments.field)) ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This social link will be submitted for platform review.")}</p> : null}
-                  <div className="mt-4 rounded-xl bg-subtle p-4 text-text-primary"><Facts value={{ ...turn.request.arguments, ...turn.request.execution_payload }}/></div>
+                  <div className="mt-4 rounded-xl bg-subtle p-4 text-text-primary">{turn.request.tool === "prepare_booking_reschedule_proposal" ? <AssistantReschedulePreview value={turn.request.execution_payload} locale={turnLocale}/> : <Facts value={{ ...turn.request.arguments, ...turn.request.execution_payload }}/>}</div>
                   {Object.keys(turn.request.before_summary).length ? <details className="mt-3 rounded-xl border border-border px-3"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-text-primary">{t("Current information")}</summary><div className="border-t border-border py-3"><Facts value={turn.request.before_summary} timeZone={String(turn.request.execution_payload.time_zone || turn.request.arguments.time_zone || "America/New_York")}/></div></details> : null}
                   {turn.request.tool === "prepare_business_policy_update" ? <label className="mt-4 flex gap-3 text-sm font-medium leading-5 text-text-primary"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-teal" checked={Boolean(reviewed[turn.id])} onChange={event => setReviewed({ ...reviewed, [turn.id]: event.target.checked })}/>{t("I reviewed this policy in its original language and understand that platform rules and legal rights take precedence.")}</label> : null}
                   {/* Keep foreground and background changes immediate so an enabled action stays readable throughout the state change. */}
-                  <button disabled={busy || (turn.request.tool === "prepare_business_policy_update" && !reviewed[turn.id])} onClick={() => void confirm(turn)} className="mt-4 min-h-11 rounded-full bg-primary-hover px-5 text-sm font-bold text-white shadow-sm transition-shadow hover:bg-primary-hover gc-disabled-control">{t(turn.request.tool === "prepare_manual_service_sale" ? "Record received payment" : turn.request.risk_class === 4 ? "Confirm this public action" : "Confirm this change")}</button>
+                  <button disabled={busy || (turn.request.tool === "prepare_business_policy_update" && !reviewed[turn.id])} onClick={() => void confirm(turn)} className="mt-4 min-h-11 rounded-full bg-primary-hover px-5 text-sm font-bold text-white shadow-sm transition-shadow hover:bg-primary-hover gc-disabled-control">{turn.request.tool === "prepare_booking_reschedule_proposal" ? <span data-no-translate>{rescheduleAssistantCopy(turnLocale).confirm}</span> : t(turn.request.tool === "prepare_manual_service_sale" ? "Record received payment" : turn.request.risk_class === 4 ? "Confirm this public action" : "Confirm this change")}</button>
                 </section> : null}
 
-                {turn.notice ? <p role="status" className="ml-11 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-text-success">{t(turn.notice)}</p> : null}
+                {turn.notice ? <p role="status" className="ml-11 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-text-success">{turn.request?.tool === "prepare_booking_reschedule_proposal" ? <span data-no-translate>{rescheduleAssistantCopy(turnLocale)[String((turn.request.result as Row)?.status).toLowerCase() === "accepted" ? "accepted" : String((turn.request.result as Row)?.status).toLowerCase() === "pending" ? "pending" : "closed"]}</span> : t(turn.notice)}</p> : null}
                 {suggestions.length ? <div className="ml-11 flex flex-wrap gap-2">{suggestions.slice(0, 3).map(suggestion => <button key={suggestion} type="button" onClick={() => setText(t(suggestion))} className="min-h-9 rounded-full border border-border bg-white px-3 text-xs font-semibold text-text-primary hover:border-teal">{t(suggestion)}</button>)}</div> : null}
               </article>;
             })}

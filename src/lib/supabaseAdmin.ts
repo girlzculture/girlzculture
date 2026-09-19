@@ -253,11 +253,12 @@ export async function sendEmail(
   subject: string,
   html: string,
   category: TransactionalEmailCategory = "account",
-  options: { fromName?: string; replyTo?: string; idempotencyKey?: string } = {},
+  options: { fromName?: string; replyTo?: string; idempotencyKey?: string; signal?: AbortSignal } = {},
 ) {
   if (!process.env.RESEND_API_KEY || !to) return { skipped: true };
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
+    signal: options.signal,
     headers: {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       "Content-Type": "application/json",

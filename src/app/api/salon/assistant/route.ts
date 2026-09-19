@@ -3,6 +3,7 @@ import { enforceRateLimit, RateLimitError } from "@/lib/requestSecurity";
 import { AssistantError, ASSISTANT_TOOLS, assertSchema, stableJson, type AssistantTool } from "@/lib/gcAssistantCore";
 import { createHash } from "node:crypto";
 import { executeAssistantTool, confirmAssistantTool } from "@/lib/gcAssistantServer";
+import { deliverAssistantReschedule } from "@/lib/assistantBookingReschedule";
 import { planOwnerRequest } from "@/lib/gcAssistantPlanningServer";
 import { isAssistantPage } from "@/lib/assistantPageContext";
 import { isAssistantLanguage } from "@/lib/assistantLanguage";
@@ -44,6 +45,10 @@ async function POSTHandler(request: Request) {
       if (body.confirm !== true || typeof body.policy_reviewed !== "boolean" || !/^[0-9a-f]{64}$/.test(body.digest)) throw new AssistantError("ASSISTANT_CONFIRMATION_REQUIRED");
       const confirmed = await confirmAssistantTool(context, body.request_id, body.digest, body.policy_reviewed);
       let warnings: { code: string; request_id: string }[] = [];
+      if (confirmed.tool === "prepare_booking_reschedule_proposal") {
+        try { warnings = await deliverAssistantReschedule(context, confirmed.result, (process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "")); }
+        catch (error) { warnings = [{ code: "RESCHEDULE_NOTIFICATION_FAILED", request_id: await capturePlatformError({ request, admin, error, feature: "booking-rescheduling", action: "assistant-reschedule-notification", actorRole: "salon", actorId, salonId, safeMessage: "The proposal was saved, but a notification could not be delivered." }) }]; }
+      }
       if (confirmed.tool === "prepare_customer_message" && confirmed.result?.booking_id && confirmed.result?.id && typeof confirmed.result?.body === "string") {
         try { warnings = (await deliverBookingMessageNotifications(confirmed.result.id)).warnings; }
         catch (error) { warnings = [{ code: "MESSAGE_NOTIFICATION_FAILED", request_id: await capturePlatformError({ request, admin, error, feature: "booking-messages", action: "assistant-message-notification", actorRole: "salon", safeMessage: "The message was saved, but a notification could not be delivered." }) }]; }

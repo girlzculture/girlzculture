@@ -53,7 +53,7 @@ async function engineValue(
   return data?.published_value ?? fallback;
 }
 
-export async function createCustomerApprovedReschedule(input: {
+export type CustomerRescheduleInput = {
   admin: SupabaseClient;
   request?: Request;
   booking: Row;
@@ -66,13 +66,14 @@ export async function createCustomerApprovedReschedule(input: {
   rootUrl: string;
   requestId?: unknown;
   changeKind?: unknown;
-}) {
+};
+
+/** Read-only canonical validation. No proposal, guest token or notification is created. */
+export async function validateCustomerReschedule(input: CustomerRescheduleInput) {
   const {
     admin,
     booking,
     salon,
-    actorUserId,
-    actorRole,
   } = input;
   const reason = cleanText(input.reason, 300);
   const message = cleanText(input.message, 600);
@@ -163,6 +164,12 @@ export async function createCustomerApprovedReschedule(input: {
     expiryConfigured <= 336
       ? expiryConfigured
       : 72;
+  return { reason, message, timeZone, verifiedOptions, expiryHours, requestId };
+}
+
+export async function createCustomerApprovedReschedule(input: CustomerRescheduleInput) {
+  const { admin, booking, salon, actorUserId, actorRole } = input;
+  const { reason, message, verifiedOptions, expiryHours, requestId } = await validateCustomerReschedule(input);
   const expiresAt = new Date(
     Date.now() + expiryHours * 60 * 60 * 1000,
   ).toISOString();
@@ -187,8 +194,23 @@ export async function createCustomerApprovedReschedule(input: {
       "id,booking_id,status,message,reason,previous_appointment_datetime,expires_at,created_at",
     )
     .eq("id", proposalId)
+    .eq("salon_id", salon.id)
+    .eq("booking_id", booking.id)
     .single();
   if (loadError) throw loadError;
+  return deliverCustomerRescheduleProposal({ admin, booking, salon, proposal, verifiedOptions, rootUrl: input.rootUrl });
+}
+
+/** Existing per-channel delivery deduplication is reused only after a durable proposal exists. */
+export async function deliverCustomerRescheduleProposal(input: {
+  admin: SupabaseClient; booking: Row; salon: Row; proposal: Row;
+  verifiedOptions: Array<{ appointment_datetime: string; duration_hours: number; stylist_id: string | null; stylist_name: string }>;
+  rootUrl: string;
+}) {
+  const { admin, booking, salon, proposal, verifiedOptions } = input;
+  const proposalId = String(proposal.id);
+  const message = String(proposal.message || "");
+  const timeZone = salonTimeZone(salon.time_zone);
   if (proposal.status !== "Pending" || new Date(String(proposal.expires_at)).getTime() <= Date.now()) return {proposal,warnings:[]};
   const access = await issueGuestBookingToken(admin, String(booking.id), {
     reason: "Reschedule proposal",

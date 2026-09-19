@@ -10,6 +10,7 @@ import { GCIA_SOURCE_MESSAGES } from "@/i18n/gcia-source-catalog";
 import { DASHBOARD_REDESIGN_SOURCE_MESSAGES } from "@/i18n/dashboard-redesign-source-catalog";
 import { BOOKING_MONEY_COPY } from "@/i18n/business-booking-money-copy";
 import { REFERRAL_COPY_ROWS } from "@/i18n/business-referral-copy";
+import { CUSTOMER_CAMPAIGN_COPY_ROWS } from "@/i18n/business-customer-campaign-copy";
 type SourceCatalog = Record<string, string>;
 
 const es: SourceCatalog = {
@@ -208,7 +209,7 @@ const wo: SourceCatalog = {
 };
 
 const operationalMoneyMessages = (column: 1 | 2 | 3): SourceCatalog => Object.fromEntries(
-  [...BOOKING_MONEY_COPY, ...REFERRAL_COPY_ROWS].map(row => [row[0], row[column]]),
+  [...BOOKING_MONEY_COPY, ...REFERRAL_COPY_ROWS, ...CUSTOMER_CAMPAIGN_COPY_ROWS].map(row => [row[0], row[column]]),
 );
 
 export const DASHBOARD_SOURCE_MESSAGES: Record<string, SourceCatalog> = {

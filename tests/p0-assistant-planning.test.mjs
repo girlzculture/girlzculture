@@ -6,12 +6,29 @@ import { typescriptLoader } from './helpers/load-typescript.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const booking = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', public_reference: 'GC123', guest_name: 'Sarah Save', appointment_datetime: '2026-09-24T19:00:00Z', status: 'Confirmed', style: { name: 'Save' }, stylist: { name: 'Aminata' } };
+
+test('schedule summary preserves exact gap times and complete totals through actual planner and answer serialization with explicit excerpts',async()=>{
+ const load=typescriptLoader(root,{}, {URLSearchParams}),hours=Object.fromEntries(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day=>[day,{open:'09:00',close:'17:00'}]));
+ const roster=[1,2,3].map(n=>({id:`33000000-0000-4000-8000-00000000000${n}`,salon_id:'business-A',name:`Own professional ${n}`,is_active:true,availability:hours}));
+ const proof=load('src/lib/businessScheduleOpportunities.ts').businessScheduleOpportunities('business-A',{salon:{id:'business-A',hours},roster,bookings:[],intents:[],blockouts:[],timeZone:'America/New_York'},Date.parse('2026-09-21T12:00:00Z'));
+ const context={salon:{id:'business-A',time_zone:'America/New_York'},user:{id:'owner-A'},isOwner:true,admin:{rpc:async()=>({data:true,error:null}),from(){const q={select(){return q;},eq(){return q;},gte(){return q;},lt(){return q;},order(){return q;},range(){return Promise.resolve({data:[],error:null});}};return q;}}};
+ const read=typescriptLoader(root,{'@/lib/bookingAvailabilityServer':{calendarAvailability:async()=>({gaps:[]})},'@/lib/businessScheduleOpportunitiesServer':{readBusinessScheduleOpportunities:async()=>proof}})('src/lib/ownerReadServer.ts').readOwnerOperation;
+ const summary=await read(context,'get_business_summary',{start:'2026-08-01T00:00:00Z',end:'2026-08-08T00:00:00Z'});
+ for(const answerOnly of [false,true]){
+ const f=fixture({answerOnly,history:[{tool:'get_business_summary',permission:'overview',arguments:{},result:summary}],...(answerOnly?{output:{reply:'Review the September 21 gap.'}}:{})});
+ await f.run('en','Which open times can I review?');const payload=JSON.parse(f.requests[0].messages[1].content).previous[0].result.schedule_opportunities;
+ assert.deepEqual(payload.opportunities[0].gap_intervals ?? payload.opportunities[0].gaps,['2026-09-21T13:00:00.000Z / 2026-09-21T21:00:00.000Z']);
+ assert.equal(payload.from,'2026-09-21');assert.equal(payload.capacity_minutes,10080);assert.equal(payload.free_minutes,10080);assert.equal(payload.record_count,21);assert.equal(payload.opportunity_count,21);assert.equal(payload.shown_count,6);assert.equal(payload.is_excerpt,true);assert.equal(payload.opportunities.length,6);assert.equal(Object.hasOwn(payload,'records'),false);
+ const row=payload.opportunities[0];assert.equal(row.gap_count,1);assert.equal(row.gaps_are_excerpt,false);assert.deepEqual(row.gap_intervals,['2026-09-21T13:00:00.000Z / 2026-09-21T21:00:00.000Z']);assert.equal(row.href,'/salon/dashboard/availability?date=2026-09-21&stylist=33000000-0000-4000-8000-000000000001');
+ }
+});
 function fixture(options = {}) {
   const calls = []; const requests = []; const updates = [];
   const history = (options.history || []).map((row, index) => ({ id: `request-${index}`, ...row }));
   const admin = {
     async rpc(name, args) {
       calls.push({ name, args });
+      if (name === 'p0_actor_can_manage_professional') return {data:options.rescheduleScopeLost !== true};
       if (name === 'p0_business_plan_active') return { data: options.planActive !== false };
       if (name === 'p0_actor_has_permission') return { data: !(options.denied || []).includes(args.p_permission) };
       if (name === 'business_finance_scope') return options.ownFinance ? { data: { kind: 'own', stylist_id: 'professional-A' } } : { error: { message: 'FINANCE_ACCESS_DENIED' } };
@@ -44,6 +61,7 @@ function fixture(options = {}) {
           if (table === 'master_styles') return { data: options.catalog || [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', name: 'Knotless Braids' }] };
           if (table === 'bookings') {
             assert.ok(filters.some(row => row[0] === 'eq' && row[1] === 'salon_id' && row[2] === 'business-A'));
+            if(options.rescheduleHistory) return {data:options.rescheduleScopeLost?null:{...booking,salon_id:'business-A',stylist_id:options.assigned || 'professional-A'}};
             assert.ok(filters.some(row => row[0] === 'eq' && row[1] === 'stylist_id' && row[2] === options.assigned));
             return { data: options.assignedBookingAvailable ? { id: booking.id } : null };
           }
@@ -79,6 +97,21 @@ function fixture(options = {}) {
   const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ context:{admin,salon:{id:'business-A',time_zone:'America/New_York'},user:{id:'owner-A'},isOwner:!options.assigned,teamMember:options.assigned?{stylist_id:options.assigned}:null}, admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: options.previousRequestIds || history.map(row => row.id), conversationRequestIds: options.conversationRequestIds, conversation: options.conversation, answerOnly: options.answerOnly, page: options.page });
   return { run, calls, requests, updates };
 }
+
+test('booking selection carries true origin and bounded excerpt totals before resolving an ambiguous reschedule',async()=>{
+ const records=Array.from({length:35},(_,i)=>({...booking,id:`booking-${i}`,booking_origin:i%2?'business_added':'marketplace',guest_email:'PRIVATE_EMAIL'}));
+ const f=fixture({history:[{tool:'get_bookings',permission:'bookings',arguments:{},result:{bookings:records,total:35,time_zone:'America/New_York'}}]});
+ const result=await f.run('en','Move Sarah to 3 PM');const payload=JSON.parse(f.requests[0].messages[1].content).previous[0].result;
+ assert.equal(payload.total,35);assert.equal(payload.shown_count,12);assert.equal(payload.is_excerpt,true);assert.equal(payload.bookings.length,12);assert.equal(payload.bookings[0].booking_origin,'marketplace');assert.equal(payload.bookings[1].booking_origin,'business_added');assert.doesNotMatch(JSON.stringify(payload),/PRIVATE_EMAIL/);
+ assert.match(f.requests[0].messages[0].content,/Sarah matches multiple appointments or the date is missing/);assert.equal(result.clarification,'Which appointment?');
+});
+
+test('a previous-request-only marketplace proposal follow-up rechecks current booking scope before transcript reaches the model',async()=>{
+ for(const rescheduleScopeLost of [false,true]){
+ const f=fixture({rescheduleHistory:true,rescheduleScopeLost,history:[{tool:'prepare_booking_reschedule_proposal',permission:'bookings',arguments:{booking_id:booking.id},result:null}],conversation:[{role:'user',text:'PRIVATE_OLD_BOOKING_CONTEXT'}]});await f.run('en','What about that booking?');const payload=JSON.parse(f.requests[0].messages[1].content);
+ assert.equal(payload.previous.length,rescheduleScopeLost?0:1);assert.equal(JSON.stringify(payload).includes('PRIVATE_OLD_BOOKING_CONTEXT'),!rescheduleScopeLost);assert(f.calls.some(call=>call.table==='bookings'));
+ }
+});
 
 test('foreign or missing history IDs discard associated client prose before the provider', async () => {
   for (const partial of [false, true]) {

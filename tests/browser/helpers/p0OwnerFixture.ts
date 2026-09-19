@@ -5,6 +5,7 @@ import { summarizeOperatingBooks, type OperatingBooks } from "../../../src/lib/b
 import { businessBookingMoney } from "../../../src/lib/businessBookingMoney";
 import { createHash } from "node:crypto";
 import { IMAGE_UPLOAD_PROFILES, type ImagePresetKey } from "../../../src/lib/imageUpload";
+import { publicGalleryPhotos } from "../../../src/lib/businessPhotoMetadata";
 
 /** Browser-only API fixture. The real owner components render real route/state
  * transitions; database authorization/mutation is separately tested in SQL. */
@@ -64,6 +65,18 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
     if (path === "/api/i18n") return route.continue();
     if (path === "/api/i18n/preference") { accountLocale = req.postDataJSON().locale; return respond({ locale: accountLocale }); }
     if (path === "/api/salon/workspace") return respond({ salon: business, isOwner: true, isTeamMember: false, permissions: {}, records });
+    // Existing fixtures supply no seven-day calendar evidence; dedicated
+    // opportunity cases provide that response instead of inventing zero capacity.
+    if (req.method() === "GET" && path === "/api/salon/schedule-opportunities") return respond({code:"SCHEDULE_HOURS_UNAVAILABLE"},409);
+    if (req.method() === "GET" && path === "/api/salon/marketing") return respond({
+      posts: [], time_zone: business.time_zone, external_posting: false,
+      sources: {
+        photos: publicGalleryPhotos(business.gallery_photos).map(url => ({ url })),
+        services: records.styles.filter(row => row.salon_id === business.id && !row.archived_at && row.is_draft !== true).map(({ id, name, base_price, price_display_min, price_display_max, service_group_id, master_style_id }) => ({ id, name, base_price, price_display_min, price_display_max, service_group_id, master_style_id })),
+        promotions: records.salon_promotions.filter(row => row.salon_id === business.id && row.status === "Active" && row.is_active === true && !row.archived_at).map(({ id, title, public_headline, target_scope, target_ids, starts_at, ends_at }) => ({ id, title, public_headline, target_scope, target_ids, starts_at, ends_at })),
+        completed_services: records.bookings.filter(row => row.salon_id === business.id && row.status === "Completed").map(({ id, style_id, appointment_datetime }) => ({ id, style_id, appointment_datetime })),
+      },
+    });
     // Existing workspace tests do not supply operating-book/queue evidence.
     // Dedicated Morning Brief cases replace this route with their own records.
     if (req.method() === "GET" && path === "/api/salon/morning-brief") {

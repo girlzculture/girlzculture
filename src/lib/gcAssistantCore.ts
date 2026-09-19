@@ -47,6 +47,7 @@ export const ASSISTANT_TOOLS = {
   get_calendar_gaps: { risk: 1, permission: "availability", schema: object({ date, stylist_id: nullableId }) },
   prepare_manual_appointment: { risk: 3, permission: "bookings", schema: object(manualAppointment) },
   prepare_manual_reschedule: { risk: 3, permission: "bookings", schema: object({ booking_id: uuid, date, time: clockTime, stylist_id: nullableId }) },
+  prepare_booking_reschedule_proposal: { risk: 4, permission: "bookings", schema: object({ booking_id: uuid, date, time: clockTime, reason: { ...string(300), minLength: 1 }, message: string(600) }) },
   prepare_manual_cancellation: { risk: 3, permission: "bookings", schema: object({ booking_id: uuid, reason: { ...string(300), minLength: 1 } }) },
   prepare_business_hours: { risk: 3, permission: "availability", schema: object({ hours }) },
   prepare_service_edit: { risk: 3, permission: "styles", schema: object({ style_id: uuid, name: { ...string(120), minLength: 1 }, price: number(0, 100000), duration_hours: number(0.25, 24), buffer_minutes: { type: "integer", minimum: 0, maximum: 180 } }) },

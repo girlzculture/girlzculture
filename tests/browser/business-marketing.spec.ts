@@ -4,10 +4,25 @@ import { test } from './helpers/hydration';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { BUSINESS_MARKETING_SOURCE_MESSAGES as messages } from '../../src/i18n/business-marketing-source-catalog';
 import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catalog';
+import { untranslatedOwnerCopy } from './helpers/ownerLocaleCoverage';
+import AxeBuilder from '@axe-core/playwright';
 import { draftMarketingCopies, marketingDestinations, MARKETING_LOCALES, type MarketingPost, type MarketingSnapshot } from '../../src/lib/businessMarketing';
 test.use({ serviceWorkers: 'block' });
 const promotion='17500000-0000-4000-8000-000000000002';
 const text=(locale:string,value:string)=>DASHBOARD_SOURCE_MESSAGES[locale]?.[value]||messages[locale]?.[value]||value;
+for(const locale of ['en','fr','es','zh-CN'])for(const width of [390,768,1440])for(const populated of [false,true]){
+ test(`Business marketing default workspace route audit ${locale} ${width}px ${populated?'populated':'empty'}`,async({page})=>{
+  const f=await p0OwnerFixture(page,{locale,populated});await page.setViewportSize({width,height:width===390?844:1000});
+  const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/salon/marketing'&&r.request().method()==='GET');
+  await page.goto('/salon/dashboard/promotions');const loaded=await response;expect(loaded.status()).toBe(200);
+  const data=await loaded.json();expect(data.posts).toEqual([]);expect(data.sources.services.map((row:{id:string})=>row.id)).toEqual(populated?[f.ids.service]:[]);expect(data.external_posting).toBe(false);
+  await expect(page.getByRole('region',{name:text(locale,'Marketing content'),exact:true})).toBeVisible();await expect(page.locator('html')).toHaveAttribute('lang',locale);
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  expect(await untranslatedOwnerCopy(page,locale)).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1)).toBe(false);
+  const audit=await new AxeBuilder({page}).include('main').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();expect(audit.violations.map(item=>({id:item.id,targets:item.nodes.map(node=>node.target)}))).toEqual([]);
+  expect(f.unexpected,'Every fixture request must remain explicitly accounted for').toEqual([]);expect(f.actions).toEqual([]);
+ });
+}
 async function fixture(page:Page,locale='en') {
   const auth=await p0OwnerFixture(page,{locale,populated:true});Object.assign(auth.business,{name:'Maison Étoile GC123'});
   const source={photo_urls:['https://maps.gstatic.com/gc-marketing-fixture/own.svg'],service_id:auth.ids.service,promotion_id:promotion,booking_id:null};

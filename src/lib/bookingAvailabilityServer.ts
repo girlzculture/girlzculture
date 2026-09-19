@@ -23,7 +23,7 @@ type AvailabilityInput = {
   durationMinutes?: number;
   bufferMinutes?: number;
 };
-type AvailabilityData = {
+export type AvailabilityData = {
   salon: Row;
   style: Row;
   roster: Row[];
@@ -108,6 +108,7 @@ async function loadAvailabilityData(
   input: AvailabilityInput,
   fromDate: string,
   days: number,
+  strict = false,
 ): Promise<AvailabilityData> {
   const admin = getSupabaseAdmin();
   const [salonResult, styleResult, stylistResult] = await Promise.all([
@@ -126,7 +127,7 @@ async function loadAvailabilityData(
       .single() : Promise.resolve({ data: {}, error: null }),
     admin
       .from("stylists")
-      .select("id,name,availability,is_active,is_draft,assigned_service_ids", { count: "exact" })
+      .select("id,salon_id,name,availability,is_active,is_draft,assigned_service_ids", { count: "exact" })
       .eq("salon_id", input.salonId)
       .is("archived_at", null),
   ]);
@@ -153,14 +154,14 @@ async function loadAvailabilityData(
   ] = await Promise.all([
     admin
       .from("bookings")
-      .select("id,stylist_id,appointment_datetime,blocked_until,status", { count: "exact" })
+      .select("id,salon_id,stylist_id,appointment_datetime,blocked_until,status", { count: "exact" })
       .eq("salon_id", input.salonId)
       .lt("appointment_datetime", rangeEnd.toISOString())
       .gt("blocked_until", rangeStart.toISOString()),
     admin
       .from("booking_checkout_intents")
       .select(
-        "id,stylist_id,appointment_datetime,blocked_until,status,expires_at", { count: "exact" },
+        "id,salon_id,stylist_id,appointment_datetime,blocked_until,status,expires_at", { count: "exact" },
       )
       .eq("salon_id", input.salonId)
       .eq("status", "Pending")
@@ -169,7 +170,7 @@ async function loadAvailabilityData(
       .gt("blocked_until", rangeStart.toISOString()),
     admin
       .from("salon_blockouts")
-      .select("id,stylist_id,starts_at,ends_at", { count: "exact" })
+      .select("id,salon_id,stylist_id,starts_at,ends_at", { count: "exact" })
       .eq("salon_id", input.salonId)
       .is("released_at", null)
       .lt("starts_at", rangeEnd.toISOString())
@@ -214,6 +215,14 @@ async function loadAvailabilityData(
   const active = (row: Row) =>
     row.id !== input.excludeBookingId &&
     !["cancelled", "canceled"].includes(String(row.status).toLowerCase());
+  if (strict) {
+    // Opportunity totals must never label a truncated response as full capacity.
+    for (const result of [stylistResult, bookingsResult, intentsResult, blockoutsResult]) {
+      if (result.error || !Array.isArray(result.data) || typeof result.count !== "number" || result.count !== result.data.length || result.count > 1000) throw Error("SCHEDULE_EVIDENCE_INCOMPLETE");
+      if (result.data.some(row => row.salon_id !== input.salonId)) throw Error("SCHEDULE_ACCESS_DENIED");
+    }
+    if (salon.id !== input.salonId || (stylistResult.data || []).length > 50) throw Error("SCHEDULE_EVIDENCE_INCOMPLETE");
+  }
   return {
     salon,
     style,
@@ -229,6 +238,12 @@ async function loadAvailabilityData(
     ].filter(active),
     timeZone,
   };
+}
+
+/** Server-only, bounded canonical evidence for the protected operating view.
+ * No customer lookup, discovery query or service-fit promise is introduced. */
+export function loadCalendarOpportunityEvidence(salonId: string, date: string) {
+  return loadAvailabilityData({ salonId }, date, 7, true);
 }
 
 function availabilityForDate(

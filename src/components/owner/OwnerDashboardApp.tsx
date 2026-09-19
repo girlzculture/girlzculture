@@ -8,6 +8,7 @@ import BookingsWorkspace from "./BookingsWorkspace";
 import BookingPriceEvidence from "@/components/booking/BookingPriceEvidence";
 import BookingAttendance from "@/components/booking/BookingAttendance";
 import WorkspaceCalendar from "@/components/dashboard/WorkspaceCalendar";
+import { scheduleDate } from "@/lib/businessScheduleOpportunities";
 import { sortCatalogRecords } from "@/lib/catalogOrdering";
 import { GcAssistantAppearanceLauncher, useAssistantBusinessBinding } from "@/components/owner/GcAssistant";
 import { assistantAvatar } from "@/lib/assistantAppearance";
@@ -96,6 +97,7 @@ import {
   US_STATES,
 } from "@/lib/usStates";
 import BookingInbox from "@/components/BookingInbox";
+import BusinessCustomerCampaigns, { CustomerCampaignNavigation } from "@/components/owner/BusinessCustomerCampaigns";
 import BookingPolicyEvidence from "@/components/booking/BookingPolicyEvidence";
 import SalonPromotionsManager from "@/components/owner/SalonPromotionsManager";
 import BusinessMarketing from "@/components/owner/BusinessMarketing";
@@ -973,7 +975,7 @@ function DashboardContent({
   if (section === "products") return <TruthfulProducts c={c} recordId={c.focusedRecordId} />;
   if (section === "availability") return <Availability c={c} recordId={c.focusedRecordId} />;
   if (section === "bookings") return <Bookings c={c} recordId={c.focusedRecordId || c.initialBookingId} />;
-  if (section === "messages") return <BookingInbox scope="salon" initialBookingId={c.focusedRecordId} focused={Boolean(c.focusedRecordId)} />;
+  if (section === "messages") return <>{c.isOwner && (!c.focusedRecordId || c.focusedRecordId === "campaigns") ? <CustomerCampaignNavigation campaigns={c.focusedRecordId === "campaigns"}/> : null}{c.focusedRecordId === "campaigns" ? c.isOwner ? <BusinessCustomerCampaigns businessId={String(c.salon.id)}/> : <AccessPaused isOwner={false}/> : <BookingInbox scope="salon" initialBookingId={c.focusedRecordId} focused={Boolean(c.focusedRecordId)} />}</>;
   if (section === "reviews") return <Reviews c={c} recordId={c.focusedRecordId} />;
   if (section === "earnings") return <BusinessFinances key={JSON.stringify([c.salon.id,c.isOwner,c.access])} salonId={String(c.salon.id)} timeZone={String(c.salon.time_zone || "America/New_York")} isOwner={c.isOwner} access={c.access} paymentEvidence={c.isOwner || c.access?.earnings ? <Earnings c={c} recordId={c.focusedRecordId} /> : null}/>;
   if (section === "promotions")
@@ -2490,7 +2492,10 @@ function TruthfulProducts({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
 
 function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   const availabilityParams = useSearchParams();
-  const [calendarStylist, setCalendarStylist] = useState("");
+  const requestedCalendarDate = availabilityParams.get("date");
+  const initialCalendarDate = scheduleDate(requestedCalendarDate) ? requestedCalendarDate : undefined;
+  const initialCalendarStylist = c.stylists.find(row => row.id === availabilityParams.get("stylist"))?.id || "";
+  const [calendarStylist, setCalendarStylist] = useState(initialCalendarStylist);
   const hours = c.salon.hours || {};
   const settings = c.salon.booking_settings || {};
   const timeZone = c.salon.time_zone || "America/New_York";
@@ -2685,7 +2690,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
       <label className="text-sm font-semibold">{c.translateSource("Calendar professional")}<select value={calendarStylist} onChange={event=>setCalendarStylist(event.target.value)} className="ml-2 min-h-11 max-w-56 rounded-xl border border-border bg-white px-3"><option value="">{c.translateSource("All staff")}</option>{c.stylists.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label>
       <Link href="/salon/dashboard/bookings/new" className="flex min-h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white"><Plus size={17}/>{c.translateSource("Add an appointment")}</Link>
     </div>
-    <WorkspaceCalendar timeZone={timeZone} events={[
+    <WorkspaceCalendar key={`${initialCalendarDate || "today"}:${initialCalendarStylist}`} timeZone={timeZone} initialDate={initialCalendarDate} initialView={initialCalendarDate ? "day" : "week"} events={[
       ...activeBookings.filter(row=>!calendarStylist||row.stylist_id===calendarStylist).map(row=>({id:String(row.id),start:String(row.appointment_datetime),end:Number(row.duration_hours)>0&&Number.isFinite(Date.parse(String(row.appointment_datetime)))?new Date(Date.parse(String(row.appointment_datetime))+Number(row.duration_hours)*3600000).toISOString():undefined,title:String(row.guest_name||c.translateSource("Appointment")),subtitle:[row.manual_service_name||styleText(c,row.style_id),stylistText(c,row.stylist_id)].join(" · "),status:String(row.status),href:"/salon/dashboard/bookings/"+row.id})),
       ...c.blockouts.filter(row=>(!calendarStylist||!row.stylist_id||row.stylist_id===calendarStylist)&&Number.isFinite(Date.parse(String(row.starts_at)))&&Number.isFinite(Date.parse(String(row.ends_at)))).map(row=>({id:String(row.id),start:String(row.starts_at),end:new Date(Math.min(Date.parse(String(row.ends_at)),row.released_at&&Number.isFinite(Date.parse(String(row.released_at)))?Date.parse(String(row.released_at)):Infinity)).toISOString(),title:String(row.reason||c.translateSource("Unavailable")),subtitle:row.stylist_id?stylistText(c,row.stylist_id):c.translateSource("Whole salon"),status:row.released_at?"Released override":"Availability override",kind:"unavailable" as const,href:"/salon/dashboard/availability/"+row.id})),
     ]}/>

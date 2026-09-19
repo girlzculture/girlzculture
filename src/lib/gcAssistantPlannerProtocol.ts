@@ -4,7 +4,7 @@ import { ASSISTANT_LANGUAGES, isAssistantLanguage, type AssistantLanguage } from
 const destinations = ["overview", "profile", "photos", "services", "imports", "professionals", "products", "availability", "policies", "bookings", "messages", "reviews", "earnings", "promotions", "subscription", "settings", "support", "security"] as const;
 const purposes: Record<AssistantTool, string> = {
   get_outstanding_balances: "Read current authorized unpaid records with minimal client display names. Requires finance, bookings and client-history permissions together. Use for who owes money. Completed unpaid balances are separate from pending/future agreed amounts, never presumed overdue. Names may be absent; do not invent identity or group unrelated clients by similar names. Lists are capped but counts/totals include the authorized records. Use the returned exact Finances links; do not send reminders or collect money.",
-  get_business_summary: "Read appointment counts, recorded no-shows, completed booking value and authorized service/professional workload for a date range. Includes comparison with the preceding equal elapsed duration; use its exact timestamps, not an assumed calendar period. A null value is unavailable, not zero. Workload and booking value are not settled revenue or forecasts.",
+  get_business_summary: "Schedule opportunities, when available, cover the current next seven days independently of the requested historical summary range. Read appointment counts, recorded no-shows, completed booking value and authorized service/professional workload for a date range. Includes comparison with the preceding equal elapsed duration; use its exact timestamps, not an assumed calendar period. A null value is unavailable, not zero. Workload and booking value are not settled revenue or forecasts.",
   get_bookings: "Read appointments and their authoritative IDs for a date range.",
   get_availability: "Read bookable times on a date. Use null IDs when no service or professional is specified.",
   get_business_profile: "Read the business name, description, address, opening hours and social links. This does not contain the service menu or prices.",
@@ -28,6 +28,7 @@ const purposes: Record<AssistantTool, string> = {
   get_calendar_gaps: "Read calendar openings on a date, optionally for one professional.",
   prepare_manual_appointment: "Prepare a business-added appointment after resolving services, duration, professional and available time. Owner confirmation is still required.",
   prepare_manual_reschedule: "Prepare a time change for an existing business-added appointment. Never reschedule marketplace bookings with this tool.",
+  prepare_booking_reschedule_proposal: "Prepare one alternative time for a resolved marketplace booking with its current professional and unchanged payment terms. Requires a clear date, time and reason. Owner confirmation sends a proposal; only customer acceptance changes the appointment. Never infer consent or use this tool for a business-added appointment.",
   prepare_manual_cancellation: "Prepare cancellation of an existing business-added appointment, with a stated reason.",
   prepare_business_hours: "Prepare all seven days of opening hours using known values; ask about missing days.",
   prepare_service_edit: "Prepare edits to an existing draft service using its verified business service ID.",

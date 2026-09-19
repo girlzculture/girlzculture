@@ -1253,6 +1253,8 @@ console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-subscri
 console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-onboarding-draft.sql")], "Reviewed onboarding source, draft and owner-confirmation isolation"));
 console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-assistant-manual-sale.sql")], "Reviewed assistant manual service sale and durable receipt readback"));
 console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-assistant-outstanding-balances.sql")], "Read-only assistant outstanding balance tool registration"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-assistant-booking-reschedule.sql")], "Assistant marketplace reschedule approval and canonical proposal isolation"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-customer-campaigns.sql")], "Own-client campaigns, consent, review and permanent delivery attempt isolation"));
 console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-marketing.sql")], "Business marketing sources, review, scheduling and public projection isolation"));
 console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-referrals.sql")], "Business referral campaign, qualification, evidence and reward isolation"));
 const businessFinanceOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-finances.sql")], "Business finance isolation and reconciliation assertions");

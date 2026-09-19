@@ -1026,13 +1026,22 @@
         "src/components/owner/OwnerDashboardShell.tsx",
         "src/components/owner/OwnerDashboardApp.tsx",
         "src/components/dashboard/WorkspaceToolbar.tsx",
-        "src/app/globals.css"
+        "src/app/globals.css",
+        "src/components/public/SalonCardSkeletons.tsx",
+        "src/components/public/NearbySalonPlacement.tsx",
+        "src/components/public/FeaturedSalonPlacement.tsx",
+        "tests/browser/public-loading-layout.spec.ts"
       ],
-      "state": "PENDING",
+      "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Nearby and featured home loading placeholders now match the existing compact horizontal cards; the featured-results loading grid retains its responsive layout. Root landing, hero, page order, content, location, discovery and actual facts remain unchanged. This is bounded component polish, not full public redesign acceptance."
+      ],
+      "verification": [
+        "PUBLIC-LOADING-ACCEPTANCE.md: original390px vertical stack reproduced (901.5px spread). Corrected6 Chromium +6 WebKit local development-server cases pass at320/390/768/1440, including real destination construction, retained fixture prices, results-grid geometry, explicit error recovery, empty states and no page overflow. Loading/loaded phone screenshots inspected. Targeted lint/design source pass. Final combined production build, CI and hosted acceptance remain.",
+        "Combined corrected production build also passes all12 Chromium/WebKit public loading cases (combined-181-corrected-browser.log). Layout/error/empty/real destination assertions remain intact; this is local production-server acceptance, not deployed public acceptance."
+      ],
       "live_evidence": [],
       "detailed_clause": "| UI-07 | Extend the founder's modern, bright, colorful, conversational and interactive design direction and plain-language copy review across the main website and app as well as the owner dashboard. | Keep the detailed dashboard references as the current visual specification; incorporate further customer-facing design instructions as they arrive. Public profile, policy, promotion and booking changes below are already explicit scope. |",
       "detailed_clause_line": 55,
@@ -1040,13 +1049,13 @@
         "state": "PENDING",
         "acceptance": "BLOCKED"
       },
-      "progress_status": "Not started",
+      "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish the remaining page/editor/dialog compositions and all-page loading/empty/error/copy review. Opaque mobile chrome now passes focused Chromium/WebKit regression; complete visual acceptance remains outstanding.",
+      "remaining": "Complete the remaining public and dashboard page/editor/dialog visual and plain-language review, full translated/keyboard/booking journeys and hosted acceptance. The reproduced public loading layout now has bounded automated and screenshot evidence.",
       "external_blocker": null,
       "requirement_kind": "product",
-      "assessment": "missing",
-      "implementation_status": "PENDING",
+      "assessment": "partial",
+      "implementation_status": "IN_PROGRESS",
       "verification_status": "AUTOMATED ONLY",
       "wire_coverage": [
         {
@@ -2845,15 +2854,28 @@
         "src/components/owner/GcAssistant.tsx",
         "src/lib/gcAssistantPlanningServer.ts",
         "src/lib/gcAssistantServer.ts",
-        "src/lib/assistantMemoryServer.ts"
+        "src/lib/assistantMemoryServer.ts",
+        "src/lib/businessScheduleOpportunities.ts",
+        "src/lib/businessScheduleOpportunitiesServer.ts",
+        "src/components/owner/BusinessScheduleOpportunities.tsx",
+        "tests/browser/business-schedule-opportunities.spec.ts",
+        "src/lib/assistantBookingReschedule.ts",
+        "src/components/owner/AssistantReschedulePreview.tsx",
+        "supabase/migrations/20260919084221_assistant_booking_reschedule.sql",
+        "tests/browser/p0-assistant-reschedule.spec.ts"
       ],
       "state": "IMPLEMENTED",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
       "changes": [
-        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels."
+        "Saved owner-controlled business avatar and 3–5 page-specific actions; permission-filtered UI; conversation/memory references clear when authorized business or role access changes. My Page mobile Info/Services/Location/More exposes actual editors. Conversation options keep voice, setup and opt-in memory accessible without permanent tall panels.",
+        "Own-business seven-day capacity evidence now unions canonical booked/held/blocked intervals, excludes unavailable/draft resources, ranks up to six dated professional opportunities, and opens that exact Calendar scope for review. It is not a historical demand, service-fit, profit or market-price claim. The assistant receives a complete bounded projection rather than depth-truncated interval objects.",
+        "Assistant marketplace rescheduling now prepares a scoped reviewed proposal, preserves booked terms, requires explicit owner confirmation, persists Pending state with exact readback and waits for customer acceptance. It does not immediately move the appointment. Manual-booking rescheduling remains separate; durable notification failure is reported truthfully."
       ],
-      "verification": [],
+      "verification": [
+        "SCHEDULE-OPPORTUNITIES-ACCEPTANCE.md: focused core/authorization/count/DST/projection regressions and14 Chromium/WebKit cases now pass on the combined production build. Fresh-grant and assigned-professional isolation, failed refresh, unavailable hours, exact incident references and dated navigation are covered. Hosted records and remaining historical/profit advice remain unverified.",
+        "ASSISTANT-RESCHEDULE-PROPOSAL-ACCEPTANCE.md: focused planning/scope/notification boundary tests, local180 actual-role SQL and10 Chromium/WebKit production-build cases pass across four languages, fresh readback failure and accepted replay. Real dictation/provider interpretation and hosted customer acceptance remain unverified."
+      ],
       "live_evidence": [],
       "evidence": [
         "40/40 local Chromium/WebKit dashboard, avatar, memory and chat regressions passed. Two appearance/contextual-action unit tests passed. TypeScript and targeted lint passed. New database assertions prepared but not executed; live persistence/provider tests and remaining detailed clauses pending."
@@ -9831,16 +9853,22 @@
         "src/lib/businessBookingMoney.ts",
         "src/lib/businessBookingMoneyServer.ts",
         "src/components/owner/BusinessBookingMoney.tsx",
-        "src/app/api/salon/booking-money/route.ts"
+        "src/app/api/salon/booking-money/route.ts",
+        "src/lib/businessScheduleOpportunities.ts",
+        "src/lib/businessScheduleOpportunitiesServer.ts",
+        "src/components/owner/BusinessScheduleOpportunities.tsx",
+        "tests/browser/business-schedule-opportunities.spec.ts"
       ],
       "state": "PENDING",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
       "changes": [
-        "Deterministic own-business finance explanations, equal-day trends, bounded recorded price samples, appointment-cohort current states and linked receipts, and saved-offer attribution. Useful period-preserving links reuse existing Finances views."
+        "Deterministic own-business finance explanations, equal-day trends, bounded recorded price samples, appointment-cohort current states and linked receipts, and saved-offer attribution. Useful period-preserving links reuse existing Finances views.",
+        "Own-business seven-day capacity evidence now unions canonical booked/held/blocked intervals, excludes unavailable/draft resources, ranks up to six dated professional opportunities, and opens that exact Calendar scope for review. It is not a historical demand, service-fit, profit or market-price claim. The assistant receives a complete bounded projection rather than depth-truncated interval objects."
       ],
       "verification": [
-        "MoneyInsights8 focused plus15 finance regressions pass. Booking-cohort/referral/localization combined43 pass; malformed date before/after evidence; actual local service_role projection verified. Browser and hosted acceptance still pending this checkpoint."
+        "MoneyInsights8 focused plus15 finance regressions pass. Booking-cohort/referral/localization combined43 pass; malformed date before/after evidence; actual local service_role projection verified. Browser and hosted acceptance still pending this checkpoint.",
+        "SCHEDULE-OPPORTUNITIES-ACCEPTANCE.md: focused core/authorization/count/DST/projection regressions and14 Chromium/WebKit cases now pass on the combined production build. Fresh-grant and assigned-professional isolation, failed refresh, unavailable hours, exact incident references and dated navigation are covered. Hosted records and remaining historical/profit advice remain unverified."
       ],
       "live_evidence": [],
       "detailed_clause": "ADVISE-02 — Provide proactive, specific suggestions: slow Tuesday afternoons; a genuinely profitable but underbooked service; own-business regulars absent for six weeks; uneven stylist utilization; open Thursday slots; and low stock before the weekend. Explain the relevant numbers briefly. Do not hardcode the sample “8%”, “6 clients” or “3 slots” as facts.",
@@ -9938,16 +9966,22 @@
         "src/lib/businessBookingMoney.ts",
         "src/lib/businessBookingMoneyServer.ts",
         "src/components/owner/BusinessBookingMoney.tsx",
-        "src/app/api/salon/booking-money/route.ts"
+        "src/app/api/salon/booking-money/route.ts",
+        "src/lib/businessScheduleOpportunities.ts",
+        "src/lib/businessScheduleOpportunitiesServer.ts",
+        "src/components/owner/BusinessScheduleOpportunities.tsx",
+        "tests/browser/business-schedule-opportunities.spec.ts"
       ],
       "state": "PENDING",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
       "changes": [
-        "Deterministic own-business finance explanations, equal-day trends, bounded recorded price samples, appointment-cohort current states and linked receipts, and saved-offer attribution. Useful period-preserving links reuse existing Finances views."
+        "Deterministic own-business finance explanations, equal-day trends, bounded recorded price samples, appointment-cohort current states and linked receipts, and saved-offer attribution. Useful period-preserving links reuse existing Finances views.",
+        "Own-business seven-day capacity evidence now unions canonical booked/held/blocked intervals, excludes unavailable/draft resources, ranks up to six dated professional opportunities, and opens that exact Calendar scope for review. It is not a historical demand, service-fit, profit or market-price claim. The assistant receives a complete bounded projection rather than depth-truncated interval objects."
       ],
       "verification": [
-        "MoneyInsights8 focused plus15 finance regressions pass. Booking-cohort/referral/localization combined43 pass; malformed date before/after evidence; actual local service_role projection verified. Browser and hosted acceptance still pending this checkpoint."
+        "MoneyInsights8 focused plus15 finance regressions pass. Booking-cohort/referral/localization combined43 pass; malformed date before/after evidence; actual local service_role projection verified. Browser and hosted acceptance still pending this checkpoint.",
+        "SCHEDULE-OPPORTUNITIES-ACCEPTANCE.md: focused core/authorization/count/DST/projection regressions and14 Chromium/WebKit cases now pass on the combined production build. Fresh-grant and assigned-professional isolation, failed refresh, unavailable hours, exact incident references and dated navigation are covered. Hosted records and remaining historical/profit advice remain unverified."
       ],
       "live_evidence": [],
       "detailed_clause": "ADVISE-03 — Offer useful next steps such as preparing a promotion, featuring a service, drafting a rebooking message, suggesting a schedule adjustment or a restock action. Execute only the authorized/approved operation through the real workflow. Suggesting a message, purchase or reschedule is not evidence it was sent, bought or saved.",
@@ -10160,7 +10194,7 @@
       },
       "progress_status": "Implemented / unverified",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish reminder revision worker tests, opt-in delivery preferences, post-visit thank-you/rebooking, consent-aware own-client campaigns and remaining reusable/attachment capabilities. Substitution and conversation lifecycle have local passes. Missing separate conversation document is recorded; explicitly specified clauses remain required.",
+      "remaining": "Verify the complete shareable business/profile/service/availability/booking/deposit journey through the canonical link on the final candidate and public release, including supported external entry points. Existing link code is not complete hosted journey evidence.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -10259,14 +10293,16 @@
         "URL-backed inbox search/unread/active/closed categories; split desktop and phone inbox/detail; original-language records, retained per-conversation draft in memory, explicit translation preview, booking/policy context. Failed sends retain draft/request ID and exact incident reference.",
         "Current confirmed appointment end+24h controls replies; confirmed reschedule changes deadline, proposed date does not; cancellation closes immediately without deleting history. Existing marketplace guest secure-management notifications preserved; unlinked manual appointments stay restricted.",
         "Scope and professional assignment enforced before conversation/translation reads, database inserts and private notification previews. Support remains read-only. Assistant refuses closed-message proposals before saving. Explicit pagination replaces100/1000 silent caps.",
-        "Explicit same-time professional substitution uses the existing customer approval mechanism. Own-business/current assignment guards run before proposals, retries deduplicate, booked duration/price/deposit remain fixed, decline preserves appointment, and acceptance rechecks availability and stale snapshots. Notification retries reuse a secure signed management link and the existing per-channel delivery claims. Accepted proposals use their own confirmation delivery event."
+        "Explicit same-time professional substitution uses the existing customer approval mechanism. Own-business/current assignment guards run before proposals, retries deduplicate, booked duration/price/deposit remain fixed, decline preserves appointment, and acceptance rechecks availability and stale snapshots. Notification retries reuse a secure signed management link and the existing per-channel delivery claims. Accepted proposals use their own confirmation delivery event.",
+        "Existing internal booking conversation remains the primary business/customer channel. Revision-aware reminders, optional own-business communication preferences and completed-appointment follow-ups use existing scoped messaging/delivery records; no WhatsApp booking workflow was introduced."
       ],
       "verification": [
         "Local Messages core/assistant/recipient suite51/51; closed and assigned-access regressions reproduced before fix. Actual two-business owner/staff RLS, fresh permission, retained originals, window and in-app notification isolation tested with rollback-only SQL.",
         "165 migrations and all clean database assertions pass: messages-clean-verified.log. Original notification leak preserved messages-notification-before.log; corrected assertions messages-notification-final.log.",
         "Final Messages browser matrix16/16passed in Chromium/WebKit: four required locales/viewports, phone unread-on-open, history filters/back/reload, retained failed-send draft, exact request reference, same-ID retry, closed originals, existingcustomer/team/support policy/translation/a11y and composer regressions. messages-browser-final.log; no live provider/message-send claim.",
         "substitution-browser-final.log:18/18 Chromium+WebKit cases, including four locale/viewport owner flows, failed draft/exact incident/same-ID retry, refreshed proposal, actual professional label, customer accept/decline/conflict/expiry and existing public professional assignment regression. Production build substitution-verified-build.log and lint substitution-lint-corrected.log pass.",
-        "Server/API/token5 tests pass (substitution-server-final.log); availability5 tests pass (substitution-core-final.log). Two-business/assigned-role SQL validates immutable terms, retry, changed assignment/conflict, stale acceptance and secure token reuse. Full166migration chain passed substitution-clean-final.log; subsequent issuance-audit addition reapplied and all substitution assertions pass substitution-audit-final.log."
+        "Server/API/token5 tests pass (substitution-server-final.log); availability5 tests pass (substitution-core-final.log). Two-business/assigned-role SQL validates immutable terms, retry, changed assignment/conflict, stale acceptance and secure token reuse. Full166migration chain passed substitution-clean-final.log; subsequent issuance-audit addition reapplied and all substitution assertions pass substitution-audit-final.log.",
+        "Previously verified evidence reused: reminder-server-final.log17/17 and fresh167 SQL; communication preferences10 browser cases and fresh168 SQL; followup-finance-core-final.log26/26 and fresh169 SQL. These are local automated checks, not actual message delivery or final hosted acceptance. See historical CHECKPOINT reminder/communication/post-visit entries."
       ],
       "live_evidence": [],
       "detailed_clause": "COMMS-02 — Create the two-way booking conversation automatically when a booking is made. Translate both directions through DeepL so business and customer each use their chosen language. Include automatic welcome messages, questions, confirmations and the stylist-substitution flow. The requested active window ends 24 hours after the appointment; define how rescheduling/cancellation affects that window and distinguish closing a chat from deleting its history.",
@@ -10280,7 +10316,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish reminder revision worker tests, opt-in delivery preferences, post-visit thank-you/rebooking, consent-aware own-client campaigns and remaining reusable/attachment capabilities. Substitution and conversation lifecycle have local passes. Missing separate conversation document is recorded; explicitly specified clauses remain required.",
+      "remaining": "Complete final-candidate and hosted two-way conversation/DeepL/substitution/window acceptance. Revision-aware reminders, customer-controlled preferences and post-visit follow-ups are already implemented with local evidence; do not restart them. Remaining reusable-reply/attachment clauses are tracked separately in PAGE-09.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -10496,17 +10532,24 @@
         "src/app/api/customer/bookings/[id]/communications/route.ts",
         "supabase/migrations/20260918173101_business_customer_communication_preferences.sql",
         "tests/p0-business-communications.test.mjs",
-        "scripts/sql/verify-business-communication-preferences.sql"
+        "scripts/sql/verify-business-communication-preferences.sql",
+        "src/lib/businessCustomerCampaigns.ts",
+        "src/lib/businessCustomerCampaignServer.ts",
+        "src/components/owner/BusinessCustomerCampaigns.tsx",
+        "supabase/migrations/20260919084558_business_customer_campaigns.sql",
+        "tests/browser/business-customer-campaigns.spec.ts"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Requirement-specific implementation/acceptance work not started; this is not an external blocker.",
       "changes": [
-        "Added customer-controlled, per-business communication preferences and booking-only guest preferences; default-off optional marketing/rebooking, revisioned consent history, signed opt-out and delivery reservation gate. Prevents an awaiting save from executing under a replacement account."
+        "Added customer-controlled, per-business communication preferences and booking-only guest preferences; default-off optional marketing/rebooking, revisioned consent history, signed opt-out and delivery reservation gate. Prevents an awaiting save from executing under a replacement account.",
+        "Client Updates connects reviewed published business content to a selected, own-business, completed-service client list with verified email and explicit business email-update consent. Each saved recipient language must be reviewed; approval sends nothing, and each explicit send action attempts one recipient. Fresh consent/source checks and a durable attempt latch prevent blind repeat sends. Cancelled unsent recipients are distinguished from eligibility skips; provider acceptance is not represented as delivered/read."
       ],
       "verification": [
         "communication-focused.log: 26/26 communication, reminder and coverage tests; communication-session-focused-final.log: 26/26 consent/session/coverage regressions; communication-preferences-sql-verified.log: real isolated PostgreSQL two-business/guest/revision/opt-out checks; communication-clean-database.log: complete 168-migration chain and assertions pass. Production untouched. Browser acceptance still running at this snapshot.",
-        "pr80-focused-browser-corrections.log: all 10 communication-preference cases passed in Chromium/WebKit across EN/FR/ES/zh-CN, including failed-save retention, retry, refresh and explicit opt-out. Synthetic customer sessions; no live communication sent."
+        "pr80-focused-browser-corrections.log: all 10 communication-preference cases passed in Chromium/WebKit across EN/FR/ES/zh-CN, including failed-save retention, retry, refresh and explicit opt-out. Synthetic customer sessions; no live communication sent.",
+        "CUSTOMER-CAMPAIGNS-ACCEPTANCE.md:10 focused Node tests, local181 actual-role SQL and18 Chromium/WebKit production-build cases pass. Coverage includes four languages, saved refresh/cross-context readback, lost response identity reuse, uncertain attempt no-retry, fresh opt-out skip, partial cancellation and authorization denial. Actual email provider delivery and hosted acceptance remain unverified."
       ],
       "live_evidence": [],
       "detailed_clause": "COMMS-04 — Let the business send promotions/updates to its own eligible client list, translated to customer languages. Use the existing permissions and messaging consent/preferences, with clear recipient selection and send behavior. This requirement describes a product feature; it is not an instruction to send any real campaign during requirements capture.",
@@ -10599,13 +10642,24 @@
         "src/lib/bookingCommunications.ts",
         "src/lib/bookingMessageTranslationServer.ts",
         "src/components/BookingInbox.tsx",
-        "supabase/migrations"
+        "supabase/migrations",
+        "src/lib/businessCustomerCampaigns.ts",
+        "src/lib/businessCustomerCampaignServer.ts",
+        "src/components/owner/BusinessCustomerCampaigns.tsx",
+        "supabase/migrations/20260919084558_business_customer_campaigns.sql",
+        "tests/browser/business-customer-campaigns.spec.ts"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Existing internal booking conversation remains the primary business/customer channel. Revision-aware reminders, optional own-business communication preferences and completed-appointment follow-ups use existing scoped messaging/delivery records; no WhatsApp booking workflow was introduced.",
+        "Client Updates connects reviewed published business content to a selected, own-business, completed-service client list with verified email and explicit business email-update consent. Each saved recipient language must be reviewed; approval sends nothing, and each explicit send action attempts one recipient. Fresh consent/source checks and a durable attempt latch prevent blind repeat sends. Cancelled unsent recipients are distinguished from eligibility skips; provider acceptance is not represented as delivered/read."
+      ],
+      "verification": [
+        "Previously verified evidence reused: reminder-server-final.log17/17 and fresh167 SQL; communication preferences10 browser cases and fresh168 SQL; followup-finance-core-final.log26/26 and fresh169 SQL. These are local automated checks, not actual message delivery or final hosted acceptance. See historical CHECKPOINT reminder/communication/post-visit entries.",
+        "CUSTOMER-CAMPAIGNS-ACCEPTANCE.md:10 focused Node tests, local181 actual-role SQL and18 Chromium/WebKit production-build cases pass. Coverage includes four languages, saved refresh/cross-context readback, lost response identity reuse, uncertain attempt no-retry, fresh opt-out skip, partial cancellation and authorization denial. Actual email provider delivery and hosted acceptance remain unverified."
+      ],
       "live_evidence": [],
       "detailed_clause": "COMMS-05 — Position this as retaining and rebooking customers served by the business. The source refers to a separate Booking Conversation document for fuller details; that document's full text is not present in this attachment. Record the dependency for consolidation without inventing its contents or dropping the specified chat capabilities.",
       "detailed_clause_line": 417,
@@ -10615,7 +10669,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Finish reminder revision worker tests, opt-in delivery preferences, post-visit thank-you/rebooking, consent-aware own-client campaigns and remaining reusable/attachment capabilities. Substitution and conversation lifecycle have local passes. Missing separate conversation document is recorded; explicitly specified clauses remain required.",
+      "remaining": "Preserve the explicit retention/rebooking and internal-chat clauses. The separate full Booking Conversation document is absent; do not invent additional requirements. Final-candidate and hosted acceptance of specified workflows remains; consent-aware campaign code is being verified separately.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",
@@ -12303,13 +12357,22 @@
       "implementation_paths": [
         "src/app/site-access/page.tsx",
         "src/app/page.tsx",
-        "src/components/SalonBookingWizard.tsx"
+        "src/components/SalonBookingWizard.tsx",
+        "src/components/public/SalonCardSkeletons.tsx",
+        "src/components/public/NearbySalonPlacement.tsx",
+        "src/components/public/FeaturedSalonPlacement.tsx",
+        "tests/browser/public-loading-layout.spec.ts"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Nearby and featured home loading placeholders now match the existing compact horizontal cards; the featured-results loading grid retains its responsive layout. Root landing, hero, page order, content, location, discovery and actual facts remain unchanged. This is bounded component polish, not full public redesign acceptance."
+      ],
+      "verification": [
+        "PUBLIC-LOADING-ACCEPTANCE.md: original390px vertical stack reproduced (901.5px spread). Corrected6 Chromium +6 WebKit local development-server cases pass at320/390/768/1440, including real destination construction, retained fixture prices, results-grid geometry, explicit error recovery, empty states and no page overflow. Loading/loaded phone screenshots inspected. Targeted lint/design source pass. Final combined production build, CI and hosted acceptance remain.",
+        "Combined corrected production build also passes all12 Chromium/WebKit public loading cases (combined-181-corrected-browser.log). Layout/error/empty/real destination assertions remain intact; this is local production-server acceptance, not deployed public acceptance."
+      ],
       "live_evidence": [],
       "detailed_clause": "PUBLIC-10 — Preserve the existing public website's approved layout, sections, content and customer journeys while refining its appearance in teal, white and black. The website mockups are inspiration only, not a replacement design to reproduce. Interpret “glows” as polished contrast, clean surfaces, appealing component shapes, restrained depth and modern interaction. Do not rebuild or reorder whole public pages solely to match an image, replace the palette, import new slogans or add harsh glow effects. Apply the founder's separately specified functional and navigation corrections; this restraint on the public website does not reduce the full business-dashboard redesign scope.",
       "detailed_clause_line": 476,
@@ -12497,13 +12560,22 @@
       "implementation_paths": [
         "src/app/site-access/page.tsx",
         "src/app/page.tsx",
-        "src/components/SalonBookingWizard.tsx"
+        "src/components/SalonBookingWizard.tsx",
+        "src/components/public/SalonCardSkeletons.tsx",
+        "src/components/public/NearbySalonPlacement.tsx",
+        "src/components/public/FeaturedSalonPlacement.tsx",
+        "tests/browser/public-loading-layout.spec.ts"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Nearby and featured home loading placeholders now match the existing compact horizontal cards; the featured-results loading grid retains its responsive layout. Root landing, hero, page order, content, location, discovery and actual facts remain unchanged. This is bounded component polish, not full public redesign acceptance."
+      ],
+      "verification": [
+        "PUBLIC-LOADING-ACCEPTANCE.md: original390px vertical stack reproduced (901.5px spread). Corrected6 Chromium +6 WebKit local development-server cases pass at320/390/768/1440, including real destination construction, retained fixture prices, results-grid geometry, explicit error recovery, empty states and no page overflow. Loading/loaded phone screenshots inspected. Targeted lint/design source pass. Final combined production build, CI and hosted acceptance remain.",
+        "Combined corrected production build also passes all12 Chromium/WebKit public loading cases (combined-181-corrected-browser.log). Layout/error/empty/real destination assertions remain intact; this is local production-server acceptance, not deployed public acceptance."
+      ],
       "live_evidence": [],
       "detailed_clause": "PUBLIC-12 — Homepage reference (08_38_15), visual inspiration: a polished image-led hero, readable heading, rounded location/query/search control, clear actions and neatly shaped photo-led business cards. Mobile visual cues include wide rounded search, touch-friendly category controls and compact cards. Apply suitable component styling to the existing homepage; do not replace its hero, sections or ordering simply to copy the reference. Keep existing approved imagery/content unless a requested correction needs a change. Do not hardcode the sample New York location, copy invented counts or add every illustrated module.",
       "detailed_clause_line": 480,
@@ -12599,13 +12671,22 @@
       "implementation_paths": [
         "src/app/site-access/page.tsx",
         "src/app/page.tsx",
-        "src/components/SalonBookingWizard.tsx"
+        "src/components/SalonBookingWizard.tsx",
+        "src/components/public/SalonCardSkeletons.tsx",
+        "src/components/public/NearbySalonPlacement.tsx",
+        "src/components/public/FeaturedSalonPlacement.tsx",
+        "tests/browser/public-loading-layout.spec.ts"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Nearby and featured home loading placeholders now match the existing compact horizontal cards; the featured-results loading grid retains its responsive layout. Root landing, hero, page order, content, location, discovery and actual facts remain unchanged. This is bounded component polish, not full public redesign acceptance."
+      ],
+      "verification": [
+        "PUBLIC-LOADING-ACCEPTANCE.md: original390px vertical stack reproduced (901.5px spread). Corrected6 Chromium +6 WebKit local development-server cases pass at320/390/768/1440, including real destination construction, retained fixture prices, results-grid geometry, explicit error recovery, empty states and no page overflow. Loading/loaded phone screenshots inspected. Targeted lint/design source pass. Final combined production build, CI and hosted acceptance remain.",
+        "Combined corrected production build also passes all12 Chromium/WebKit public loading cases (combined-181-corrected-browser.log). Layout/error/empty/real destination assertions remain intact; this is local production-server acceptance, not deployed public acceptance."
+      ],
       "live_evidence": [],
       "detailed_clause": "PUBLIC-13 — Discovery/results reference (08_38_33), visual inspiration: rounded search, neat service chips, concise sorting and consistently shaped salon cards. Refine the existing discovery layout and controls; do not add a new map, sidebar or layout merely because one appears in the image. Where list/map functionality already exists, maintain and polish it. Display actual images, names, valid ratings/location/open status, tags and prices with clear profile/booking actions. Preserve working filters/location behavior and readable mobile results.",
       "detailed_clause_line": 482,
@@ -12893,13 +12974,22 @@
       "implementation_paths": [
         "src/app/site-access/page.tsx",
         "src/app/page.tsx",
-        "src/components/SalonBookingWizard.tsx"
+        "src/components/SalonBookingWizard.tsx",
+        "src/components/public/SalonCardSkeletons.tsx",
+        "src/components/public/NearbySalonPlacement.tsx",
+        "src/components/public/FeaturedSalonPlacement.tsx",
+        "tests/browser/public-loading-layout.spec.ts"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
       "blocker": "Remaining implementation or full-clause/live verification is outstanding; this is not an external blocker.",
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Nearby and featured home loading placeholders now match the existing compact horizontal cards; the featured-results loading grid retains its responsive layout. Root landing, hero, page order, content, location, discovery and actual facts remain unchanged. This is bounded component polish, not full public redesign acceptance."
+      ],
+      "verification": [
+        "PUBLIC-LOADING-ACCEPTANCE.md: original390px vertical stack reproduced (901.5px spread). Corrected6 Chromium +6 WebKit local development-server cases pass at320/390/768/1440, including real destination construction, retained fixture prices, results-grid geometry, explicit error recovery, empty states and no page overflow. Loading/loaded phone screenshots inspected. Targeted lint/design source pass. Final combined production build, CI and hosted acceptance remain.",
+        "Combined corrected production build also passes all12 Chromium/WebKit public loading cases (combined-181-corrected-browser.log). Layout/error/empty/real destination assertions remain intact; this is local production-server acceptance, not deployed public acceptance."
+      ],
       "live_evidence": [],
       "detailed_clause": "PUBLIC-16 — Desktop and mobile each require intentional layouts. Verify the new component shapes, tabs, search, cards, menus and booking controls at representative narrow phone, wider phone, tablet and desktop sizes, with translated labels and mobile keyboard behavior. Avoid horizontal page overflow, clipped text, hidden primary actions and decorative controls that do not work.",
       "detailed_clause_line": 488,
@@ -16488,10 +16578,18 @@
       "release_status": "NOT RELEASED",
       "implementation_paths": [
         "src/components/owner/OwnerDashboardShell.tsx",
-        "src/components/owner/OwnerDashboardApp.tsx"
+        "src/components/owner/OwnerDashboardApp.tsx",
+        "src/lib/assistantBookingReschedule.ts",
+        "src/components/owner/AssistantReschedulePreview.tsx",
+        "supabase/migrations/20260919084221_assistant_booking_reschedule.sql",
+        "tests/browser/p0-assistant-reschedule.spec.ts"
       ],
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Assistant marketplace rescheduling now prepares a scoped reviewed proposal, preserves booked terms, requires explicit owner confirmation, persists Pending state with exact readback and waits for customer acceptance. It does not immediately move the appointment. Manual-booking rescheduling remains separate; durable notification failure is reported truthfully."
+      ],
+      "verification": [
+        "ASSISTANT-RESCHEDULE-PROPOSAL-ACCEPTANCE.md: focused planning/scope/notification boundary tests, local180 actual-role SQL and10 Chromium/WebKit production-build cases pass across four languages, fresh readback failure and accepted replay. Real dictation/provider interpretation and hosted customer acceptance remain unverified."
+      ],
       "live_evidence": [],
       "remaining": "Complete the detailed clauses through the existing module, including entry, durable outcome, dependent views, return/repeat and recovery. Current tests are foundations, not whole-journey release acceptance.",
       "external_blocker": null,
@@ -19504,15 +19602,21 @@
         "supabase/migrations/20260919063800_assistant_outstanding_balances.sql",
         "tests/p0-assistant-unpaid-scope.test.mjs",
         "tests/browser/p0-assistant-balances.spec.ts",
-        "docs/dashboard-redesign/ASSISTANT-OUTSTANDING-BALANCES-ACCEPTANCE.md"
+        "docs/dashboard-redesign/ASSISTANT-OUTSTANDING-BALANCES-ACCEPTANCE.md",
+        "src/lib/assistantBookingReschedule.ts",
+        "src/components/owner/AssistantReschedulePreview.tsx",
+        "supabase/migrations/20260919084221_assistant_booking_reschedule.sql",
+        "tests/browser/p0-assistant-reschedule.spec.ts"
       ],
       "changes": [
         "Reviewed manual received-payment action resolves own service and professional and writes the canonical sale/receipt atomically, without a provider charge or automatic customer message.",
-        "The bounded outstanding-balances read reuses canonical own-business books with fresh finance, bookings and client-history authorization before and after the read. It separates completed balances from pending agreed amounts, preserves exact record links, and returns unavailable rather than debt/zero when payment evidence is unverified."
+        "The bounded outstanding-balances read reuses canonical own-business books with fresh finance, bookings and client-history authorization before and after the read. It separates completed balances from pending agreed amounts, preserves exact record links, and returns unavailable rather than debt/zero when payment evidence is unverified.",
+        "Assistant marketplace rescheduling now prepares a scoped reviewed proposal, preserves booked terms, requires explicit owner confirmation, persists Pending state with exact readback and waits for customer acceptance. It does not immediately move the appointment. Manual-booking rescheduling remains separate; durable notification failure is reported truthfully."
       ],
       "verification": [
         "78 focused assistant tests and actual local177 SQL pass; independent review completed. All10 production-build Chromium/WebKit manual receipt cases pass, including review, confirmation, exact readback and no provider payment or automatic customer message.",
-        "Outstanding balances is implemented: assistant-balances-final.log passes20/20 focused core/scope cases, including13 independent two-business/direct/follow-up/revocation cases; combined-179-assistant-impacted.log passes82/82 affected assistant checks. Incremental local179 SQL passes on the verified178 baseline. All12 browser cases have composite evidence:10 in combined-179-focused-browser.log plus2 corrected Spanish FinanceRecords-format expectations in combined-179-fixture-corrections.log. Real dictation/provider interpretation and hosted acceptance remain unverified."
+        "Outstanding balances is implemented: assistant-balances-final.log passes20/20 focused core/scope cases, including13 independent two-business/direct/follow-up/revocation cases; combined-179-assistant-impacted.log passes82/82 affected assistant checks. Incremental local179 SQL passes on the verified178 baseline. All12 browser cases have composite evidence:10 in combined-179-focused-browser.log plus2 corrected Spanish FinanceRecords-format expectations in combined-179-fixture-corrections.log. Real dictation/provider interpretation and hosted acceptance remain unverified.",
+        "ASSISTANT-RESCHEDULE-PROPOSAL-ACCEPTANCE.md: focused planning/scope/notification boundary tests, local180 actual-role SQL and10 Chromium/WebKit production-build cases pass across four languages, fresh readback failure and accepted replay. Real dictation/provider interpretation and hosted customer acceptance remain unverified."
       ],
       "live_evidence": [],
       "remaining": "Finish final required CI and clean-chain migration verification, bounded hosted voice clarification/review/save/readback, and remaining voice/action clauses without treating dictated intent as implicit payment confirmation. Automated outstanding-balance facts and links do not establish real-provider interpretation quality.",
@@ -19947,14 +20051,20 @@
         "src/lib/businessBookingMoney.ts",
         "src/lib/businessBookingMoneyServer.ts",
         "src/components/owner/BusinessBookingMoney.tsx",
-        "src/app/api/salon/booking-money/route.ts"
+        "src/app/api/salon/booking-money/route.ts",
+        "src/lib/businessScheduleOpportunities.ts",
+        "src/lib/businessScheduleOpportunitiesServer.ts",
+        "src/components/owner/BusinessScheduleOpportunities.tsx",
+        "tests/browser/business-schedule-opportunities.spec.ts"
       ],
       "changes": [
-        "Deterministic own-business finance explanations, equal-day trends, bounded recorded price samples, appointment-cohort current states and linked receipts, and saved-offer attribution. Useful period-preserving links reuse existing Finances views."
+        "Deterministic own-business finance explanations, equal-day trends, bounded recorded price samples, appointment-cohort current states and linked receipts, and saved-offer attribution. Useful period-preserving links reuse existing Finances views.",
+        "Own-business seven-day capacity evidence now unions canonical booked/held/blocked intervals, excludes unavailable/draft resources, ranks up to six dated professional opportunities, and opens that exact Calendar scope for review. It is not a historical demand, service-fit, profit or market-price claim. The assistant receives a complete bounded projection rather than depth-truncated interval objects."
       ],
       "verification": [
         "MoneyInsights8 focused plus15 finance regressions pass. Booking-cohort/referral/localization combined43 pass; malformed-date before/after evidence and actual local service_role projection verified.",
-        "All14 booking-cohort and10 MoneyInsights Chromium/WebKit cases now have composite passing evidence: initial12/14 and8/10 plus the four corrected Spanish expected-format cases in combined-179-focused-browser.log. Exact values remain asserted using the documented es-US formatter. That run also captured EN/FR/Chinese viewports. The separate fixed French bottom-navigation and My Page upper-tab corrections now pass both engines, with the final French320px capture inspected; hosted records and full visual/action acceptance remain unverified."
+        "All14 booking-cohort and10 MoneyInsights Chromium/WebKit cases now have composite passing evidence: initial12/14 and8/10 plus the four corrected Spanish expected-format cases in combined-179-focused-browser.log. Exact values remain asserted using the documented es-US formatter. That run also captured EN/FR/Chinese viewports. The separate fixed French bottom-navigation and My Page upper-tab corrections now pass both engines, with the final French320px capture inspected; hosted records and full visual/action acceptance remain unverified.",
+        "SCHEDULE-OPPORTUNITIES-ACCEPTANCE.md: focused core/authorization/count/DST/projection regressions and14 Chromium/WebKit cases now pass on the combined production build. Fresh-grant and assigned-professional isolation, failed refresh, unavailable hours, exact incident references and dated navigation are covered. Hosted records and remaining historical/profit advice remain unverified."
       ],
       "live_evidence": [],
       "remaining": "Finish capacity/opportunity and richer action journeys, bounded real-record hosted acceptance, complete visual review and required release checks. Recorded prices are own-business samples, not geographic market benchmarks or prescribed prices; booked offer usage does not prove incremental revenue.",
@@ -20245,13 +20355,20 @@
         "src/components/public/BusinessMarketingUpdates.tsx",
         "netlify/functions/business-marketing-publish.ts",
         "supabase/migrations/20260919033712_business_marketing_publication.sql",
-        "docs/dashboard-redesign/BUSINESS-MARKETING-ACCEPTANCE.md"
+        "docs/dashboard-redesign/BUSINESS-MARKETING-ACCEPTANCE.md",
+        "src/lib/businessCustomerCampaigns.ts",
+        "src/lib/businessCustomerCampaignServer.ts",
+        "src/components/owner/BusinessCustomerCampaigns.tsx",
+        "supabase/migrations/20260919084558_business_customer_campaigns.sql",
+        "tests/browser/business-customer-campaigns.spec.ts"
       ],
       "changes": [
-        "Own-business media/services/promotions produce editable four-language drafts and canonical booking links; owner review approves first-party business-page publication or scheduling. Worker revalidates authorization and source facts. Social export is explicitly manual and is not represented as external posting."
+        "Own-business media/services/promotions produce editable four-language drafts and canonical booking links; owner review approves first-party business-page publication or scheduling. Worker revalidates authorization and source facts. Social export is explicitly manual and is not represented as external posting.",
+        "Client Updates connects reviewed published business content to a selected, own-business, completed-service client list with verified email and explicit business email-update consent. Each saved recipient language must be reviewed; approval sends nothing, and each explicit send action attempts one recipient. Fresh consent/source checks and a durable attempt latch prevent blind repeat sends. Cancelled unsent recipients are distinguished from eligibility skips; provider acceptance is not represented as delivered/read."
       ],
       "verification": [
-        "19 focused core/API/worker tests and actual-role local175 SQL checks pass. Production build,18 owner/public cases and4 workspace viewport cases pass in Chromium/WebKit. Desktop viewport reviewed; corrected390px screenshot positioning awaits focused capture. Hosted scheduler/publication remains unverified."
+        "19 focused core/API/worker tests and actual-role local175 SQL checks pass. Production build,18 owner/public cases and4 workspace viewport cases pass in Chromium/WebKit. Desktop viewport reviewed; corrected390px screenshot positioning awaits focused capture. Hosted scheduler/publication remains unverified.",
+        "CUSTOMER-CAMPAIGNS-ACCEPTANCE.md:10 focused Node tests, local181 actual-role SQL and18 Chromium/WebKit production-build cases pass. Coverage includes four languages, saved refresh/cross-context readback, lost response identity reuse, uncertain attempt no-retry, fresh opt-out skip, partial cancellation and authorization denial. Actual email provider delivery and hosted acceptance remain unverified."
       ],
       "live_evidence": [],
       "remaining": "Complete18 browsers, final visual review, reviewed migration, actual worker registration/scheduling and hosted public readback. External social publishing is not configured or claimed working.",
@@ -20681,10 +20798,14 @@
         "src/app/api/bookings/reminders/route.ts",
         "src/lib/businessCommunicationServer.ts"
       ],
-      "changes": [],
-      "verification": [],
+      "changes": [
+        "Existing internal booking conversation remains the primary business/customer channel. Revision-aware reminders, optional own-business communication preferences and completed-appointment follow-ups use existing scoped messaging/delivery records; no WhatsApp booking workflow was introduced."
+      ],
+      "verification": [
+        "Previously verified evidence reused: reminder-server-final.log17/17 and fresh167 SQL; communication preferences10 browser cases and fresh168 SQL; followup-finance-core-final.log26/26 and fresh169 SQL. These are local automated checks, not actual message delivery or final hosted acceptance. See historical CHECKPOINT reminder/communication/post-visit entries."
+      ],
       "live_evidence": [],
-      "remaining": "Complete the detailed clauses through the existing module, including entry, durable outcome, dependent views, return/repeat and recovery. Current tests are foundations, not whole-journey release acceptance.",
+      "remaining": "Maintain announcements/community links and the existing internal booking conversation; WhatsApp customer booking remains outside immediate scope. Complete the specified internal-chat hosted acceptance, without adding an external booking channel.",
       "external_blocker": null,
       "wire_coverage": [
         {
@@ -24696,11 +24817,11 @@
     }
   ],
   "progress_audit": {
-    "at": "2026-09-19T07:13:11.716600+00:00",
+    "at": "2026-09-19T10:01:50.356Z",
     "counts": {
-      "In progress": 170,
-      "Not started": 5,
+      "In progress": 171,
       "Implemented / unverified": 20,
+      "Not started": 4,
       "Completed / verified": 1,
       "Explicitly deferred": 5
     },
@@ -24708,21 +24829,22 @@
     "live_product_requirements": 0,
     "pr": "https://github.com/girlzculture/girlzculture/pull/80",
     "uncommitted": true,
-    "uncommitted_summary": "Reviewed operational/CI corrections and software-first slices after b7bbf1b; local verification only, not released.",
+    "uncommitted_summary": "Combined181 local checkpoint:54 focused production-build browser passes, actual-role180/181SQL passes. Required c0 CI failed48 identical missing marketing-fixture cases; correction has focused evidence and awaits updated-source CI.",
     "production_checked_at": "2026-09-18T19:25:03.226Z",
     "production_commit": "d37cbf4ef3954063797946b7508352470653a739",
     "production_deployment": "6aac503fa5eacb00089c6d87",
     "production_locked": true,
     "original140_counts": {
-      "In progress": 115,
-      "Not started": 5,
+      "In progress": 116,
       "Implemented / unverified": 19,
+      "Not started": 4,
       "Completed / verified": 1
     },
     "total": 201,
-    "current_work": "Combined UI history52passed/2failed is preserved. Subsequent combined-ui-tabs-browser.log24/24 passes allPhoto8, MyPage navigation8 and existing profile/photo8. Finance34 and French bottom navigation2 already pass; referrals24, outstanding balances12, cohort14 and insights10 have composite browser evidence. Six disabled-opacity classnames changed after the last local build; full design guard/fixtures/contrast and2642/2642 required-locale coverage pass. Required CI must rebuild final source; clean-chain/hosted acceptance remains. No production changes.",
+    "current_work": "Record the corrected workflow checkpoint, then continue remaining own-business advice, mobile gallery/calendar compactness, billing sandbox acceptance and final hosted/release gates.",
     "parent_commit": "b7bbf1b4f0007a50244825e8cb279b9914c32eaf",
-    "checkpoint": "Use containing commit for final checkpoint; current local verification does not establish hosted or deployed acceptance."
+    "checkpoint": "Use containing commit for final checkpoint; current local verification does not establish hosted or deployed acceptance.",
+    "commit": "c0fc677103b8999863d6d009939bcdb72c5842d8"
   },
   "latest_authority": {
     "source": "founder-software-first-2026-09-18.md",
@@ -24733,11 +24855,11 @@
     "rules": "Latest explicit decisions, then Appendix A, then compatible original 140. Implementation, verification and release are separate."
   },
   "reconciliation": {
-    "at": "2026-09-19T05:12:01.653270+00:00",
-    "head": "Latest pushed b7bbf1b4f0007a50244825e8cb279b9914c32eaf; newer documented features are local working-tree changes.",
+    "at": "2026-09-19T10:01:50.358Z",
+    "head": "c0fc677103b8999863d6d009939bcdb72c5842d8 (pushed); combined181 newer local checkpoint",
     "production_unchanged": "6aac503fa5eacb00089c6d87 / d37cbf4ef3954063797946b7508352470653a739",
     "not_completion_percentage": true,
     "provider_access": "Live activation deferred by founder—awaiting a qualifying salon profile, Google approval and live verification. OAuth/secure per-business storage/disconnect/sync implementation and simulated tests remain required. Live controls and background sync disabled; do not retry zero-quota API or request another profile.",
-    "local_checkpoint": "Local automated evidence now includes Photo8/8, MyPage navigation8/8, affected profile/photo8/8, Finance34, French bottom navigation2 and composite referrals24, balances12, cohort14, insights10. The final French320px navigation capture is readable. Six subsequent CSS classname corrections passed static design checks but were not in the last local build; final-source required CI remains. Sandbox proof remains external-key/event-routing dependent. Full release is unfinished."
+    "local_checkpoint": "54/54 focused production-server browser passes on source digest e7ba1859b40c79b53a3b4b3ad3eaf78969f578bd9825d9481901464950efbcfb; full release unfinished."
   }
 }

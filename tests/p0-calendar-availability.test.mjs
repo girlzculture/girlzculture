@@ -31,6 +31,12 @@ test('incomplete occupancy or roster responses fail closed instead of inventing 
     await assert.rejects(fixture({truncated}).calendarAvailability(input), /RESULT_TRUNCATED/);
   }
 });
+test('operating calendar includes configured draft hours while public service-fit excludes them; missing professional hours never create a gap',async()=>{
+ const draft={id:'one',salon_id:'business',name:'Draft',is_active:true,is_draft:true,availability:{Tue:'09:00 - 19:00'}};
+ const f=fixture({roster:[draft]});assert.equal((await f.calendarAvailability(input)).gaps.length,1);assert.equal((await f.bookingAvailability({...input,styleId:'service'})).slots.length,0);
+ assert.equal((await fixture({roster:[{...draft,is_active:false}]}).calendarAvailability(input)).gaps.length,0);
+ assert.equal((await fixture({roster:[{...draft,is_draft:false,availability:{}}]}).calendarAvailability(input)).gaps.length,0);
+});
 
 test('service assignments exclude unassigned professionals without falling back to a salon slot',async()=>{
   const professional={id:'one',salon_id:'business',name:'One',is_active:true,is_draft:false,availability:{Tue:'09:00 - 19:00'}};
