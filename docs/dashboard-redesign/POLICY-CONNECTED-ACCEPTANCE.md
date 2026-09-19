@@ -1,6 +1,6 @@
 # Connected business-policy acceptance — POL-08
 
-Status: **AUTOMATED ONLY — connected Chromium/WebKit journey2/2 PASS; legacy public regression6/6 PASS**. This closes the local connected test-path gap; it adds no policy feature or production endpoint. The earlier owner and public tests remain unchanged and retain their original four-language and responsive evidence. The six legacy public cases pass against the extended default fixture.
+Status: **AUTOMATED ONLY — current complete policy spec 20/20 PASS in 2.5 minutes**, Chromium and WebKit, after the popup-readiness test correction below. This comprises 18 existing cases and 2 new script-gated variants of the connected journey. Earlier connected 2/2 and legacy 6/6 evidence remains recorded below. This adds no policy feature or production endpoint; hosted acceptance remains separate.
 
 The new `P0 public policy carries one reviewed owner revision through recovery public link and booking acknowledgement` case in `tests/browser/p0-public-policy.spec.ts` uses one unique business and one saved revision through the real owner editor, public page and booking components. It runs at390×844 in the existing Chromium and WebKit projects.
 
@@ -20,5 +20,26 @@ The subsequent [legacy regression run](../../../redesign-evidence/finance-forms-
 All three actual WebKit390×844 viewport captures were inspected:
 
 - [Failed-save viewport](../../../redesign-evidence/policy-connected-browser-results/p0-public-policy-P0-public-df0ba-and-booking-acknowledgement-webkit/policy-connected-failed-save.png) shows the retained48-hour cancellation input and24/15 rules. The main wording and incident reference are above the frame; Save is only partly visible at the bottom navigation at this captured scroll position. The exact draft/error assertions passed, but this image does not establish full error or Save-control visual clearance.
-- [Public policy](../../../redesign-evidence/policy-connected-browser-results/p0-public-policy-P0-public-df0ba-and-booking-acknowledgement-webkit/policy-connected-public.png) visibly shows Version2, the complete unique owner wording and48/24/15 rules without text collision. The lower platform-policy content continues below the captured area/navigation.
-- [Recorded booking policy](../../../redesign-evidence/policy-connected-browser-results/p0-public-policy-P0-public-df0ba-and-booking-acknowledgement-webkit/policy-connected-booking-evidence.png) shows confirmationGC123, the expanded recorded-policy section, Version2 and the matching unique owner-policy identifier. The lower wording and rule block are below the frame; exact text/rules were asserted by the passing test. This is not a full-page, all-control or native-keyboard visual acceptance claim.
+- [Public policy](../../../redesign-evidence/policy-connected-browser-results/p0-public-policy-P0-public-df0ba-and-booking-acknowledgement-webkit/policy-connected-public.png) visibly shows Version 2, the complete unique owner wording and 48/24/15 rules without text collision. The lower platform-policy content continues below the captured area/navigation.
+- [Recorded booking policy](../../../redesign-evidence/policy-connected-browser-results/p0-public-policy-P0-public-df0ba-and-booking-acknowledgement-webkit/policy-connected-booking-evidence.png) shows confirmationGC123, the expanded recorded-policy section, Version 2 and the matching unique owner-policy identifier. The lower wording and rule block are below the frame; exact text/rules were asserted by the passing test. This is not a full-page, all-control or native-keyboard visual acceptance claim.
+
+## Streamed popup readiness correction
+
+The older required run `35472407770` at `b81396c` finished with 1,396 passed, 5 skipped and 1 failure in 53.7 minutes. Its sole failure was the Chromium connected journey at the public popup's `#business-policies summary` click: the strict selector matched two elements. The original log is `ci-b81396c-required-failed.log`; the original artifact was downloaded once to `ci-b81396c-required-artifact` outside Git.
+
+The decoded trace, preserved as `ci-b81396c-policy-snapshot-summary.json`, shows that the preceding count-one and Version 2 assertions read the policy underneath hidden `DIV#S:1`. At the click snapshot, that hidden stream copy coexisted with the actual visible `BODY > MAIN` copy containing the same policy. The component itself renders one summary. This demonstrates a test-readiness/locator-scope failure, not failed publication or two visible business policies. The popup's exact `readyState` and load-event time were not recorded in the original trace; response-body completion alone is not asserted as DOM readiness.
+
+The test now awaits the popup's document load, requires an accessible visible main, and then retains **document-wide `#business-policies` count 1** before selecting the policy within that main. It also retains local count 1, explicit visibility, Version 2, exact owner wording/rules and a native disclosure click. It never chooses `.first()`/`.nth()` or filters away a persistent duplicate. Every save/retry/publication/readback/booking-consent assertion remains.
+
+The original connected journey remains ungated. A second parameterized variant holds the first real Next script request belonging to the exact newly opened unique business page. It changes no response bytes, markup or application behavior. While the request is held, it requires an incomplete document, an uncontinued request and an unresolved readiness helper. The gate is released and its handler awaited in `finally`; the same full connected journey then continues through the recorded booking policy.
+
+| Current evidence | Result |
+| --- | --- |
+| Original b813 required log/trace | Failure retained: hidden streamed copy followed by hidden+visible copies at the strict click |
+| `policy-popup-immediate-before.ts` and `policy-popup-readiness-before.log` | **2 intentional failures**, Chromium/WebKit, at pending readiness; the isolated helper returned immediately while the actual script was held |
+| `policy-popup-corrected-source.ts` | Corrected test restored byte-for-byte in `finally` and SHA-256 checked before AFTER; no temporary mode/no-op helper remains in source |
+| `policy-popup-readiness-after.log` | **20/20 PASS in 2.5 minutes**, zero failures/skips, all policy cases in both engines against existing compiled build 201 |
+| `policy-popup-readiness-after-gates.json` | Both gated cases recorded `readyState=interactive`, `scriptContinued=false`, `ready=false`; each subsequently completed the full journey |
+| `policy-popup-readiness-lint.log` | Scoped ESLint exit 0 |
+
+The gated Chromium and WebKit `policy-connected-public.png` captures in `policy-popup-readiness-after-results` were directly inspected. Both show one expanded Version 2 disclosure, the complete unique owner wording and 48/24/15 rules. Lower platform-policy content continues below the viewport. These bounded fixture images and tests do not certify production policy writes, provider checkout or hosted acceptance. The deterministic script gate proves the readiness contract; it does not claim to reproduce the exact transient duplicate timing on demand.

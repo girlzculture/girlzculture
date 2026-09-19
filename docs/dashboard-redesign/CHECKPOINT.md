@@ -1,4 +1,17 @@
-# Current continuation — prelaunch readiness contract and provider pause
+# Current continuation — connected policy popup and accurate remaining work
+
+Continue existing PR80 above754bf0befaf96d91cca889585d3a1abdcadb0004. Required754 run35475404561 and release35475404574 are already running; finish and inspect those results before the next push so corrections are batched. Their results cannot certify the popup-test change described here. Application source, build201, all188 reviewed migrations, dependencies and caps are unchanged.
+
+- Earlier b81396c required35472407770 finished1396passed/5existing viewport skips/1failed. The failure was the connected policy test's new-tab readiness: original snapshots show count1 and Version2 checks reading only hidden DIV#S:1 streamed content; its later native click matches that hidden copy plus the actual visible MAIN. No failed save or two visible disclosures was demonstrated, and the trace does not record document load timing.
+- The test now waits for popup load and visible accessible main, retaining global document-wide policy uniqueness, local uniqueness, exact revision/text, native disclosure click and all booking acknowledgement/snapshot assertions. A held actual Next script preserves its bytes and proves readiness remains pending. The immediate-helper counterexample fails in both engines; all20 policy cases pass in2.5minutes (18original+2 gated variants) on the unchanged compiled application. Lint passes; POLICY-CONNECTED-ACCEPTANCE.md retains exact original and corrected evidence.
+- A bounded tracker reconciliation found no additional demonstrated unwritten non-Stripe feature. Thirty stale remaining-work clauses now reference existing scope, policy, marketing and finance evidence and keep actual hosted/release limits. All201 definitions/detailed clauses/statuses/live evidence are unchanged; immutable projection SHA256 remains9e0a8f1bcadcde1218dc2d66ce80461680c270a8db8c879fe3db3d5d199ea6be. Counts remain102/90/3/1/5, not a completion percentage. PUBLIC-17/EXEC-08/EXEC-11 are hosted/provider/production verification tasks. Native-device keyboard and specifically uncaptured visual states are not claimed verified.
+- The guarded migration/publication helper is prepared outsideGit and independently reviewed, but not executed. It pins exact main CI/candidate/fallback and migration evidence, preserves uncertain-operation latches, verifies blocked page/API paths, and requires controlled traffic/drain evidence before protected SQL. Final manifest remains unconfigured until actual merged source/candidate/CI exist.
+
+Production was read back23:15:41UTC on19September: state current, deployment6aac503fa5eacb00089c6d87 / d37cbf4ef3954063797946b7508352470653a739, publication locked. No PR80 change is live. The exact Stripe pause, Google/Wolof/five-group deferrals, Meta manual-configuration boundary and bothUSD25 caps remain unchanged. No new build, provider call, production data/schema action, merge or deployment was made for this test correction.
+
+---
+
+# Previous continuation — prelaunch readiness contract and provider pause
 
 Continue existing PR80 above pushed b81396ca2e3fac059248b9abc8a79ad3a0e65068. This correction changes test readiness characterization and the automatic provider-test pause only; build201 application code, all188 migrations, dependencies and both USD25 caps are unchanged. All201 requirement definitions and detailed clauses remain intact.
 

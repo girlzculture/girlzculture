@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+import { expect, type Page, type Route } from '@playwright/test';
 import { test, screenshotCaret } from './helpers/hydration';
 import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
@@ -9,7 +9,21 @@ import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catal
 
 test.use({ serviceWorkers: 'block' });
 
-test('P0 public policy carries one reviewed owner revision through recovery public link and booking acknowledgement', async ({ page, request }, info) => {
+async function waitForPublicPolicyPopup(page: Page) {
+  await page.waitForLoadState('load');
+  const main = page.getByRole('main');
+  await expect(main).toBeVisible();
+  // Preserve document-wide uniqueness after the visible streamed main arrives.
+  // A hidden React stream copy must neither satisfy readiness nor be ignored.
+  await expect(page.locator('#business-policies')).toHaveCount(1);
+  const disclosure = main.locator('#business-policies');
+  await expect(disclosure).toBeVisible();
+  return disclosure;
+}
+
+for (const gatePopupScript of [false, true]) test(gatePopupScript
+  ? 'P0 public policy waits for the actual popup script before reading the published revision'
+  : 'P0 public policy carries one reviewed owner revision through recovery public link and booking acknowledgement', async ({ page, request }, info) => {
   const provider = process.env.PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL || 'http://127.0.0.1:3105';
   expect(['localhost', '127.0.0.1']).toContain(new URL(provider).hostname);
   const id = randomUUID(), slug = `p0-policy-${id}`;
@@ -111,12 +125,46 @@ test('P0 public policy carries one reviewed owner revision through recovery publ
     expect(draftAttempts).toBe(2); expect(publishAttempts).toBe(2); expect(checkoutCalls).toBe(0);
     const link = page.locator(`a[href="/salon/${slug}#business-policies"]`);
     await expect(link).toHaveAttribute('target', '_blank');
-    const opened = page.waitForEvent('popup');
-    await link.click();
-    const publicPage = await opened;
-    await publicPage.setViewportSize({ width: 390, height: 844 });
-    await expect(publicPage).toHaveURL(new RegExp(`/salon/${slug}#business-policies$`));
-    const disclosure = publicPage.locator('#business-policies');
+    let releaseScript!: () => void, markScriptRequested!: () => void, markScriptFinished!: () => void;
+    const scriptGate = new Promise<void>(resolve => { releaseScript = resolve; });
+    const scriptRequested = new Promise<void>(resolve => { markScriptRequested = resolve; });
+    const scriptFinished = new Promise<void>(resolve => { markScriptFinished = resolve; });
+    let heldPage: Page | null = null, scriptContinued = false;
+    const scriptPattern = '**/_next/static/chunks/**';
+    const holdScript = async (route: Route) => {
+      const requestPage = route.request().frame().page();
+      if (heldPage || route.request().resourceType() !== 'script' || requestPage === page || new URL(requestPage.url()).pathname !== `/salon/${slug}`) return route.continue();
+      heldPage = requestPage; markScriptRequested();
+      try { await scriptGate; scriptContinued = true; await route.continue(); }
+      finally { markScriptFinished(); }
+    };
+    if (gatePopupScript) await page.context().route(scriptPattern, holdScript);
+    let publicPage!: Page;
+    let disclosure: Awaited<ReturnType<typeof waitForPublicPolicyPopup>>;
+    try {
+      const opened = page.waitForEvent('popup');
+      await link.click();
+      publicPage = await opened;
+      await publicPage.setViewportSize({ width: 390, height: 844 });
+      await expect(publicPage).toHaveURL(new RegExp(`/salon/${slug}#business-policies$`));
+      if (gatePopupScript) await scriptRequested;
+      let ready = false;
+      const policyReady = waitForPublicPolicyPopup(publicPage).then(value => { ready = true; return value; });
+      if (gatePopupScript) {
+        expect(heldPage).toBe(publicPage);
+        const readyState = await publicPage.evaluate(() => document.readyState);
+        await info.attach('policy-popup-held-script', { body: JSON.stringify({ readyState, scriptContinued, ready }), contentType: 'application/json' });
+        expect(readyState).not.toBe('complete');
+        expect(scriptContinued).toBe(false);
+        expect(ready).toBe(false);
+        releaseScript();
+      }
+      disclosure = await policyReady;
+    } finally {
+      releaseScript();
+      if (heldPage) await scriptFinished;
+      if (gatePopupScript) await page.context().unroute(scriptPattern, holdScript);
+    }
     await expect(disclosure).toHaveCount(1);
     await expect(disclosure).toContainText('Version 2');
     await disclosure.locator('summary').click();
