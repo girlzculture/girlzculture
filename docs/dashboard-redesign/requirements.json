@@ -2,7 +2,7 @@
   "base_commit": "d37cbf4ef3954063797946b7508352470653a739",
   "branch": "codex/business-dashboard-value-redesign",
   "published_baseline": "6aac503fa5eacb00089c6d87",
-  "status": "IN PROGRESS; checkpoint332a716 required CI passed but its original release-candidate prelaunch gate remains failed; build199/BLS and test-only readiness correction pass locally, pending updated-commit CI/protected migrations/provider/hosted/public visual acceptance; release unpublished",
+  "status": "IN PROGRESS; ff4792f required CI running and release core step failed on missing test-harness hook; focused correction8/8 and connected policy/Finance browser acceptance pass locally; updated-source CI, protected migrations, provider and hosted acceptance remain; release unpublished",
   "instructions": "Each index includes every detailed clause in its referenced source sections. PENDING is work state, not a pass; acceptance uses repository statuses. Attach separate clause evidence as changes are completed.",
   "decisions": {
     "no_show": "Founder requires own-business verified incidents only. No cross-business blacklists, scores, anonymized flags, indicators, queries or disclosures. Supersedes across-platform wording.",
@@ -5567,7 +5567,9 @@
         "src/lib/businessPolicyServer.ts",
         "src/components/booking/BusinessPolicyDisclosure.tsx",
         "src/components/SalonBookingWizard.tsx",
-        "tests/browser/p0-public-policy.spec.ts"
+        "tests/browser/p0-public-policy.spec.ts",
+        "tests/fixtures/p0-public-policy.mjs",
+        "docs/dashboard-redesign/POLICY-CONNECTED-ACCEPTANCE.md"
       ],
       "state": "IN_PROGRESS",
       "acceptance": "AUTOMATED ONLY",
@@ -5578,7 +5580,8 @@
       ],
       "verification": [
         "11 policy API,10 owner policy browser and6 corrected public-policy Chromium/WebKit cases pass. The changed assistant/policy final combined server suite is72/72. See ASSISTANT-POLICY-OPERATIONAL-ACCEPTANCE.md. No production policy was changed.",
-        "ASSISTANT-POLICY-OPERATIONAL-ACCEPTANCE.md retains10 passing owner policy and6 passing public/booking Chromium/WebKit cases plus11 API cases, including missing-current fail-closed, failed load/save and retained draft recovery. Bounded source review of p0-public-policy.spec.ts confirms the owner public-link href assertion and separately seeded public-to-booking fixture; no continuous same-revision or deployed persistence pass is inferred. No new test was run."
+        "ASSISTANT-POLICY-OPERATIONAL-ACCEPTANCE.md retains10 passing owner policy and6 passing public/booking Chromium/WebKit cases plus11 API cases, including missing-current fail-closed, failed load/save and retained draft recovery. Bounded source review of p0-public-policy.spec.ts confirms the owner public-link href assertion and separately seeded public-to-booking fixture; no continuous same-revision or deployed persistence pass is inferred. No new test was run.",
+        "POLICY-CONNECTED-ACCEPTANCE.md: policy-connected-browser.log2/2 Chromium/WebKit passes in50.2s against unchanged848-file build199 source digest9de5b16cf654634f56fda74cda1d3fe9eba3922ff2c49c5fc1dc238aae8d29f8. One unique business carries its exact saved draft through failed-save and failed-publish recovery, review, publication, owner refresh, actual new-tab public link, booking action and same-revision acknowledgement/snapshot. Platform consent alone fails actual client validation with zero checkout calls; explicit business consent permits one simulated no-deposit request with exact business/revision. TypeScript/lint and independent source review pass. Three actual WebKit captures were inspected: public wording/version/rules are readable; failed-save error/main draft and lower confirmation rules are outside their viewport crops, so full-control/native-keyboard visual acceptance is not inferred. Six legacy default-fixture public cases subsequently pass at390/768/1440px across Chromium/WebKit in finance-forms-and-policy-fixture.log; the mixed run is10/10 in1.0minute, comprising6 policy and4 Finance cases. This is simulated persistence, not production RPC/RLS, cross-device login, real payment/notification or hosted acceptance."
       ],
       "live_evidence": [],
       "detailed_clause": "POL-08 — Acceptance follows the full path: edit → save/review → publish → refresh → public policy link → booking acknowledgement, including a failed-save recovery. The owner must be able to preview exactly what customers will read.",
@@ -5589,7 +5592,7 @@
       },
       "progress_status": "In progress",
       "release_status": "NOT RELEASED",
-      "remaining": "Connect the implemented and separately tested stages into the clause's same-business/same-revision edit → save/review → publish → refresh → public policy link → booking acknowledgement path, including failed-save recovery, then verify the final migrated hosted persistence. Existing owner tests check the public href but do not follow it; public/booking tests seed a separate revision fixture. This is a connected acceptance gap, not evidence that another policy implementation or the already-tested recovery behavior is missing.",
+      "remaining": "The same-business/same-revision connected local path now passes in Chromium/WebKit, including failed-save/publish recovery, actual public-link navigation and required business acknowledgement. The six legacy default-fixture public regressions also pass after the test-harness extension. Complete final updated-commit CI, protected migrations and authorized hosted owner/customer persistence. Retain the documented screenshot cropping/Save-clearance limits and outstanding full visual/native-device acceptance; the simulated browser fixture does not replace actual SQL or deployed persistence evidence.",
       "external_blocker": null,
       "requirement_kind": "product",
       "assessment": "partial",

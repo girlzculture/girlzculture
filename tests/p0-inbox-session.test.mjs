@@ -5,17 +5,42 @@ import { typescriptLoader } from './helpers/load-typescript.mjs';
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
+// Keep layout commits separate from passive effects: the real Inbox relies on
+// its committed composer context being current before asynchronous work resumes.
+function hookHarness() {
+  const slots = []; let cursor = 0; let effects = []; let layoutEffects = []; let dirty = true; let tree;
+  function scheduleEffect(queue, effect, deps) {
+    const index = cursor++; const old = slots[index];
+    if (!old || deps === undefined || old.deps === undefined || deps.length !== old.deps.length || deps.some((value, i) => !Object.is(value, old.deps[i]))) {
+      slots[index] = { deps, cleanup: old?.cleanup };
+      queue.push(() => { old?.cleanup?.(); slots[index].cleanup = effect(); });
+    }
+  }
+  const react = {
+    useRef: value => { const index = cursor++; return slots[index] ??= { current: value }; },
+    useState: initial => { const index = cursor++; if (!(index in slots)) slots[index] = typeof initial === 'function' ? initial() : initial; return [slots[index], value => { const next = typeof value === 'function' ? value(slots[index]) : value; if (next !== slots[index]) { slots[index] = next; dirty = true; } }]; },
+    useEffect: (effect, deps) => scheduleEffect(effects, effect, deps),
+    useLayoutEffect: (effect, deps) => scheduleEffect(layoutEffects, effect, deps),
+  };
+  function render(component) {
+    do {
+      dirty = false; cursor = 0; tree = component();
+      const pendingLayout = layoutEffects; layoutEffects = [];
+      pendingLayout.forEach(effect => effect());
+      const pending = effects; effects = [];
+      pending.forEach(effect => effect());
+    } while (dirty);
+    return tree;
+  }
+  return { react, render };
+}
+
 function inboxHarness(translateSource = value => value) {
-  const slots = []; let cursor = 0; let effects = []; let dirty = true; let tree; let changeAuth = () => {};
+  const hooks = hookHarness(); const react = hooks.react; let changeAuth = () => {};
   let session = { user: { id: 'customer-a' }, access_token: 'local-a' }; let sessionWait;
   const requests = []; const responses = [];
   const params = new URLSearchParams();
   const booking = { id: 'booking-a', guest_name: 'PRIVATE A', status: 'Confirmed', duration_hours: 1, appointment_datetime: new Date(Date.now() + 86_400_000).toISOString() };
-  const react = {
-    useRef: value => { const index = cursor++; return slots[index] ??= { current: value }; },
-    useState: initial => { const index = cursor++; if (!(index in slots)) slots[index] = typeof initial === 'function' ? initial() : initial; return [slots[index], value => { const next = typeof value === 'function' ? value(slots[index]) : value; if (next !== slots[index]) { slots[index] = next; dirty = true; } }]; },
-    useEffect: (effect, deps) => { const index = cursor++; const old = slots[index]; if (!old || deps.some((value, i) => value !== old.deps[i])) { slots[index] = { deps, cleanup: old?.cleanup }; effects.push(() => { old?.cleanup?.(); slots[index].cleanup = effect(); }); } },
-  };
   const Component = typescriptLoader(process.cwd(), {
     react, 'next/link': { default: 'a' }, 'next/navigation': { useSearchParams: () => params }, 'lucide-react': { Languages: 'i', MessageSquare: 'i', Send: 'i' },
     '@/components/booking/MessageDisplay': { default: 'message-display' }, '@/components/booking/BookingWelcome': { default: 'booking-welcome' }, '@/components/booking/BookingPolicyEvidence': { default: 'policy-evidence' },
@@ -25,7 +50,7 @@ function inboxHarness(translateSource = value => value) {
       getSupabaseForScope: () => ({ auth: { onAuthStateChange: callback => { changeAuth = callback; callback('INITIAL_SESSION', session); return { data: { subscription: { unsubscribe() {} } } }; } } }),
     },
   }, { crypto: { randomUUID }, AbortController, window: { innerWidth: 1280 }, setTimeout: (callback, delay) => setTimeout(callback, delay).unref(), fetch: async (url, options) => { requests.push({ url, ...options }); const response = deferred(); responses.push(response); return response.promise; } })('src/components/BookingInbox.tsx').default;
-  function render() { do { dirty = false; cursor = 0; tree = Component({ scope: 'customer' }); const pending = effects; effects = []; pending.forEach(effect => effect()); } while (dirty); return tree; }
+  function render() { return hooks.render(() => Component({ scope: 'customer' })); }
   function find(predicate) { function walk(node) { if (!node || typeof node !== 'object') return null; if (Array.isArray(node)) return node.map(walk).find(Boolean); return predicate(node) ? node : walk(node.props?.children); } return walk(render()); }
   async function settle() { for (let i = 0; i < 4; i++) { await tick(); render(); } }
   render();
@@ -36,6 +61,34 @@ function inboxHarness(translateSource = value => value) {
     async ready(messages = []) { await settle(); responses[0].resolve(Response.json({ threads: [{ booking, messages: [] }], role: 'customer' })); await settle(); responses[1].resolve(Response.json({ booking, messages, role: 'customer' })); await settle(); },
   };
 }
+
+test('inbox hook harness commits layout authorization and cleanup before passive reads', () => {
+  const hooks = hookHarness(); const events = [];
+  function view(actor) {
+    const authorization = hooks.react.useRef(null);
+    // Register the passive hook first so source order cannot stand in for
+    // React's layout-before-passive commit order.
+    hooks.react.useEffect(() => {
+      events.push(`passive:${authorization.current}`);
+      return () => events.push(`passive-cleanup:${actor}`);
+    }, [actor]);
+    hooks.react.useLayoutEffect(() => {
+      authorization.current = actor;
+      events.push(`layout:${actor}`);
+      return () => { events.push(`layout-cleanup:${authorization.current}`); authorization.current = null; };
+    }, [actor]);
+    events.push(`render:${authorization.current}`);
+    return authorization;
+  }
+  const current = hooks.render(() => view('account-a'));
+  assert.equal(current.current, 'account-a');
+  assert.deepEqual(events.splice(0), ['render:null', 'layout:account-a', 'passive:account-a']);
+  hooks.render(() => view('account-a'));
+  assert.deepEqual(events.splice(0), ['render:account-a'], 'unchanged dependencies neither revoke nor repeat work');
+  hooks.render(() => view('account-b'));
+  assert.equal(current.current, 'account-b');
+  assert.deepEqual(events, ['render:account-a', 'layout-cleanup:account-a', 'layout:account-b', 'passive-cleanup:account-a', 'passive:account-b'], 'cleanup runs at commit, not during render; passive reads see only the new authorization');
+});
 
 test('a late inbox list cannot restore the previous account private booking after sign-out', async () => {
   const app = inboxHarness(); await app.settle(); app.switchActor(null);

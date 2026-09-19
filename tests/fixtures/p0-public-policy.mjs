@@ -11,7 +11,20 @@ export async function p0PublicPolicyFixture(request, response, url, json, readJs
     try {
       const input = await readJson(request);
       if (input.version === null) records.delete(id);
-      else if ([1, 2].includes(input.version)) records.set(id, {version:input.version,priced:input.priced===true,assignments:input.assignments===true,marketing:input.marketing===true});
+      else if ([1, 2].includes(input.version)) {
+        // Carry the exact owner-reviewed revision into the existing isolated
+        // public fixture. This branch is reached only by the localhost test
+        // harness above; it is not an application policy mutation endpoint.
+        let publishedRevision = null;
+        if (input.published_revision !== undefined) {
+          const revision = input.published_revision;
+          if (!revision || revision.id !== revisionId(id, input.version) || revision.salon_id !== id || revision.version !== input.version
+            || !['en', 'fr', 'es', 'zh-CN'].includes(revision.source_locale) || typeof revision.published_at !== 'string' || !Number.isFinite(Date.parse(revision.published_at))
+            || !revision.policy || typeof revision.policy !== 'object' || Array.isArray(revision.policy)) throw Error('Invalid connected fixture revision');
+          publishedRevision = { id: revision.id, salon_id: id, version: revision.version, source_locale: revision.source_locale, published_at: revision.published_at, policy: revision.policy };
+        }
+        records.set(id, {version:input.version,priced:input.priced===true,assignments:input.assignments===true,marketing:input.marketing===true,publishedRevision});
+      }
       else throw Error('Invalid fixture revision');
       json(response, 200, { ok: true });
     } catch { json(response, 400, { error: 'Invalid policy fixture payload' }); }
@@ -28,8 +41,8 @@ export async function p0PublicPolicyFixture(request, response, url, json, readJs
   let businessId = records.has(id) ? id : null;
   if (table === 'business_policy_revisions') businessId = [...records.keys()].find(key => revisionId(key, records.get(key).version) === (url.searchParams.get('id') || '').replace(/^eq\./, '')) || null;
   if (!businessId) return false;
-  const {version,priced,assignments} = records.get(businessId);
-  const revision = { id: revisionId(businessId, version), salon_id: businessId, version, source_locale: 'en', published_at: '2026-09-01T00:00:00Z', policy: { ...policy, cancellation_hours: version === 1 ? 24 : 72 } };
+  const {version,priced,assignments,publishedRevision} = records.get(businessId);
+  const revision = publishedRevision || { id: revisionId(businessId, version), salon_id: businessId, version, source_locale: 'en', published_at: '2026-09-01T00:00:00Z', policy: { ...policy, cancellation_hours: version === 1 ? 24 : 72 } };
   const salon = { id: businessId, user_id: null, name: 'P0 Policy Fixture', slug: `p0-policy-${businessId}`, vanity_slug: null, status: 'Active', is_discoverable: true, accepting_bookings: true, subscription_status: 'active', subscription_tier: 'Gold', time_zone: 'America/New_York', description: 'Isolated browser fixture.', address_street: '123 Fixture Street', address_city: 'Miami', address_state: 'FL', address_zip: '33101', gallery_photos: [], hours: {}, business_policy_revision_id: revision.id };
   const style = { id: businessId, salon_id: businessId, name: 'Fixture consultation', category: 'Braiding', service_category: { name: 'Braiding' }, base_price: 0, price_display_min: 0, price_display_max: 0, duration_min_hours: 1, duration_max_hours: 1, is_draft: false, archived_at: null, photos: [], length_options: [], size_options: [], addons: [] };
   if(priced) Object.assign(style,{base_price:100,price_display_min:100,price_display_max:100});

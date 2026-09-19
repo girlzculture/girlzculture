@@ -3,11 +3,167 @@ import { test, screenshotCaret } from './helpers/hydration';
 import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
-import { POLICY_DEFAULTS } from '../../src/lib/businessPolicyCore';
+import { POLICY_DEFAULTS, type BusinessPolicy } from '../../src/lib/businessPolicyCore';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catalog';
 
 test.use({ serviceWorkers: 'block' });
+
+test('P0 public policy carries one reviewed owner revision through recovery public link and booking acknowledgement', async ({ page, request }, info) => {
+  const provider = process.env.PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL || 'http://127.0.0.1:3105';
+  expect(['localhost', '127.0.0.1']).toContain(new URL(provider).hostname);
+  const id = randomUUID(), slug = `p0-policy-${id}`;
+  const originalId = id.slice(0, -4) + '0001', nextId = id.slice(0, -4) + '0002';
+  const text = `Owner reviewed policy ${id}: cancellation requires 48 hours; contact this business about its services.`;
+  type Revision = { id: string; salon_id: string; policy: BusinessPolicy; version: number | null; source_locale: string; published_at: string | null };
+  const original: Revision = { id: originalId, salon_id: id, version: 1, source_locale: 'en', published_at: '2026-09-01T00:00:00Z', policy: { ...POLICY_DEFAULTS, business_policy_text: 'Original connected business policy GC123.' } };
+  const revisions: Revision[] = [original];
+  let current = originalId, draftAttempts = 0, publishAttempts = 0, checkoutCalls = 0;
+  const publishPayloads: Record<string, unknown>[] = [];
+  const seed = (revision: Revision | null) => request.post(`${provider}/__fixtures/p0-public-policy/${id}`, {
+    headers: { 'x-acceptance-fixture': 'p0-public-policy' },
+    data: revision ? { version: revision.version, published_revision: revision } : { version: null },
+  });
+  const publicRevision = async (revisionId: string) => {
+    const response = await request.get(`${provider}/rest/v1/business_policy_revisions?id=eq.${revisionId}`, { headers: { Accept: 'application/vnd.pgrst.object+json' } });
+    expect(response.ok()).toBe(true);
+    return response.json();
+  };
+  const f = await p0OwnerFixture(page, { populated: true, locale: 'en' });
+  Object.assign(f.business, { id, slug, name: 'P0 Policy Fixture', business_policy_revision_id: originalId });
+  for (const rows of Object.values(f.records)) for (const record of rows) if ('salon_id' in record) record.salon_id = id;
+  expect((await seed(original)).ok()).toBe(true);
+  try {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.route('**/api/salon/policies', async route => {
+      if (route.request().method() === 'GET') return route.fulfill({ json: { revisions, current, public_policy_path: `/salon/${slug}#business-policies` } });
+      const body = route.request().postDataJSON();
+      if (body.action === 'draft') {
+        draftAttempts++;
+        expect(body.locale).toBe('en');
+        expect(body.policy.business_policy_text).toBe(text);
+        expect(body.policy.cancellation_hours).toBe(48);
+        if (draftAttempts === 1) return route.fulfill({ status: 503, json: { code: 'POLICY_UNAVAILABLE', request_id: 'CONNECTED-POLICY-SAVE' } });
+        expect(draftAttempts).toBe(2);
+        const revision: Revision = { ...original, id: nextId, version: null, published_at: null, policy: structuredClone(body.policy), source_locale: body.locale };
+        revisions.unshift(revision);
+        return route.fulfill({ json: { revision, digest: 'b'.repeat(64), expected_revision: current } });
+      }
+      expect(body).toEqual({ action: 'publish', revision_id: nextId, digest: 'b'.repeat(64), expected_revision: originalId, confirm: true, platform_rules_acknowledged: true, source_reviewed: true });
+      publishPayloads.push(body); publishAttempts++;
+      if (publishAttempts === 1) return route.fulfill({ status: 503, json: { code: 'POLICY_UNAVAILABLE', request_id: 'CONNECTED-POLICY-PUBLISH' } });
+      expect(publishAttempts).toBe(2);
+      const draft = revisions.find(revision => revision.id === body.revision_id)!;
+      expect(draft.policy.business_policy_text).toBe(text);
+      const published = { ...draft, version: 2, published_at: '2026-09-20T00:00:00Z' };
+      // The exact saved draft, not a separately seeded policy, becomes the
+      // public server-rendered record only after explicit reviewed publication.
+      expect((await seed(published)).ok()).toBe(true);
+      Object.assign(draft, published); current = draft.id; f.business.business_policy_revision_id = current;
+      return route.fulfill({ json: { revision: draft, verified: true } });
+    });
+    await page.context().route('**/api/booking-availability?**', route => route.fulfill({ json: { slots: [{ value: '13:00', label: '1:00 PM', stylistId: null }], timeZone: 'America/New_York' } }));
+    await page.context().route('**/api/stripe/booking-checkout', route => {
+      checkoutCalls++;
+      const payload = route.request().postDataJSON();
+      expect(payload.salon_id).toBe(id);
+      expect(payload.business_policy_revision_id).toBe(nextId);
+      expect(payload.platform_policy_acknowledged).toBe(true);
+      expect(payload.business_policy_acknowledged).toBe(true);
+      const published = revisions.find(revision => revision.id === current)!;
+      expect(published.id).toBe(nextId); expect(published.version).toBe(2);
+      return route.fulfill({ json: { verified: true, booking: { id: randomUUID(), public_reference: 'GC123', status: 'Confirmed', appointment_datetime: payload.appointment_datetime, business_policy_revision_id: published.id, business_policy_version: published.version, business_policy_snapshot: structuredClone(published.policy) } } });
+    });
+    await page.goto('/salon/dashboard/my-page/business-policies');
+    const editor = page.getByLabel('Business Policy', { exact: true });
+    await expect(editor).toHaveValue(original.policy.business_policy_text!);
+    await editor.fill(text);
+    await page.locator('form').getByText('Booking rules', { exact: true }).click();
+    await page.getByLabel('Cancellation notice (hours)', { exact: true }).fill('48');
+    await page.getByRole('button', { name: 'Save draft and review', exact: true }).click();
+    await expect(page.getByText('CONNECTED-POLICY-SAVE', { exact: true })).toBeVisible();
+    await expect(editor).toHaveValue(text);
+    await expect(page.getByLabel('Cancellation notice (hours)', { exact: true })).toHaveValue('48');
+    expect(revisions).toEqual([original]); expect(current).toBe(originalId);
+    expect(await publicRevision(originalId)).toEqual(original);
+    await page.screenshot({ path: info.outputPath('policy-connected-failed-save.png'), ...screenshotCaret });
+    await page.getByRole('button', { name: 'Save draft and review', exact: true }).click();
+    const preview = page.getByRole('heading', { name: 'Review policy draft', exact: true }).locator('..');
+    await expect(preview.getByText(text, { exact: true })).toBeVisible();
+    await expect(preview).toContainText('Cancellation notice (hours): 48');
+    await expect(page.getByText('CONNECTED-POLICY-SAVE', { exact: true })).toHaveCount(0);
+    await expect(preview.getByRole('button', { name: 'Confirm and publish', exact: true })).toBeDisabled();
+    expect(current).toBe(originalId); expect(publishAttempts).toBe(0);
+    await preview.getByRole('checkbox').check();
+    await preview.getByRole('button', { name: 'Confirm and publish', exact: true }).click();
+    await expect(page.getByText('CONNECTED-POLICY-PUBLISH', { exact: true })).toBeVisible();
+    await expect(preview.getByText(text, { exact: true })).toBeVisible();
+    await expect(preview.getByRole('checkbox')).toBeChecked();
+    expect(current).toBe(originalId); expect(await publicRevision(originalId)).toEqual(original);
+    await preview.getByRole('button', { name: 'Confirm and publish', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'Business policies published.' })).toBeVisible();
+    expect(publishPayloads[1]).toEqual(publishPayloads[0]);
+    const published = structuredClone(revisions.find(revision => revision.id === nextId)!);
+    expect(await publicRevision(nextId)).toEqual(published);
+    await page.reload();
+    await expect(editor).toHaveValue(text);
+    await expect(page.getByLabel('Cancellation notice (hours)', { exact: true })).toHaveValue('48');
+    expect(draftAttempts).toBe(2); expect(publishAttempts).toBe(2); expect(checkoutCalls).toBe(0);
+    const link = page.locator(`a[href="/salon/${slug}#business-policies"]`);
+    await expect(link).toHaveAttribute('target', '_blank');
+    const opened = page.waitForEvent('popup');
+    await link.click();
+    const publicPage = await opened;
+    await publicPage.setViewportSize({ width: 390, height: 844 });
+    await expect(publicPage).toHaveURL(new RegExp(`/salon/${slug}#business-policies$`));
+    const disclosure = publicPage.locator('#business-policies');
+    await expect(disclosure).toHaveCount(1);
+    await expect(disclosure).toContainText('Version 2');
+    await disclosure.locator('summary').click();
+    await expect(disclosure.getByText(text, { exact: true })).toBeVisible();
+    await expect(disclosure).toContainText('Cancellation notice (hours): 48');
+    await publicPage.screenshot({ path: info.outputPath('policy-connected-public.png'), ...screenshotCaret });
+    await publicPage.getByRole('link', { name: 'Book Appointment', exact: true }).click();
+    await expect(publicPage).toHaveURL(new RegExp(`/salon/${slug}/book(?:\\?|$)`));
+    await expect(publicPage.getByRole('heading', { name: 'Book Your Appointment', exact: true })).toBeVisible();
+    for (let step = 0; step < 3; step++) await publicPage.getByRole('button', { name: 'Continue', exact: true }).filter({ visible: true }).click();
+    const bookingPolicy = publicPage.locator('#business-policies').filter({ visible: true });
+    await bookingPolicy.locator('summary').click();
+    await expect(bookingPolicy.getByText(text, { exact: true })).toBeVisible();
+    await expect(bookingPolicy).toContainText('Version 2');
+    await expect(bookingPolicy).toContainText('Cancellation notice (hours): 48');
+    await publicPage.getByPlaceholder('Full Name', { exact: true }).filter({ visible: true }).fill('Connected Fixture Customer');
+    await publicPage.getByPlaceholder('name@example.com', { exact: true }).filter({ visible: true }).fill('connected@example.test');
+    await publicPage.getByPlaceholder('+1 (555) 123-4567', { exact: true }).filter({ visible: true }).fill('3055550123');
+    const agreements = publicPage.getByRole('checkbox').filter({ visible: true });
+    await expect(agreements).toHaveCount(2);
+    await expect(agreements.nth(0)).not.toBeChecked(); await expect(agreements.nth(1)).not.toBeChecked();
+    expect(checkoutCalls).toBe(0);
+    // Platform consent alone must not accept this newly published business
+    // revision. Real client validation returns to review without an API call.
+    await agreements.nth(1).check();
+    await publicPage.getByRole('button', { name: 'Continue', exact: true }).filter({ visible: true }).click();
+    await publicPage.getByRole('button', { name: 'Confirm Booking — No Deposit', exact: true }).filter({ visible: true }).click();
+    await expect(publicPage.getByText('This confirmation is required', { exact: true }).filter({ visible: true })).toBeVisible();
+    await expect(agreements.nth(0)).not.toBeChecked(); await expect(agreements.nth(1)).toBeChecked();
+    expect(checkoutCalls).toBe(0);
+    await agreements.nth(0).check();
+    await publicPage.getByRole('button', { name: 'Continue', exact: true }).filter({ visible: true }).click();
+    await publicPage.getByRole('button', { name: 'Confirm Booking — No Deposit', exact: true }).filter({ visible: true }).click();
+    await expect(publicPage.getByRole('heading', { name: 'You’re All Set!', exact: true }).filter({ visible: true })).toBeVisible();
+    expect(checkoutCalls).toBe(1);
+    const evidence = publicPage.locator('details').filter({ has: publicPage.locator('summary').filter({ hasText: 'Policy recorded for this booking' }) }).filter({ visible: true });
+    await evidence.locator(':scope > summary').click();
+    await evidence.locator('#business-policies summary').click();
+    await expect(evidence.getByText(text, { exact: true })).toBeVisible();
+    await expect(evidence).toContainText('Version 2');
+    await expect(evidence).toContainText('Cancellation notice (hours): 48');
+    expect(await publicRevision(nextId)).toEqual(published);
+    expect(draftAttempts).toBe(2); expect(publishAttempts).toBe(2); expect(f.unexpected).toEqual([]);
+    await publicPage.screenshot({ path: info.outputPath('policy-connected-booking-evidence.png'), ...screenshotCaret });
+  } finally { expect((await seed(null)).ok()).toBe(true); }
+});
+
 for (const width of [390, 768, 1440]) test(`P0 public policy survives review, replacement and booking confirmation at ${width}px`, async ({ page, request }, info) => {
   const provider = process.env.PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL || 'http://127.0.0.1:3105';
   expect(['localhost', '127.0.0.1']).toContain(new URL(provider).hostname);

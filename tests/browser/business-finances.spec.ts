@@ -1,10 +1,46 @@
-import { expect } from '@playwright/test';
-import { test } from './helpers/hydration';
+import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { test, screenshotCaret } from './helpers/hydration';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { summarizeOperatingBooks, type OperatingBooks } from '../../src/lib/businessFinanceCore';
 import { BUSINESS_FINANCE_SOURCE_MESSAGES } from '../../src/i18n/business-finance-source-catalog';
 import { expectOwnerLocaleCoverage } from './helpers/ownerLocaleCoverage';
 import AxeBuilder from '@axe-core/playwright';
+
+// A focused 390x430 viewport is a reduced-height proxy, not an OS keyboard.
+// Scroll and actionability checks never move overlays or force a covered click.
+async function captureFinanceFormProxy(page:Page,form:Locator,focused:Locator,assertDraft:()=>Promise<void>,info:TestInfo,name:string){
+  await focused.focus();
+  await expect(focused).toBeFocused();
+  await page.setViewportSize({width:390,height:430});
+  await expect(focused).toBeFocused();
+  await assertDraft();
+  await focused.scrollIntoViewIfNeeded();
+  const upper=await form.boundingBox();expect(upper).not.toBeNull();
+  await page.screenshot({path:info.outputPath(`finance-${name}-focused-390x430-proxy.png`),...screenshotCaret});
+  const geometry:Record<string,unknown>={proxy:'Focused input; viewport reduced to 390x430; no OS keyboard',inputFormTop:upper!.y};
+  for(const label of ['Cancel','Save record']){
+    const control=form.getByRole('button',{name:label,exact:true});
+    await control.scrollIntoViewIfNeeded();
+    await expect(control).toBeVisible();await expect(control).toBeEnabled();
+    await control.click({trial:true});
+    const clearance=await control.evaluate(element=>{
+      const rect=element.getBoundingClientRect(),inset=Math.min(8,rect.width/4,rect.height/4);
+      const points=[[rect.left+inset,rect.top+inset],[rect.right-inset,rect.top+inset],[rect.left+inset,rect.bottom-inset],[rect.right-inset,rect.bottom-inset],[rect.left+rect.width/2,rect.top+rect.height/2]];
+      return {left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom,viewportWidth:innerWidth,viewportHeight:innerHeight,unobstructed:points.map(([x,y])=>{const top=document.elementFromPoint(x,y);return top===element||!!top&&element.contains(top);})};
+    });
+    expect(clearance.left).toBeGreaterThanOrEqual(0);expect(clearance.top).toBeGreaterThanOrEqual(0);
+    expect(clearance.right).toBeLessThanOrEqual(clearance.viewportWidth);expect(clearance.bottom).toBeLessThanOrEqual(clearance.viewportHeight);
+    expect(clearance.unobstructed,`${name} ${label}: full target remains clear of fixed chrome`).toEqual([true,true,true,true,true]);
+    geometry[label]=clearance;
+    await page.screenshot({path:info.outputPath(`finance-${name}-${label==='Cancel'?'cancel':'save'}-390x430-proxy.png`),...screenshotCaret});
+  }
+  const lower=await form.boundingBox();expect(lower).not.toBeNull();
+  expect(Math.abs(upper!.y-lower!.y),'Input and Save captures must use distinct scroll positions').toBeGreaterThan(4);
+  geometry.saveFormTop=lower!.y;
+  await assertDraft();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await info.attach(`finance-${name}-reduced-height-clearance`,{body:JSON.stringify(geometry,null,2),contentType:'application/json'});
+}
 
 test.use({ serviceWorkers: 'block' });
 test('Business finance period change suppresses unmatched totals and stale record actions until its snapshot arrives',async({page})=>{
@@ -254,7 +290,7 @@ test('front desk logging permission does not request or render owner finance tot
   expect(requests.length).toBeGreaterThan(0);
 });
 
-test('Business finance wage agreement, obligation and partial payment retain separate totals after refresh',async({page})=>{
+test('Business finance wage agreement, obligation and partial payment retain separate totals after refresh',async({page},info)=>{
   const fixture=await p0OwnerFixture(page,{populated:true});
   const books:OperatingBooks={sales:[],payments:[],expenses:[],obligations:[],compensation_payments:[]};
   const arrangements:Record<string,unknown>[]=[];const actions:string[]=[];
@@ -278,6 +314,16 @@ test('Business finance wage agreement, obligation and partial payment retain sep
   await form.getByLabel('Arrangement type',{exact:true}).selectOption('employee');
   await form.getByLabel('Stylist',{exact:true}).selectOption(fixture.ids.professional);
   await form.getByLabel('Agreed amount',{exact:true}).fill('100');
+  const effectiveFrom=await form.getByLabel('Effective from',{exact:true}).inputValue();
+  const arrangementForm=form;
+  await captureFinanceFormProxy(page,arrangementForm,form.getByLabel('Agreed amount',{exact:true}),async()=>{
+    await expect(arrangementForm.getByLabel('Arrangement type',{exact:true})).toHaveValue('employee');
+    await expect(arrangementForm.getByLabel('Stylist',{exact:true})).toHaveValue(fixture.ids.professional);
+    await expect(arrangementForm.getByLabel('Agreed amount',{exact:true})).toHaveValue('100');
+    await expect(arrangementForm.getByLabel('Effective from',{exact:true})).toHaveValue(effectiveFrom);
+    await expect(arrangementForm.getByLabel('Period',{exact:true})).toHaveValue('week');
+  },info,'arrangement');
+  expect(actions).toEqual([]);
   await form.getByRole('button',{name:'Save record',exact:true}).click();await expect(form).toHaveCount(0);
   await region.getByRole('button',{name:'Record wage or rent due',exact:true}).click();
   form=region.getByRole('form',{name:'Record wage or rent due',exact:true});
@@ -293,4 +339,90 @@ test('Business finance wage agreement, obligation and partial payment retain sep
   await page.getByRole('tab',{name:'Reports',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Recorded profit: -$100.00',exact:true})).toBeVisible();
   expect(actions).toEqual(['arrangement','obligation','compensation_payment']);expect(fixture.unexpected).toEqual([]);
+});
+
+test('Business finance receipt and expense drafts retain values with clear actions in a reduced-height viewport',async({page},info)=>{
+  const fixture=await p0OwnerFixture(page,{populated:true,locale:'en'});
+  const saleId='99000000-0000-4000-8000-000000000910',saleKey=`sale:${saleId}`;
+  const books:OperatingBooks={
+    sales:[{id:saleKey,salon_id:fixture.business.id,source:'walk_in',kind:'service',name:'Recorded braid appointment',stylist_id:fixture.ids.professional,client_id:null,client_name:null,list_cents:12550,discount_cents:0,agreed_cents:12550,cost_cents:null,quantity:1,status:'completed',recorded_at:'2026-08-10T16:00:00.000Z',occurred_at:'2026-08-10T16:00:00.000Z',compensation:{kind:'none',version:null}}],
+    payments:[{id:'receipt:99000000-0000-4000-8000-000000000911',salon_id:fixture.business.id,sale_id:saleKey,occurred_at:'2026-08-10T16:00:00.000Z',stage:'deposit',method:'cash',amount_cents:2550,original_payment_id:null}],
+    expenses:[],obligations:[],compensation_payments:[],
+  };
+  const posts:{action:string;request_id:string;payload:Record<string,unknown>}[]=[];
+  const receiptTime='2026-08-11T12:30',expenseTime='2026-08-12T13:15';
+  let receiptUtc='',expenseUtc='';
+  await page.route('**/api/salon/finances**',async route=>{
+    const url=new URL(route.request().url());
+    if(route.request().method()==='GET'){
+      if(url.searchParams.get('options')==='entry'){await route.fulfill({json:{stylists:fixture.records.stylists}});return;}
+      expect(url.searchParams.get('from')).toBe('2026-08-01');expect(url.searchParams.get('to')).toBe('2026-08-31');
+      await route.fulfill({json:{scope:{kind:'business'},books,summary:summarizeOperatingBooks(fixture.business.id,books,{from:'2026-08-01',to:'2026-08-31',timeZone:fixture.business.time_zone}),stylists:fixture.records.stylists,arrangements:[],evidence:{}}});return;
+    }
+    expect(route.request().method()).toBe('POST');
+    const body=route.request().postDataJSON();posts.push(body);
+    expect(body.request_id).toMatch(/^[0-9a-f-]{36}$/i);
+    const id=crypto.randomUUID();
+    if(body.action==='receipt'){
+      expect(body.payload).toEqual({sale_id:saleId,amount_cents:3750,method:'transfer',occurred_at:receiptUtc});
+      books.payments.push({id:`receipt:${id}`,salon_id:fixture.business.id,sale_id:saleKey,occurred_at:receiptUtc,stage:'balance',method:'transfer',amount_cents:3750,original_payment_id:null});
+    }else if(body.action==='expense'){
+      expect(body.payload).toEqual({category:'Studio supplies',amount_cents:2325,treatment:'operating',note:'Disposable capes for recorded appointments',occurred_at:expenseUtc});
+      books.expenses.push({id,salon_id:fixture.business.id,occurred_at:expenseUtc,category:'Studio supplies',amount_cents:2325,treatment:'operating'});
+    }else throw Error(`Unexpected finance action ${body.action}`);
+    await route.fulfill({json:{id,verified:true}});
+  });
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/salon/dashboard/earnings?finance=transactions&finance_from=2026-08-01&finance_to=2026-08-31');
+  // Match the form's explicit device-time conversion; both entered dates stay
+  // inside the deliberately selected August reporting period in business time.
+  [receiptUtc,expenseUtc]=await page.evaluate(values=>values.map(value=>new Date(value).toISOString()),[receiptTime,expenseTime]);
+  const finances=page.getByRole('region',{name:'Finances',exact:true});
+  const sale=finances.locator('[data-finance-sale]:visible').filter({hasText:'Recorded braid appointment'});
+  await expect(sale).toContainText('$100.00');
+  await sale.getByRole('button',{name:'Record balance',exact:true}).click();
+  const receipt=finances.getByRole('form',{name:'Record balance',exact:true});
+  await receipt.getByLabel('Amount received',{exact:true}).fill('37.50');
+  await receipt.getByLabel('Payment method',{exact:true}).selectOption('transfer');
+  await receipt.getByLabel('Recorded date and time (optional)',{exact:true}).fill(receiptTime);
+  await captureFinanceFormProxy(page,receipt,receipt.getByLabel('Amount received',{exact:true}),async()=>{
+    await expect(receipt.getByLabel('Amount received',{exact:true})).toHaveValue('37.50');
+    await expect(receipt.getByLabel('Payment method',{exact:true})).toHaveValue('transfer');
+    await expect(receipt.getByLabel('Recorded date and time (optional)',{exact:true})).toHaveValue(receiptTime);
+  },info,'receipt');
+  expect(posts).toEqual([]);
+  await receipt.getByRole('button',{name:'Save record',exact:true}).click();
+  await expect(receipt).toHaveCount(0);await expect(sale).toContainText('$62.50');
+  await page.reload();await expect(sale).toContainText('$62.50');
+  expect(books.payments).toHaveLength(2);
+
+  await page.setViewportSize({width:390,height:844});
+  await finances.locator('header').getByRole('button',{name:'Add expense',exact:true}).click();
+  const expense=finances.getByRole('form',{name:'Add expense',exact:true});
+  await expense.getByLabel('Category',{exact:true}).fill('Studio supplies');
+  await expense.getByLabel('Amount',{exact:true}).fill('23.25');
+  await expense.getByLabel('Treatment',{exact:true}).selectOption('operating');
+  await expense.getByLabel('Note',{exact:true}).fill('Disposable capes for recorded appointments');
+  await expense.getByLabel('Recorded date and time (optional)',{exact:true}).fill(expenseTime);
+  await captureFinanceFormProxy(page,expense,expense.getByLabel('Category',{exact:true}),async()=>{
+    await expect(expense.getByLabel('Category',{exact:true})).toHaveValue('Studio supplies');
+    await expect(expense.getByLabel('Amount',{exact:true})).toHaveValue('23.25');
+    await expect(expense.getByLabel('Treatment',{exact:true})).toHaveValue('operating');
+    await expect(expense.getByLabel('Note',{exact:true})).toHaveValue('Disposable capes for recorded appointments');
+    await expect(expense.getByLabel('Recorded date and time (optional)',{exact:true})).toHaveValue(expenseTime);
+  },info,'expense');
+  expect(posts.map(row=>row.action)).toEqual(['receipt']);
+  await expense.getByRole('button',{name:'Save record',exact:true}).click();
+  await expect(expense).toHaveCount(0);
+  await expect(finances.getByRole('status').filter({hasText:'Record saved.'})).toContainText('No payment was processed.');
+  await page.reload();
+  const expenses=finances.getByRole('tabpanel',{name:'Expenses',exact:true});
+  const savedExpense=expenses.getByRole('listitem').filter({hasText:'Studio supplies'});
+  await expect(savedExpense).toHaveCount(1);await expect(savedExpense).toContainText('$23.25');await expect(savedExpense).toContainText('Operating expense');
+  await page.getByRole('tab',{name:'Overview',exact:true}).click();
+  const overview=finances.getByRole('tabpanel',{name:'Overview',exact:true});
+  await expect(overview.getByText('Completed sales',{exact:true}).locator('..')).toContainText('$125.50');
+  await expect(overview.getByText('Payments received',{exact:true}).locator('..')).toContainText('$63.00');
+  await expect(overview.getByText('Unpaid balances',{exact:true}).locator('..')).toContainText('$62.50');
+  expect(posts.map(row=>row.action)).toEqual(['receipt','expense']);expect(books.expenses).toHaveLength(1);expect(fixture.unexpected).toEqual([]);
 });
