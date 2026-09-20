@@ -1354,34 +1354,6 @@
       "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
     },
     {
-      "file": "src/components/BookingInbox.tsx",
-      "token": "text-ink/40",
-      "maxOccurrences": 1,
-      "classification": "legacy-metadata-migration-budget",
-      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
-    },
-    {
-      "file": "src/components/BookingInbox.tsx",
-      "token": "text-ink/50",
-      "maxOccurrences": 1,
-      "classification": "legacy-metadata-migration-budget",
-      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
-    },
-    {
-      "file": "src/components/BookingInbox.tsx",
-      "token": "text-ink/55",
-      "maxOccurrences": 4,
-      "classification": "legacy-metadata-migration-budget",
-      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
-    },
-    {
-      "file": "src/components/BookingInbox.tsx",
-      "token": "text-ink/60",
-      "maxOccurrences": 1,
-      "classification": "legacy-metadata-migration-budget",
-      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
-    },
-    {
       "file": "src/components/commerce/ProductCheckoutClient.tsx",
       "token": "text-ink/55",
       "maxOccurrences": 4,
@@ -1580,13 +1552,6 @@
     {
       "file": "src/components/owner/OwnerRealtimeAlertBridge.tsx",
       "token": "text-ink/65",
-      "maxOccurrences": 1,
-      "classification": "legacy-metadata-migration-budget",
-      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
-    },
-    {
-      "file": "src/components/owner/OwnerSetupGuideLink.tsx",
-      "token": "text-ink/55",
       "maxOccurrences": 1,
       "classification": "legacy-metadata-migration-budget",
       "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."

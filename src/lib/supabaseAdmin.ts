@@ -3,6 +3,10 @@ import { formatInTimeZone } from "@/lib/dateTime";
 import { sendPushToUsers } from "@/lib/webPushServer";
 import { assertAuthorizedAdminUser } from "@/lib/adminSecurityServer";
 import { ENGLISH_MESSAGES, normalizeLocale } from "@/i18n/catalog";
+import { reminderTranslation, reminderDate, reminderStylistClause } from "@/lib/bookingReminderCopy";
+import {bookingCommunicationPreferences,communicationUnsubscribeToken} from "@/lib/businessCommunicationServer";
+import {bookingFollowupCopy} from "@/lib/bookingFollowupCopy";
+import {salonPublicPath} from "@/lib/salonVanity";
 import { capturePlatformError } from "@/lib/platformErrors";
 import { shouldCaptureProviderResponse } from "@/lib/operationalMonitoringCore";
 import { noteOperationalFailure } from "@/lib/operationalTelemetryContext";
@@ -32,7 +36,7 @@ import {
   classifySupabaseAuthFailure,
   retryTransientAuthOperation,
 } from "@/lib/authSessionCore";
-import { bookingReminderDueWindow, notificationDeliveryKey, runIsolatedReminderBatch, type ReminderStage } from "@/lib/bookingReminderCore";
+import { notificationDeliveryKey, runIsolatedReminderBatch, type ReminderStage } from "@/lib/bookingReminderCore";
 import {
   isActiveSalonTeamMembership,
   resolveSalonIdentityScope,
@@ -249,11 +253,12 @@ export async function sendEmail(
   subject: string,
   html: string,
   category: TransactionalEmailCategory = "account",
-  options: { fromName?: string; replyTo?: string; idempotencyKey?: string } = {},
+  options: { fromName?: string; replyTo?: string; idempotencyKey?: string; signal?: AbortSignal } = {},
 ) {
   if (!process.env.RESEND_API_KEY || !to) return { skipped: true };
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
+    signal: options.signal,
     headers: {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       "Content-Type": "application/json",
@@ -323,7 +328,8 @@ async function bookingNotificationContext(bookingId: string) {
     ? await admin.auth.admin.getUserById(String(salon.user_id))
     : null;
   if (salonAuth?.error) throw salonAuth.error;
-  const customerLocale = normalizeLocale(booking.preferred_locale);
+  const communicationPreferences = await bookingCommunicationPreferences(admin, booking);
+  const customerLocale = normalizeLocale(communicationPreferences.locale);
   const salonLocale = normalizeLocale(
     salonAuth?.data.user?.user_metadata?.locale,
   );
@@ -350,6 +356,7 @@ async function bookingNotificationContext(bookingId: string) {
     material,
     stylistContact,
     customerLocale,
+    communicationPreferences,
     salonLocale,
   };
 }
@@ -358,7 +365,7 @@ type PublishedNotificationTemplate={template_key:string;published_subject:string
 type NotificationTemplateMap=Record<string,PublishedNotificationTemplate>;
 type NotificationTranslationMap=Record<string,string>;
 function renderNotificationText(translations:NotificationTranslationMap,locale:string,key:string,fallback:string,variables:Record<string,string>={}){
-  const source=translations[`${locale}:${key}`]||ENGLISH_MESSAGES[key]||fallback;
+  const source=translations[`${locale}:${key}`]||reminderTranslation(locale,key)||ENGLISH_MESSAGES[key]||fallback;
   return String(source).replace(/\{\{([a-z][a-z0-9_]*)\}\}/g,(_match,name:string)=>variables[name]||"");
 }
 function renderNotificationEmail(templates:NotificationTemplateMap,translations:NotificationTranslationMap,locale:string,key:string,variables:Record<string,string>,fallbackSubject:string,fallbackBody:string){
@@ -366,8 +373,8 @@ function renderNotificationEmail(templates:NotificationTemplateMap,translations:
   const substitute=(value:string)=>value.replace(/\{\{([a-z][a-z0-9_]*)\}\}/g,(_match,name:string)=>variables[name]||"");
   const subjectKey=`notification.${key}.subject`;const bodyKey=`notification.${key}.body`;
   const englishSubject=String(template?.published_subject||fallbackSubject);const englishBody=String(template?.published_body||fallbackBody);
-  const subject=substitute(locale==="en"?englishSubject:renderNotificationText(translations,locale,subjectKey,englishSubject)).slice(0,140);
-  const plainText=substitute(locale==="en"?englishBody:renderNotificationText(translations,locale,bodyKey,englishBody));
+  const subject=(locale==="en"?substitute(englishSubject):renderNotificationText(translations,locale,subjectKey,englishSubject,variables)).slice(0,140);
+  const plainText=locale==="en"?substitute(englishBody):renderNotificationText(translations,locale,bodyKey,englishBody,variables);
   return{subject,html:`<p>${escapeHtml(plainText).replaceAll("\n","<br/>")}</p>`};
 }
 
@@ -391,7 +398,7 @@ async function bookingNotificationSettings(admin:ReturnType<typeof getSupabaseAd
   const templates=Object.fromEntries((templateRows||[]).map(row=>[row.template_key,row])) as NotificationTemplateMap;
   const translations=Object.fromEntries((translationRows||[]).map(row=>[`${row.locale}:${row.translation_key}`,row.translated_text])) as NotificationTranslationMap;
   const rawChannels=Array.isArray(values["notifications.channels"])?values["notifications.channels"]:[];
-  const channels=new Set((rawChannels.length?rawChannels:["email","sms","push"]).map(value=>String(value)).filter(value=>["email","sms","push"].includes(value)));
+  const channels=new Set((Array.isArray(values["notifications.channels"])?rawChannels:["email","sms","push"]).map(value=>String(value)).filter(value=>["email","sms","push"].includes(value)));
   const subject=(key:string,fallback:string)=>{const value=String(values[key]||"").trim();return value&&value.length<=140?value:fallback};
   const text=(key:string,fallback:string,maxLength=1200)=>{const value=String(values[key]||"").trim();return value&&value.length<=maxLength?value:fallback};
   const reminderHours=(Array.isArray(values["notifications.booking_reminder_hours"])?values["notifications.booking_reminder_hours"]:[24,2]).map(Number).filter(value=>Number.isInteger(value)&&value>=1&&value<=336).slice(0,6);
@@ -467,7 +474,7 @@ async function bookingCommunicationInput(
   };
 }
 
-async function runDeliveries(bookingId: string, eventType: string, tasks: DeliveryTask[]) {
+export async function runDeliveries(bookingId: string, eventType: string, tasks: DeliveryTask[], scheduleRevision?: number, followupLease?: string) {
   const admin = getSupabaseAdmin();
   const results: Array<{ recipientType: string; channel: string; status: "delivered" | "failed" | "skipped"; request_id?: string }> = [];
   for (const task of tasks) {
@@ -476,14 +483,17 @@ async function runDeliveries(bookingId: string, eventType: string, tasks: Delive
       eventType,
       recipientType: task.recipientType,
       channel: task.channel,
+      scheduleRevision,
     });
-    const claim = await admin.rpc("claim_notification_delivery", {
+    const claim = await admin.rpc(followupLease ? "claim_followup_notification_delivery" : scheduleRevision === undefined ? "claim_notification_delivery" : "claim_scheduled_notification_delivery", {
       p_booking_id: bookingId,
       p_event_type: eventType,
       p_recipient_type: task.recipientType,
       p_channel: task.channel,
       p_destination: task.destination,
       p_deduplication_key: deduplicationKey,
+      ...(scheduleRevision === undefined ? {} : { p_schedule_revision: scheduleRevision }),
+      ...(followupLease ? {p_lease:followupLease} : {}),
     });
     if (claim.error) {
       const reference = await capturePlatformError({
@@ -552,6 +562,10 @@ async function runDeliveries(bookingId: string, eventType: string, tasks: Delive
   return results;
 }
 
+export async function bookingDeliveryChannels(admin: SupabaseClient) {
+  return (await bookingNotificationSettings(admin)).channels;
+}
+
 /** Share the established per-event delivery claim/lease for typed and
  * Assistant messages. A retry can retry a failed channel without resending a
  * successfully delivered channel or creating another message. */
@@ -585,7 +599,7 @@ export async function deliverBookingMessageNotifications(messageId: string) {
     const team = await admin.from("salon_team_members").select("user_id,permissions").eq("salon_id", booking.salon_id).eq("status", "Active");
     if (team.error) throw team.error;
     recipientIds.push(...(team.data || []).filter(row => Boolean(row.permissions?.bookings)).map(row => String(row.user_id || "")).filter(Boolean));
-    recipientIds = await authorizedMessageRecipients(admin, String(booking.salon_id), recipientIds);
+    recipientIds = await authorizedMessageRecipients(admin, String(booking.salon_id), String(booking.id), recipientIds);
     if (!recipientIds.includes(String(salon.user_id || ""))) { email = ""; phone = ""; }
   }
   const url = path.startsWith("https://") ? path : `${root}${path}`;
@@ -601,13 +615,19 @@ export async function deliverBookingMessageNotifications(messageId: string) {
 
 export async function deliverBookingNotifications(
   bookingId: string,
-  options: { manageUrl?: string; skipCustomerEmail?: boolean } = {},
+  options: { manageUrl?: string; skipCustomerEmail?: boolean; acceptedProposalId?: string } = {},
 ) {
   const context = await bookingNotificationContext(bookingId);
   const { admin, booking, salon, style, stylist, stylistContact, customerLocale, salonLocale } = context;
   const stylistLocale=stylistContact?.locale||salonLocale;
   const notification=await bookingNotificationSettings(admin,[customerLocale,salonLocale,stylistLocale]);
-  if (booking.notifications_sent_at) return { alreadySent: true };
+  let confirmationEvent = "booking_confirmed";
+  if (options.acceptedProposalId) {
+    const accepted = await admin.from("booking_reschedule_proposals").select("id").eq("id", options.acceptedProposalId).eq("booking_id", bookingId).eq("status", "Accepted").maybeSingle();
+    if (accepted.error) throw accepted.error;
+    if (!accepted.data) throw new Error("RESCHEDULE_PROPOSAL_UNAVAILABLE");
+    confirmationEvent = `reschedule_accepted:${accepted.data.id}`;
+  } else if (booking.notifications_sent_at) return { alreadySent: true };
   const when = formatInTimeZone(booking.appointment_datetime, salon.time_zone);
   const duration = `${Number(booking.duration_hours || 0)} hour${Number(booking.duration_hours || 0) === 1 ? "" : "s"}`;
   const service = String(style?.name || "Braiding service");
@@ -654,7 +674,7 @@ export async function deliverBookingNotifications(
   if (stylistContact?.email) tasks.push({ recipientType: "stylist", channel: "email", destination: stylistContact.email, run: () => sendEmail(stylistContact.email, stylistEmail.subject, stylistEmail.html, "bookings", { fromName: notification.senderName, replyTo: notification.replyTo }) });
   if (stylistContact?.phone) tasks.push({ recipientType: "stylist", channel: "sms", destination: stylistContact.phone, run: () => sendSms(stylistContact.phone, stylistSms) });
   if (stylistContact?.userId) tasks.push({ recipientType: "stylist", channel: "push", destination: stylistContact.userId, run: () => sendPushToUsers([stylistContact.userId], { title: renderNotificationText(notification.translations,stylistLocale,"notification.booking.stylist_confirmed.push_title","A booking was assigned to you"), body: stylistSummary, url: `/salon/dashboard/bookings?booking=${booking.id}`, tag: `booking-${booking.id}`, requireInteraction: true }) });
-  const deliveries = await runDeliveries(bookingId, "booking_confirmed", tasks.filter(task=>notification.channels.has(task.channel)));
+  const deliveries = await runDeliveries(bookingId, confirmationEvent, tasks.filter(task=>notification.channels.has(task.channel)));
   const delivered = deliveries.every((item) => item.status === "delivered");
   const warningReferences=[...notification.warningReferences,...deliveries.map(item=>item.request_id).filter((value):value is string=>Boolean(value))];
   if (delivered) {
@@ -735,56 +755,109 @@ export async function deliverCancellationNotifications(bookingId: string) {
   return { deliveries, warnings:[...notification.warningReferences,...deliveries.map(item=>item.request_id).filter((value):value is string=>Boolean(value))].map(reference=>({message:`A cancellation notification needs attention. Reference ${reference}.`,request_id:reference})) };
 }
 
-export async function deliverBookingReminder(bookingId:string,reminderHours:number){
+export async function deliverBookingReminder(bookingId:string,reminderHours:number,scheduleRevision:number){
   const{admin,booking,salon,style,stylist,stylistContact,customerLocale,salonLocale}=await bookingNotificationContext(bookingId);
   const stylistLocale=stylistContact?.locale||salonLocale;
-  if(String(booking.status||"").toLowerCase()!=="confirmed")return{skipped:true,reason:"Booking is no longer confirmed."};
+  if(String(booking.status||"").toLowerCase()!=="confirmed" || booking.schedule_revision!==scheduleRevision)return{skipped:true,reason:"Booking is no longer confirmed at the selected schedule."};
   const notification=await bookingNotificationSettings(admin,[customerLocale,salonLocale,stylistLocale]);
-  const when=formatInTimeZone(booking.appointment_datetime,salon.time_zone);
+  const when=reminderDate(booking.appointment_datetime,salon.time_zone,customerLocale);
   const service=String(style?.name||"Braiding service");
   const root=(process.env.NEXT_PUBLIC_SITE_URL||"https://girlzculture.com").replace(/\/$/,"");
-  const customer=String(booking.guest_name||"A customer");const stylistClause=stylist?.name?` with ${stylist.name}`:"";const variables={service,salon:String(salon.name||""),when,stylist_clause:stylistClause,customer};
+  const customer=String(booking.guest_name||"A customer");const stylistClause=reminderStylistClause(customerLocale,stylist?.name);const variables={service,salon:String(salon.name||""),when,stylist_clause:stylistClause,customer};
   const summary=renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_reminder.summary",`Reminder: ${service} at ${salon.name} is scheduled for ${when}${stylistClause}.`,variables);
-  const salonSummary=renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_reminder.summary",`Reminder: ${customer}'s ${service} appointment is scheduled for ${when}${stylistClause}.`,variables);
-  const stylistSummary=renderNotificationText(notification.translations,stylistLocale,"notification.booking.salon_reminder.summary",salonSummary,variables);
-  const accountUrl=`${root}/account?tab=upcoming`;const dashboardUrl=`${root}/salon/dashboard/bookings?booking=${booking.id}`;
+  const salonSummary=renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_reminder.summary",`Reminder: ${customer}'s ${service} appointment is scheduled for ${when}${stylistClause}.`,{...variables,when:reminderDate(booking.appointment_datetime,salon.time_zone,salonLocale),stylist_clause:reminderStylistClause(salonLocale,stylist?.name)});
+  const stylistSummary=renderNotificationText(notification.translations,stylistLocale,"notification.booking.salon_reminder.summary",salonSummary,{...variables,when:reminderDate(booking.appointment_datetime,salon.time_zone,stylistLocale),stylist_clause:reminderStylistClause(stylistLocale,stylist?.name)});
+  const accountUrl=booking.customer_id?`${root}/account?tab=upcoming`:(await issueGuestBookingToken(admin,booking.id,{reason:"Scheduled booking reminder",rootUrl:root,reuseActive:true})).url;const dashboardUrl=`${root}/salon/dashboard/bookings?booking=${booking.id}`;
   const customerEmail=renderNotificationEmail(notification.templates,notification.translations,customerLocale,"booking.customer_reminder",{summary,account_url:accountUrl},notification.reminderSubject,`Appointment reminder.\n\n${summary}\n\nView your booking: ${accountUrl}`);
   const salonEmail=renderNotificationEmail(notification.templates,notification.translations,salonLocale,"booking.salon_reminder",{summary:salonSummary,dashboard_url:dashboardUrl},"Upcoming Girlz Culture appointment",`Appointment reminder.\n\n${salonSummary}\n\nOpen booking: ${dashboardUrl}`);
   const stylistEmail=renderNotificationEmail(notification.templates,notification.translations,stylistLocale,"booking.stylist_reminder",{summary:stylistSummary},"Upcoming assigned appointment",`Appointment reminder.\n\n${stylistSummary}`);
+  const emailOptions=(recipientType:string)=>({fromName:notification.senderName,replyTo:notification.replyTo,idempotencyKey:notificationDeliveryKey({bookingId,eventType:`booking_reminder_${reminderHours}h`,recipientType,channel:"email",scheduleRevision})});
   const tasks:DeliveryTask[]=[
-    {recipientType:"customer",channel:"email",destination:String(booking.guest_email||""),run:()=>sendEmail(String(booking.guest_email||""),customerEmail.subject,customerEmail.html,"bookings")},
+    {recipientType:"customer",channel:"email",destination:String(booking.guest_email||""),run:()=>sendEmail(String(booking.guest_email||""),customerEmail.subject,customerEmail.html,"bookings",emailOptions("customer"))},
     {recipientType:"customer",channel:"sms",destination:String(booking.guest_phone||""),run:()=>sendSms(String(booking.guest_phone||""),renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_reminder.sms",`Girlz Culture: ${summary}`,{summary}))},
-    {recipientType:"salon",channel:"email",destination:String(salon.email||""),run:()=>sendEmail(String(salon.email||""),salonEmail.subject,salonEmail.html,"bookings")},
+    {recipientType:"salon",channel:"email",destination:String(salon.email||""),run:()=>sendEmail(String(salon.email||""),salonEmail.subject,salonEmail.html,"bookings",emailOptions("salon"))},
     {recipientType:"salon",channel:"sms",destination:String(salon.phone||""),run:()=>sendSms(String(salon.phone||""),renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_reminder.sms",`Girlz Culture: ${salonSummary}`,{summary:salonSummary}))},
     {recipientType:"salon",channel:"push",destination:String(salon.user_id||""),run:()=>sendPushToUsers([String(salon.user_id||"")],{title:renderNotificationText(notification.translations,salonLocale,"notification.booking.salon_reminder.push_title","Upcoming appointment"),body:salonSummary,url:`/salon/dashboard/bookings?booking=${booking.id}`,tag:`booking-reminder-${booking.id}-${reminderHours}h`})},
   ];
   if(booking.customer_id)tasks.push({recipientType:"customer",channel:"push",destination:String(booking.customer_id),run:()=>sendPushToUsers([String(booking.customer_id)],{title:renderNotificationText(notification.translations,customerLocale,"notification.booking.customer_reminder.push_title","Appointment reminder"),body:summary,url:"/account?tab=upcoming",tag:`booking-reminder-${booking.id}-${reminderHours}h`})});
-  if(stylistContact?.email)tasks.push({recipientType:"stylist",channel:"email",destination:stylistContact.email,run:()=>sendEmail(stylistContact.email,stylistEmail.subject,stylistEmail.html,"bookings")});
+  if(stylistContact?.email)tasks.push({recipientType:"stylist",channel:"email",destination:stylistContact.email,run:()=>sendEmail(stylistContact.email,stylistEmail.subject,stylistEmail.html,"bookings",emailOptions("stylist"))});
   if(stylistContact?.phone)tasks.push({recipientType:"stylist",channel:"sms",destination:stylistContact.phone,run:()=>sendSms(stylistContact.phone,renderNotificationText(notification.translations,stylistLocale,"notification.booking.salon_reminder.sms",`Girlz Culture: ${stylistSummary}`,{summary:stylistSummary}))});
   if(stylistContact?.userId)tasks.push({recipientType:"stylist",channel:"push",destination:stylistContact.userId,run:()=>sendPushToUsers([stylistContact.userId],{title:renderNotificationText(notification.translations,stylistLocale,"notification.booking.stylist_reminder.push_title","Upcoming assigned appointment"),body:stylistSummary,url:`/salon/dashboard/bookings?booking=${booking.id}`,tag:`booking-reminder-${booking.id}-${reminderHours}h`})});
-  const deliveries=await runDeliveries(bookingId,`booking_reminder_${reminderHours}h`,tasks.filter(task=>notification.channels.has(task.channel)));
+  const deliveries=await runDeliveries(bookingId,`booking_reminder_${reminderHours}h`,tasks.filter(task=>notification.channels.has(task.channel)),scheduleRevision);
   return{deliveries,warnings:[...notification.warningReferences,...deliveries.map(item=>item.request_id).filter((value):value is string=>Boolean(value))].map(reference=>({message:`A reminder notification needs attention. Reference ${reference}.`,request_id:reference}))};
 }
 
+export async function deliverBookingFollowup(bookingId:string,leaseId:string){
+  const {admin,booking,salon,style,customerLocale,communicationPreferences:preferences}=await bookingNotificationContext(bookingId);
+  const end=new Date(booking.appointment_datetime).getTime()+Number(booking.duration_hours)*3_600_000;
+  if(booking.status!=="Completed"||!preferences.follow_up||!preferences.id||!Number.isFinite(end)||end>Date.now()-86_400_000||end<=Date.now()-259_200_000){
+    return {deliveries:[],skipped:true};
+  }
+  const notification=await bookingNotificationSettings(admin,[customerLocale]);
+  // Optional messages fail closed when channel/template settings cannot load.
+  if(notification.warningReferences.length)throw Error("FOLLOWUP_CONFIGURATION_UNAVAILABLE");
+  if(!salon.slug||!style?.name)throw Error("FOLLOWUP_CONTEXT_UNAVAILABLE");
+  const root=(process.env.NEXT_PUBLIC_SITE_URL||"https://girlzculture.com").replace(/\/$/,"");
+  const bookPath=salonPublicPath(String(salon.slug));
+  const bookUrl=new URL(bookPath,root).toString();
+  const unsubscribe=new URL("/communications/unsubscribe",root);
+  unsubscribe.searchParams.set("token",communicationUnsubscribeToken(preferences.id));
+  const copy=bookingFollowupCopy(customerLocale,String(salon.name),String(style.name));
+  const variables={salon:String(salon.name),service:String(style.name),booking_url:bookUrl,unsubscribe_url:unsubscribe.toString()};
+  const email=renderNotificationEmail(notification.templates,notification.translations,customerLocale,"booking.customer_follow_up",variables,copy.subjectTemplate,copy.bodyTemplate);
+  // The opt-out remains present even when the Engine overrides the template.
+  const html=`${email.html}<p><a href="${escapeHtml(bookUrl)}">${escapeHtml(copy.book)}</a></p><p><a href="${escapeHtml(unsubscribe.toString())}">${escapeHtml(copy.preferences)}</a></p>`;
+  const tasks:DeliveryTask[]=[];
+  if(preferences.email_enabled&&booking.guest_email&&notification.channels.has("email"))tasks.push({recipientType:"customer",channel:"email",destination:String(booking.guest_email),run:()=>sendEmail(String(booking.guest_email),email.subject,html,"bookings",{fromName:notification.senderName,replyTo:notification.replyTo,idempotencyKey:notificationDeliveryKey({bookingId,eventType:"booking_follow_up",recipientType:"customer",channel:"email"})})});
+  if(preferences.sms_enabled&&booking.guest_phone&&notification.channels.has("sms"))tasks.push({recipientType:"customer",channel:"sms",destination:String(booking.guest_phone),run:()=>sendSms(String(booking.guest_phone),`${copy.body}\n${copy.book}: ${bookUrl}\n${copy.preferences}: ${unsubscribe}`)});
+  if(preferences.push_enabled&&booking.customer_id&&notification.channels.has("push"))tasks.push({recipientType:"customer",channel:"push",destination:String(booking.customer_id),run:()=>sendPushToUsers([String(booking.customer_id)],{title:copy.subject,body:copy.body,url:bookPath,tag:`booking-follow-up-${booking.id}`})});
+  return {deliveries:await runDeliveries(bookingId,"booking_follow_up",tasks,undefined,leaseId),skipped:tasks.length===0};
+}
+
+export async function processBookingFollowups(){
+  const admin=getSupabaseAdmin();
+  const batch=await admin.rpc("claim_due_booking_followups",{p_limit:10});
+  if(batch.error)throw batch.error;
+  const results:Array<{bookingId:string;status:string;request_id?:string}>=[];
+  for(const item of (batch.data||[]) as Array<{booking_id:string;lease_id:string}>){
+    let reference:string|undefined;
+    let skipped=false;
+    try{
+      const delivery=await deliverBookingFollowup(item.booking_id,item.lease_id);
+      skipped=delivery.skipped;
+      const failure=delivery.deliveries.find(result=>result.status==="failed"||result.request_id);
+      if(failure)reference=failure.request_id||await capturePlatformError({admin,error:Error("FOLLOWUP_DELIVERY_FAILED"),feature:"booking-followups",action:"deliver",actorRole:"system",recordType:"booking",recordId:item.booking_id,safeMessage:"A post-visit message could not be delivered."});
+    }catch(error){
+      reference=await capturePlatformError({admin,error,feature:"booking-followups",action:"deliver",actorRole:"system",recordType:"booking",recordId:item.booking_id,safeMessage:"A post-visit message could not be delivered."});
+    }
+    const finished=await admin.rpc("finish_booking_followup",{p_booking:item.booking_id,p_lease:item.lease_id,p_success:!reference,p_reference:reference||null});
+    if(finished.error){
+      reference=await capturePlatformError({admin,error:finished.error,feature:"booking-followups",action:"complete",actorRole:"system",recordType:"booking",recordId:item.booking_id,safeMessage:"A post-visit delivery result could not be recorded."});
+    }
+    results.push({bookingId:item.booking_id,status:reference?"failed":finished.data!==true?"superseded":skipped?"skipped":"completed",...(reference?{request_id:reference}:{})});
+  }
+  return {processed:results.length,results};
+}
+
 export async function processBookingReminders(){
-  const admin=getSupabaseAdmin();const notification=await bookingNotificationSettings(admin);const now=Date.now();const results:Array<Record<string,unknown>>=[];
+  const admin=getSupabaseAdmin();const notification=await bookingNotificationSettings(admin);const results:Array<Record<string,unknown>>=[];
   for(const reminderHours of notification.reminderHours){
-    const{from,to}=bookingReminderDueWindow({now,reminderHours});
-    const{data:bookings,error}=await admin.from("bookings").select("id,appointment_datetime").eq("booking_origin","marketplace").eq("status","Confirmed").gte("appointment_datetime",from).lt("appointment_datetime",to).order("appointment_datetime").limit(250);
+    const{data:bookings,error}=await admin.rpc("due_booking_reminders",{p_reminder_hours:reminderHours});
     if(error){
       const reference=await capturePlatformError({admin,error,feature:"booking-reminders",action:"load_due_bookings",actorRole:"system",provider:"supabase",safeMessage:"Due booking reminders could not be loaded."});
       results.push({reminderHours,status:"failed",stage:"load_due_bookings",request_id:reference});
       continue;
     }
+    const revisions=new Map<string,number>((bookings||[]).map((booking:{id:string;schedule_revision:number})=>[booking.id,Number(booking.schedule_revision)]));
     results.push(...await runIsolatedReminderBatch({
       bookings:bookings||[],
       reminderHours,
       claim:async bookingId=>{
-        const claim=await admin.rpc("claim_booking_reminder",{p_booking_id:bookingId,p_reminder_hours:reminderHours});
+        const claim=await admin.rpc("claim_booking_reminder",{p_booking_id:bookingId,p_reminder_hours:reminderHours,p_schedule_revision:revisions.get(bookingId)});
         if(claim.error)throw claim.error;
         return claim.data===true;
       },
-      deliver:bookingId=>deliverBookingReminder(bookingId,reminderHours),
+      deliver:bookingId=>deliverBookingReminder(bookingId,reminderHours,revisions.get(bookingId)!),
       getDeliveryFailure:delivery=>{
         const failedDelivery=delivery.deliveries?.find(item=>item.status==="failed");
         if(!failedDelivery)return null;
@@ -796,12 +869,11 @@ export async function processBookingReminders(){
         };
       },
       complete:async bookingId=>{
-        const nowIso=new Date().toISOString();
-        const update=await admin.from("booking_reminder_claims").update({completed_at:nowIso,error_message:null,lease_expires_at:null,next_attempt_at:null,updated_at:nowIso}).eq("booking_id",bookingId).eq("reminder_hours",reminderHours).is("completed_at",null).is("terminal_at",null);
+        const update=await admin.rpc("complete_booking_reminder",{p_booking_id:bookingId,p_reminder_hours:reminderHours,p_schedule_revision:revisions.get(bookingId)});
         if(update.error)throw update.error;
       },
       recordDeliveryFailure:async (bookingId,reference)=>{
-        const failure=await admin.rpc("fail_booking_reminder_claim",{p_booking_id:bookingId,p_reminder_hours:reminderHours,p_reference:reference});
+        const failure=await admin.rpc("fail_booking_reminder_claim",{p_booking_id:bookingId,p_reminder_hours:reminderHours,p_reference:reference,p_schedule_revision:revisions.get(bookingId)});
         if(failure.error)throw failure.error;
       },
       reportFailure:async (stage:ReminderStage,error,bookingId)=>capturePlatformError({

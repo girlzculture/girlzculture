@@ -7,12 +7,35 @@ type StripeProviderError = Error & {
   code: string;
   status?: number;
   deliveryUncertain?: boolean;
+  diagnostics?: ReturnType<typeof allowedStripeFailure>;
 };
+
+function allowedStripeFailure(response: Response, body: unknown) {
+  const error = body && typeof body === "object" && "error" in body ? (body as { error?: Record<string, unknown> }).error : null;
+  const codes = new Set(["resource_missing", "parameter_missing", "parameter_invalid_empty", "parameter_invalid_integer", "parameter_invalid_string_blank", "parameter_unknown", "url_invalid", "account_invalid", "api_key_expired", "rate_limit", "idempotency_key_in_use", "testmode_charges_only"]);
+  const types = new Set(["invalid_request_error", "authentication_error", "permission_error", "rate_limit_error", "api_error", "idempotency_error", "card_error"]);
+  const params = new Set(["customer", "subscription", "configuration", "return_url", "flow_data[type]", "flow_data[after_completion][type]", "flow_data[after_completion][redirect][return_url]"]);
+  const requestId = response.headers.get("request-id") || "";
+  return {
+    http_status: response.status,
+    provider_code: typeof error?.code === "string" && codes.has(error.code) ? error.code : "unclassified",
+    provider_type: typeof error?.type === "string" && types.has(error.type) ? error.type : "unclassified",
+    parameter: typeof error?.param === "string" && params.has(error.param) ? error.param : null,
+    provider_request_id: /^req_[A-Za-z0-9]{1,120}$/.test(requestId) ? requestId : null,
+  };
+}
+
+/** Never retain/return provider messages, body, URLs, credential values or
+ * arbitrary error fields. Unknown diagnostics stay unknown. */
+export function stripeFailureDiagnostics(error: unknown) {
+  return error && typeof error === "object" && "provider" in error && error.provider === "stripe" && "diagnostics" in error
+    ? (error as StripeProviderError).diagnostics || null : null;
+}
 
 function stripeProviderError(
   message: string,
   code: string,
-  options: { status?: number; deliveryUncertain?: boolean; cause?: unknown } = {},
+  options: { status?: number; deliveryUncertain?: boolean; cause?: unknown; diagnostics?: ReturnType<typeof allowedStripeFailure> } = {},
 ) {
   return Object.assign(new Error(message), {
     provider: "stripe" as const,
@@ -20,6 +43,7 @@ function stripeProviderError(
     status: options.status,
     deliveryUncertain: options.deliveryUncertain === true,
     cause: options.cause,
+    diagnostics: options.diagnostics,
   }) as StripeProviderError;
 }
 
@@ -32,7 +56,7 @@ export function stripeConfigured() {
 export async function stripeRequest<T>(
   path: string,
   values: Record<string, string | number | boolean | null | undefined>,
-  options?: { idempotencyKey?: string },
+  options?: { idempotencyKey?: string; signal?: AbortSignal; apiVersion?: '2025-06-30.basil'; onResponse?: (evidence: { requestId: string | null }) => void },
 ) {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) throw new Error("Stripe test mode is not configured yet.");
@@ -48,12 +72,14 @@ export async function stripeRequest<T>(
       headers: {
         Authorization: `Bearer ${secret}`,
         "Content-Type": "application/x-www-form-urlencoded",
+        ...(options?.apiVersion ? { "Stripe-Version": options.apiVersion } : {}),
         ...(options?.idempotencyKey
           ? { "Idempotency-Key": options.idempotencyKey }
           : {}),
       },
       body: form,
       cache: "no-store",
+      signal: options?.signal,
     });
   } catch (error) {
     throw stripeProviderError(
@@ -64,6 +90,8 @@ export async function stripeRequest<T>(
   }
 
   let data: T;
+  const responseRequestId = response.headers.get("request-id") || "";
+  options?.onResponse?.({ requestId: /^req_[A-Za-z0-9]{1,120}$/.test(responseRequestId) ? responseRequestId : null });
   try {
     data = (await response.json()) as T;
   } catch (error) {
@@ -84,21 +112,23 @@ export async function stripeRequest<T>(
       {
         status: response.status,
         deliveryUncertain: response.status >= 500,
+        diagnostics: allowedStripeFailure(response, data),
       },
     );
   }
   return data;
 }
 
-export async function stripeGet<T>(path: string) {
+export async function stripeGet<T>(path: string, options?: { signal?: AbortSignal; apiVersion?: '2025-06-30.basil' }) {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) throw new Error("Stripe test mode is not configured yet.");
 
   let response: Response;
   try {
     response = await fetch(`${STRIPE_API}${path}`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { Authorization: `Bearer ${secret}`, ...(options?.apiVersion ? { "Stripe-Version": options.apiVersion } : {}) },
       cache: "no-store",
+      signal: options?.signal,
     });
   } catch (error) {
     throw stripeProviderError(
@@ -122,7 +152,7 @@ export async function stripeGet<T>(path: string) {
     throw stripeProviderError(
       `STRIPE_PROVIDER_FAILURE:${response.status}`,
       `HTTP_${response.status}`,
-      { status: response.status },
+      { status: response.status, diagnostics: allowedStripeFailure(response, data) },
     );
   }
   return data;

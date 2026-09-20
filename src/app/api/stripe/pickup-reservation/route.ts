@@ -80,7 +80,6 @@ function expectedPickupError(error: unknown) {
 }
 
 async function POSTHandler(request: Request) {
-  if (!customerMarketplaceLive()) return marketplaceUnavailable();
   const admin = getSupabaseAdmin();
   let intentId = "";
   try {
@@ -295,4 +294,3 @@ export const POST = withOperationalMonitoring(
   }),
   POSTHandler,
 );
-import { customerMarketplaceLive, marketplaceUnavailable } from "@/lib/marketplaceLaunchCore";

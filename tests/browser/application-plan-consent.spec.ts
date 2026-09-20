@@ -3,6 +3,12 @@ import { test } from "./helpers/hydration";
 import { buildAuthStorageKeys } from "../../src/lib/authSessionCore";
 import { BUSINESS_SETUP_OPTIONS } from "../../src/lib/businessOnboarding";
 
+// These tests deliberately replace Auth/application requests with isolated
+// fixtures. A controlling service worker can bypass Playwright page.route,
+// notably after the multi-page WebKit signup journey. Keep fixture ownership
+// deterministic; production PWA registration/behavior is unchanged.
+test.use({ serviceWorkers: "block" });
+
 // Local session/provider fixtures only. Never submit a production application.
 const providerURL = process.env.PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL || "http://127.0.0.1:3105";
 const user = {
@@ -197,7 +203,7 @@ for (const query of ["", "?plan=invalid", "?plan="]) {
   });
 }
 
-for (const [plan, price] of [["Starter", 59], ["Growth", 69], ["Premium", 89]] as const) {
+for (const [plan, price] of [["Starter", 89], ["Growth", 109], ["Premium", 129]] as const) {
   test(`explicit ${plan} survives plans → signup → application → refresh → submission`, async ({ page }) => {
     let signupPayload: Record<string, unknown> | undefined;
     let applicationPayload: Record<string, unknown> | undefined;
@@ -219,6 +225,7 @@ for (const [plan, price] of [["Starter", 59], ["Growth", 69], ["Premium", 89]] a
     await page.getByLabel("Password", { exact: true }).fill("local-fixture-password");
     await page.getByLabel("Phone Number").fill("2125550123");
     await page.getByRole("button", { name: "Create account" }).click();
+    await expect.poll(() => signupPayload?.selected_plan, { message: "The isolated signup adapter must receive the selected plan" }).toBe(plan);
     await expect(page).toHaveURL(new RegExp(`/business/apply\\?plan=${plan.toLowerCase()}$`));
     expect(signupPayload?.selected_plan).toBe(plan);
     await expect(planButton(page, plan)).toContainText(`$${price}/month`);

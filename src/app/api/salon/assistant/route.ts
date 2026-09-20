@@ -3,6 +3,7 @@ import { enforceRateLimit, RateLimitError } from "@/lib/requestSecurity";
 import { AssistantError, ASSISTANT_TOOLS, assertSchema, stableJson, type AssistantTool } from "@/lib/gcAssistantCore";
 import { createHash } from "node:crypto";
 import { executeAssistantTool, confirmAssistantTool } from "@/lib/gcAssistantServer";
+import { deliverAssistantReschedule } from "@/lib/assistantBookingReschedule";
 import { planOwnerRequest } from "@/lib/gcAssistantPlanningServer";
 import { isAssistantPage } from "@/lib/assistantPageContext";
 import { isAssistantLanguage } from "@/lib/assistantLanguage";
@@ -44,6 +45,10 @@ async function POSTHandler(request: Request) {
       if (body.confirm !== true || typeof body.policy_reviewed !== "boolean" || !/^[0-9a-f]{64}$/.test(body.digest)) throw new AssistantError("ASSISTANT_CONFIRMATION_REQUIRED");
       const confirmed = await confirmAssistantTool(context, body.request_id, body.digest, body.policy_reviewed);
       let warnings: { code: string; request_id: string }[] = [];
+      if (confirmed.tool === "prepare_booking_reschedule_proposal") {
+        try { warnings = await deliverAssistantReschedule(context, confirmed.result, (process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "")); }
+        catch (error) { warnings = [{ code: "RESCHEDULE_NOTIFICATION_FAILED", request_id: await capturePlatformError({ request, admin, error, feature: "booking-rescheduling", action: "assistant-reschedule-notification", actorRole: "salon", actorId, salonId, safeMessage: "The proposal was saved, but a notification could not be delivered." }) }]; }
+      }
       if (confirmed.tool === "prepare_customer_message" && confirmed.result?.booking_id && confirmed.result?.id && typeof confirmed.result?.body === "string") {
         try { warnings = (await deliverBookingMessageNotifications(confirmed.result.id)).warnings; }
         catch (error) { warnings = [{ code: "MESSAGE_NOTIFICATION_FAILED", request_id: await capturePlatformError({ request, admin, error, feature: "booking-messages", action: "assistant-message-notification", actorRole: "salon", safeMessage: "The message was saved, but a notification could not be delivered." }) }]; }
@@ -55,7 +60,7 @@ async function POSTHandler(request: Request) {
       if (!Array.isArray(body.previous_request_ids) || body.previous_request_ids.length > 6 || typeof body.text !== "string") throw new AssistantError("ASSISTANT_INVALID_INPUT");
       body.previous_request_ids.forEach(validId);
       if (body.conversation !== undefined) assertSchema(body.conversation, { type: "array", maxItems: 6, items: { type: "object", additionalProperties: false, required: ["role", "text"], properties: { role: { type: "string", enum: ["user", "assistant"] }, text: { type: "string", maxLength: 2400 } } } });
-      const planned = await planOwnerRequest({ admin, salonId: context.salon.id, userId: context.user.id, locale: body.locale, text: body.text, timeZone: String(context.salon.time_zone), previousRequestIds: body.previous_request_ids, conversation: body.conversation, page: body.page });
+      const planned = await planOwnerRequest({ context, admin, salonId: context.salon.id, userId: context.user.id, locale: body.locale, text: body.text, timeZone: String(context.salon.time_zone), previousRequestIds: body.previous_request_ids, conversation: body.conversation, page: body.page });
       const responseLocale = isAssistantLanguage(planned.response_locale) ? planned.response_locale : body.locale;
       if (!planned.plan) return Response.json(planned, { headers });
       noteTool(planned.plan.tool, planned.plan.args);
@@ -65,7 +70,11 @@ async function POSTHandler(request: Request) {
         // responder can neither call tools nor confirm a write. If it fails,
         // the authorized, deterministic summary remains available.
         try {
-          const answer = await planOwnerRequest({ admin, salonId: context.salon.id, userId: context.user.id, locale: responseLocale, text: body.text, timeZone: String(context.salon.time_zone), previousRequestIds: [body.request_id], answerOnly: true });
+          // Client prose without distinct prior records has no authorization
+          // anchor. The current read is evidence for this answer, not proof
+          // that older text can be replayed. The planner rechecks every anchor.
+          const conversationRequestIds = body.previous_request_ids.filter((id: string) => id !== body.request_id);
+          const answer = await planOwnerRequest({ context, admin, salonId: context.salon.id, userId: context.user.id, locale: responseLocale, text: body.text, timeZone: String(context.salon.time_zone), previousRequestIds: [body.request_id], conversationRequestIds, conversation: conversationRequestIds.length ? body.conversation : undefined, page: body.page, answerOnly: true });
           if (answer.reply) executed.assistant_message = answer.reply;
         } catch (error) {
           await capturePlatformError({ request, admin, error, feature: "gc-assistant", action: "answer-fallback", actorRole: "salon", actorId, salonId, severity: "low", safeMessage: "The authorized business summary was returned without AI wording." });

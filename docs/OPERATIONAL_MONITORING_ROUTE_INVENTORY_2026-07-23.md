@@ -1,6 +1,6 @@
 # Operational monitoring route inventory
 
-Updated: 2026-09-17. This inventory covers 130 API route files and is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
+Updated: 2026-09-19. This inventory covers 166 API route files and is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
 
 ## Coverage rules
 
@@ -15,6 +15,43 @@ Updated: 2026-09-17. This inventory covers 130 API route files and is enforced b
 
 | Route | Methods | Classification | Coverage |
 |---|---|---|---|
+| `/api/customer/waitlist` | GET, POST | protected | Covered |
+| `/api/salon/referrals` | GET, POST | protected | Covered |
+| `/api/salon/booking-money` | GET | protected | Covered |
+| `/api/salon/schedule-opportunities` | GET | protected | Covered |
+| `/api/salon/service-capacity` | GET | protected | Covered |
+| `/api/salon/customer-campaigns` | GET, POST | protected | Covered |
+| `/api/salon/rebooking-advice` | GET | protected | Covered |
+| `/api/salon/service-contribution` | GET, POST | protected | Covered |
+| `/api/admin/referral-campaigns` | GET, POST | protected | Covered |
+| `/api/salon/marketing` | GET, POST | protected | Covered |
+| `/api/salon/reusable-replies` | GET, POST | protected | Covered |
+| `/api/salon/marketing/publish-due` | POST | protected | Covered |
+| `/api/salon/onboarding-draft` | GET, POST | protected | Covered |
+| `/api/salon/onboarding-instagram` | GET, POST | provider-backed | Covered |
+| `/api/salon/onboarding-instagram/callback` | GET | provider-backed | Covered |
+| `/api/salon/onboarding-instagram/data-deletion` | POST | provider-backed | Covered |
+| `/api/salon/onboarding-instagram/deauthorization` | POST | provider-backed | Covered |
+| `/api/salon/onboarding-instagram/deletion-status` | GET | public/read-only | Covered |
+| `/api/salon/morning-brief` | GET | protected | Covered |
+| `/api/salon/waitlist` | GET | protected | Covered |
+| `/api/salon/integrations/google` | GET, POST | protected | Covered |
+| `/api/salon/integrations/google/callback` | GET | protected | Covered |
+| `/api/salon/integrations/google/sync` | POST | protected | Covered |
+| `/api/communications/unsubscribe` | POST | expected-only | Covered |
+| `/api/customer/bookings/[id]/attendance` | GET, POST | protected | Covered |
+| `/api/customer/bookings/[id]/communications` | GET, PUT | protected | Covered |
+| `/api/salon/assistant/appearance` | PATCH | protected | Covered |
+| `/api/salon/bookings/[id]/attendance` | GET, POST | provider-backed | Covered |
+| `/api/salon/bookings/[id]/client-record/links` | GET, POST | provider-backed | Covered |
+| `/api/salon/bookings/[id]/client-record/photos/[photoId]` | GET, DELETE | provider-backed | Covered |
+| `/api/salon/bookings/[id]/client-record/photos` | POST | provider-backed | Covered |
+| `/api/salon/bookings/[id]/client-record` | GET, POST | provider-backed | Covered |
+| `/api/salon/deposit-rules` | GET, POST | protected | Covered |
+| `/api/salon/finances/export` | GET | protected | Covered |
+| `/api/salon/finances` | GET, POST | protected | Covered |
+| `/api/salon/inventory` | GET, POST | protected | Covered |
+| `/api/salon/photos` | PATCH | protected | Covered |
 | `/api/salon/assistant` | POST | protected | Covered |
 | `/api/salon/assistant/memory` | GET, POST, DELETE | protected | Covered |
 | `/api/salon/policies` | GET, POST | protected | Covered |
@@ -139,7 +176,7 @@ Updated: 2026-09-17. This inventory covers 130 API route files and is enforced b
 | `/api/stripe/commerce-checkout` | POST | provider-backed | Covered |
 | `/api/stripe/commerce-status` | GET | provider-backed | Covered |
 | `/api/stripe/pickup-reservation` | POST | provider-backed | Covered |
-| `/api/stripe/portal` | POST | provider-backed | Covered |
+| `/api/stripe/portal` | POST, GET | provider-backed | Covered |
 | `/api/stripe/subscription/change` | POST | provider-backed | Covered |
 | `/api/stripe/subscription/checkout` | POST | provider-backed | Covered |
 | `/api/stripe/subscription/lifecycle` | POST | provider-backed | Covered |
@@ -211,3 +248,7 @@ Monitoring stores UUID/account identifiers only when verified or safely parsed, 
 ## Verification evidence
 
 `npm run verify:monitoring` executes behavior assertions for expected 400/403/404/429 outcomes, protected authentication/session failures, database/RLS, booking/availability, storage, Stripe, OpenAI, notification, client-provider bridge behavior, provider-response transport classification, reference parity, warning parity, recursive secret/contact redaction and Netlify function behavior. It also enforces the complete route/method/classification inventory and provider-entry-point table. Type checking, lint, the existing repository verification matrix and a production build are run separately before handoff.
+
+Google worker: `google-profile-sync.ts` is separately monitored and activation-gated. OAuth callback monitoring persists pathname and allowlisted error codes only; codes, state, cookies and provider bodies are excluded.
+
+Marketing worker: `business-marketing-publish.ts` is monitored, disabled outside published Production deployments, and invokes only the protected publication endpoint. Approved business-page posts revalidate source facts and approval identity before becoming visible; no external social messages are sent.

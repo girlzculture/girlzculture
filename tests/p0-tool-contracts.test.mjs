@@ -9,7 +9,7 @@ const { preferredLocale, localeStorageKey, localeAuthScope } = load('src/lib/loc
 const id = '11111111-1111-4111-8111-111111111111';
 const range = { start: '2026-09-20T13:00:00Z', end: '2026-09-20T16:00:00Z' };
 const samples = {
-  get_business_summary: range, get_bookings: range,
+  get_business_summary: range, get_bookings: range, get_client_record: { booking_id: id },
   get_availability: { style_id: id, stylist_id: null, date: '2026-09-20' },
   get_business_profile: {}, get_services_and_prices: { query: 'knotless' }, get_business_policies: {},
   prepare_business_profile_update: { field: 'description', text: 'We specialize in knotless braids.', hours: null },

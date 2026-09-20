@@ -7,6 +7,32 @@ import { resolveSourceTranslation } from '../../src/lib/localizationCore';
 test.use({ serviceWorkers: 'block' });
 const logoutLabel = resolveSourceTranslation('Log out of salon account', {}, DASHBOARD_SOURCE_MESSAGES.fr);
 
+test('P0 account locale translates asynchronously mounted interface copy before its next paint', async ({ page }) => {
+  const fixture = await p0OwnerFixture(page, { locale: 'zh-CN' });
+  await page.goto('/salon/dashboard/earnings');
+  await expect(page.getByRole('heading', { name: '财务', exact: true }).first()).toBeVisible();
+  // A controlled DOM commit isolates the bridge boundary used by legacy panels:
+  // inspect the very next paint, not a later retry after untranslated copy flashes.
+  const painted = await page.evaluate(() => new Promise(resolve => {
+    const panel = document.createElement('section');
+    const title = document.createElement('h2'); title.textContent = 'Transaction ledger';
+    const search = document.createElement('input'); search.placeholder = 'Search customer or reference';
+    const original = document.createElement('p'); original.setAttribute('translate', 'no'); original.textContent = 'Transaction ledger';
+    const draft = document.createElement('textarea'); draft.textContent = 'Transaction ledger';
+    panel.append(title, search, original, draft); document.querySelector('main')!.append(panel);
+    requestAnimationFrame(() => {
+      resolve({ title: title.textContent, placeholder: search.placeholder, original: original.textContent, draft: draft.value });
+      panel.remove();
+    });
+  }));
+  expect(painted).toEqual({
+    title: resolveSourceTranslation('Transaction ledger', {}, DASHBOARD_SOURCE_MESSAGES['zh-CN']),
+    placeholder: resolveSourceTranslation('Search customer or reference', {}, DASHBOARD_SOURCE_MESSAGES['zh-CN']),
+    original: 'Transaction ledger', draft: 'Transaction ledger',
+  });
+  expect(fixture.unexpected).toEqual([]);
+});
+
 // Actual sign-in/sign-out client flow, backed by explicit local auth responses.
 // Hosted Supabase/MFA acceptance remains a separate external dependency.
 async function loginFixture(page: Page, locale = 'en', actorId?: string) {

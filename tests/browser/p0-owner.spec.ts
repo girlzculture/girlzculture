@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 import { test } from "./helpers/hydration";
 import { p0OwnerFixture } from "./helpers/p0OwnerFixture";
+import { ownerReleaseLocales } from './helpers/releaseLocales';
 import { expectOwnerLocaleCoverage } from "./helpers/ownerLocaleCoverage";
 import { DASHBOARD_SOURCE_MESSAGES } from "../../src/i18n/dashboard-source-catalog";
 import AxeBuilder from "@axe-core/playwright";
@@ -16,10 +17,10 @@ for (const width of [390, 768, 1440]) test(`P0 owner core language flow translat
   await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
   await page.goto('/salon/dashboard/availability');
   await expect(page.locator('[data-owner-workspace]')).toBeVisible();
-  const source = 'Choose one scheduling workspace. Appointments are shown in {value0}.';
+  const source = "Manage your team's schedule in {value0}.";
   const gallery = `docs/screenshots/p0/${info.project.name}`;
   await mkdir(gallery, { recursive: true });
-  for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
+  for (const locale of ownerReleaseLocales) {
     await page.locator('select').filter({ has: page.locator('option[value="zh-CN"]') }).first().selectOption(locale);
     await expect.poll(fixture.accountLocale).toBe(locale);
     const expected = (DASHBOARD_SOURCE_MESSAGES[locale]?.[source] || source).replace('{value0}', 'America/New York');
@@ -60,7 +61,7 @@ test("P0 owner core language flow retains account preference and original busine
 });
 
 for (const width of [390, 768, 1440]) {
-  test(`P0 policy publication and Assistant review at ${width}px in every locale`, async ({ page }, testInfo) => {
+  test(`P0 policy publication and Assistant review at ${width}px in every release locale`, async ({ page }, testInfo) => {
     test.setTimeout(150_000);
     const fixture = await p0OwnerFixture(page, { planning: true });
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
@@ -68,10 +69,11 @@ for (const width of [390, 768, 1440]) {
     await expect(page.getByRole('heading', { name: 'Your Business Policies', exact: true })).toBeVisible();
     const gallery = `docs/screenshots/p0/${testInfo.project.name}`;
     await mkdir(gallery, { recursive: true });
-    for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
+    for (const locale of ownerReleaseLocales) {
       const t = (text: string) => DASHBOARD_SOURCE_MESSAGES[locale]?.[text] || text;
       await page.locator('select').filter({ has: page.locator('option[value="zh-CN"]') }).first().selectOption(locale);
       await expect.poll(fixture.accountLocale).toBe(locale);
+      await page.locator('form').getByText(t('Booking rules'), { exact: true }).click();
       const cancellation = page.getByLabel(t('Cancellation notice (hours)'), { exact: true });
       await cancellation.fill('-1');
       const actionCount = fixture.actions.length;
@@ -79,13 +81,13 @@ for (const width of [390, 768, 1440]) {
       await expect.poll(() => cancellation.evaluate((node: HTMLInputElement) => node.validationMessage)).toBe(t('Enter a value within the allowed range.'));
       expect(fixture.actions).toHaveLength(actionCount);
       await cancellation.fill('24');
-      const notes = page.getByLabel(t('Additional business notes'), { exact: true });
+      const notes = page.getByLabel(t('Business Policy'), { exact: true });
       await notes.fill('Original policy — Save, $180, GC123');
       await page.getByRole('button', { name: t('Save draft and review'), exact: true }).click();
       await expect(page.getByRole('heading', { name: t('Review policy draft'), exact: true })).toBeVisible();
       const publish = page.getByRole('button', { name: t('Confirm and publish'), exact: true });
       await expect(publish).toBeDisabled();
-      expect(fixture.revisions.filter(row => row.published_at)).toHaveLength(['en', 'fr', 'wo', 'es', 'zh-CN'].indexOf(locale));
+      expect(fixture.revisions.filter(row => row.published_at)).toHaveLength(ownerReleaseLocales.indexOf(locale));
       await page.getByRole('checkbox').check();
       await publish.click();
       await expect(page.getByRole('status').filter({ hasText: t('Business policies published.') })).toBeVisible();
@@ -102,7 +104,7 @@ for (const width of [390, 768, 1440]) {
       await expect(dialog.getByRole('heading', { name: t('Review this draft'), exact: true }).last()).toBeVisible();
       await page.screenshot({ path: `${gallery}/assistant-preview-${locale}-${width}.png`, ...screenshotCaret });
       const pending = fixture.actions.filter(action => action.action === 'confirm').length;
-      expect(pending).toBe(['en', 'fr', 'wo', 'es', 'zh-CN'].indexOf(locale));
+      expect(pending).toBe(ownerReleaseLocales.indexOf(locale));
       await dialog.getByRole('button', { name: t('Confirm this public action'), exact: true }).click();
       await expect(dialog.getByRole('status').filter({ hasText: t('Your change was saved and verified.') }).last()).toBeVisible();
       expect(fixture.business.description).toBe('Texte original vérifié — $180');

@@ -12,7 +12,6 @@ import {
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { reportClientOperationalFailure } from "@/lib/supabase";
 import { formatDistanceMiles } from "@/lib/location";
-import { useSiteAccess } from "@/components/site/SiteAccessProvider";
 
 export type MapSalon = { id: string; name: string; slug: string; starting_price?: number | null; startingPrice?: number | null; rating_overall?: number | null; review_count?: number | null; latitude?: number | null; longitude?: number | null; distance_miles?: number | null; matched_service?: { id: string; name: string; price: number | null } | null };
 
@@ -25,7 +24,6 @@ function mapPrice(value: unknown) {
 }
 
 export function SalonMapSelectionSummary({ salon }: { salon: MapSalon }) {
-  const siteAccess = useSiteAccess();
   const reviews = Number(salon.review_count || 0);
   const rating = Number(salon.rating_overall || 0);
   const bookingParams = new URLSearchParams();
@@ -34,7 +32,7 @@ export function SalonMapSelectionSummary({ salon }: { salon: MapSalon }) {
   const price = salon.matched_service
     ? salon.matched_service.price
     : salon.starting_price ?? salon.startingPrice;
-  return <aside aria-live="polite" data-map-salon-summary className="absolute inset-x-3 bottom-3 z-10 flex items-center justify-between gap-3 rounded-[12px] border border-plum/10 bg-white/95 p-3 shadow-[0_10px_30px_rgba(13,17,20,.18)] backdrop-blur"><div className="min-w-0"><p className="truncate font-serif text-base font-semibold text-plum">{salon.name}</p>{salon.matched_service ? <p className="truncate text-[10px] font-semibold text-plum">{salon.matched_service.name}</p> : null}<p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px] text-ink/65">{reviews > 0 && rating > 0 ? <span>{rating.toFixed(1)} ({reviews})</span> : null}<span>{mapPrice(price)}</span><span>{formatDistanceMiles(salon.distance_miles)}</span></p></div><div className="flex shrink-0 gap-2"><Link href={`/salon/${encodeURIComponent(salon.slug)}`} className="inline-flex min-h-10 items-center rounded-[8px] border border-magenta bg-white px-3 text-[11px] font-bold text-magenta">View</Link>{siteAccess ? <span aria-disabled="true" className="gc-state-disabled inline-flex min-h-10 items-center rounded-[8px] border px-3 text-[11px] font-bold">Demo only</span> : <Link href={bookingHref} className="inline-flex min-h-10 items-center rounded-[8px] bg-magenta px-3 text-[11px] font-bold text-white">Book</Link>}</div></aside>;
+  return <aside aria-live="polite" data-map-salon-summary className="absolute inset-x-3 bottom-3 z-10 flex items-center justify-between gap-3 rounded-[12px] border border-plum/10 bg-white/95 p-3 shadow-[0_10px_30px_rgba(13,17,20,.18)] backdrop-blur"><div className="min-w-0"><p className="truncate font-serif text-base font-semibold text-plum">{salon.name}</p>{salon.matched_service ? <p className="truncate text-[10px] font-semibold text-plum">{salon.matched_service.name}</p> : null}<p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px] text-ink/65">{reviews > 0 && rating > 0 ? <span>{rating.toFixed(1)} ({reviews})</span> : null}<span>{mapPrice(price)}</span><span>{formatDistanceMiles(salon.distance_miles)}</span></p></div><div className="flex shrink-0 gap-2"><Link href={`/salon/${encodeURIComponent(salon.slug)}`} className="inline-flex min-h-10 items-center rounded-[8px] border border-magenta bg-white px-3 text-[11px] font-bold text-magenta">View</Link>{<Link href={bookingHref} className="inline-flex min-h-10 items-center rounded-[8px] bg-magenta px-3 text-[11px] font-bold text-white">Book</Link>}</div></aside>;
 }
 
 export default function GoogleSalonMap({ salons, compact = false, selectedSalonId = "", onSelect }: { salons: MapSalon[]; compact?: boolean; selectedSalonId?: string; onSelect?: (salonId: string) => void }) {

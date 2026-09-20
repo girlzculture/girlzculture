@@ -1,0 +1,22 @@
+const rows:readonly(readonly[string,string,string,string])[]=[
+ ['Messages workspace','Espace messages','Espacio de mensajes','消息工作区'],
+ ['Connect with clients and keep appointment conversations together.','Échangez avec vos clients et regroupez les conversations liées aux rendez-vous.','Conecta con tus clientes y reúne las conversaciones de las citas.','联系客户并集中管理预约对话。'],
+ ['Refresh conversations','Actualiser les conversations','Actualizar conversaciones','刷新对话'],
+ ['Inbox categories','Catégories de la boîte de réception','Categorías de la bandeja','收件箱类别'],
+ ['Active conversations','Conversations actives','Conversaciones activas','进行中的对话'],
+ ['Closed conversations','Conversations closes','Conversaciones cerradas','已关闭的对话'],
+ ['Unread messages','Messages non lus','Mensajes sin leer','未读消息'],
+ ['Search conversations','Rechercher une conversation','Buscar conversaciones','搜索对话'],
+ ['No conversations match these filters.','Aucune conversation ne correspond aux filtres.','Ninguna conversación coincide con estos filtros.','没有符合筛选条件的对话。'],
+ ['Back to conversations','Retour aux conversations','Volver a las conversaciones','返回对话列表'],
+ ['Booking and customer context','Informations sur le rendez-vous et le client','Contexto de la cita y del cliente','预约与客户信息'],
+ ['Conversation history','Historique de la conversation','Historial de la conversación','对话历史'],
+ ['Conversation deadline','Fin des réponses','Fecha límite de respuesta','回复截止时间'],
+ ['Replies close 24 hours after the appointment ends. A confirmed reschedule updates the deadline; cancellation closes replies immediately.','Les réponses ferment 24 heures après la fin du rendez-vous. Un report confirmé actualise ce délai ; une annulation ferme les réponses immédiatement.','Las respuestas se cierran 24 horas después de terminar la cita. Una reprogramación confirmada actualiza el plazo; una cancelación las cierra de inmediato.','预约结束24小时后停止回复。确认改期会更新截止时间；取消预约将立即停止回复。'],
+ ['This conversation is closed. Its history is still available.','Cette conversation est close. Son historique reste accessible.','Esta conversación está cerrada. Su historial sigue disponible.','此对话已关闭，历史记录仍可查看。'],
+ ['This appointment has no customer account participant.','Aucun compte client ne participe à ce rendez-vous.','Esta cita no tiene un participante con cuenta de cliente.','此预约没有客户账户参与者。'],
+ ['Translation preview','Aperçu de la traduction','Vista previa de traducción','翻译预览'],
+ ['Unread','Non lus','Sin leer','未读'],
+ ['Closed','Fermée','Cerrada','已关闭'],
+];
+export const BUSINESS_MESSAGES_SOURCE_MESSAGES:Record<string,Record<string,string>>=Object.fromEntries(['fr','es','zh-CN'].map((locale,index)=>[locale,Object.fromEntries(rows.map(row=>[row[0],row[index+1]]))]));

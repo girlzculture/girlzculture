@@ -6,6 +6,7 @@ export const POLICY_DEFAULTS = {
   satisfaction: "contact_business", preparation: "", guests: "ask_first",
   children: "ask_first", walk_ins: "ask_first", notes: "",
   refund_satisfaction: "contact_business", refund_terms: "",
+  business_policy_text: null,
 } as const;
 export type BusinessPolicy = {
   cancellation_hours: number; rescheduling_hours: number; grace_minutes: number;
@@ -18,6 +19,7 @@ export type BusinessPolicy = {
   walk_ins: "welcome" | "ask_first" | "appointment_only"; notes: string;
   refund_satisfaction?: "contact_business" | "case_by_case" | "redo_or_refund";
   refund_terms?: string;
+  business_policy_text?: string | null;
 };
 export class PolicyInputError extends Error {
   constructor(public code: "POLICY_INVALID" | "PLATFORM_POLICY_CONFLICT") { super(code); }
@@ -32,7 +34,7 @@ const options: Record<string, readonly string[]> = {
 export function validateBusinessPolicy(input: unknown): BusinessPolicy {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new PolicyInputError("POLICY_INVALID");
   const row = input as Record<string, unknown>;
-  const required = Object.keys(POLICY_DEFAULTS).filter(key => !["refund_satisfaction", "refund_terms"].includes(key));
+  const required = Object.keys(POLICY_DEFAULTS).filter(key => !["refund_satisfaction", "refund_terms", "business_policy_text"].includes(key));
   if (required.some(key => !Object.hasOwn(row, key)) || Object.keys(row).some(key => !Object.hasOwn(POLICY_DEFAULTS, key))) throw new PolicyInputError("POLICY_INVALID");
   if ((row.refund_satisfaction === undefined) !== (row.refund_terms === undefined)) throw new PolicyInputError("POLICY_INVALID");
   for (const [key, max] of [["cancellation_hours", 168], ["rescheduling_hours", 168], ["grace_minutes", 60]] as const) {
@@ -46,10 +48,12 @@ export function validateBusinessPolicy(input: unknown): BusinessPolicy {
     if (key === "refund_terms" && row[key] === undefined) continue;
     if (typeof row[key] !== "string" || row[key].length > 1200 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/u.test(row[key])) throw new PolicyInputError("POLICY_INVALID");
   }
+  if (row.business_policy_text != null && (typeof row.business_policy_text !== "string" || row.business_policy_text.length > 12000 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/u.test(row.business_policy_text))) throw new PolicyInputError("POLICY_INVALID");
   // Free-form operational notes confer no payment or legal authority. Publishing
   // requires owner review; this is an additional obvious-conflict check, not legal advice.
   if (/non[- ]?refundable|no refunds|waiv(?:e|er).{0,35}(?:rights|care)|ignore.{0,30}(?:law|stripe|platform)|aucun remboursement|sin reembolso|不退款|放弃.{0,8}权利/iu.test(`${row.preparation}\n${row.notes}`)) throw new PolicyInputError("PLATFORM_POLICY_CONFLICT");
   if (/waiv(?:e|er).{0,35}(?:rights|care)|ignore.{0,30}(?:law|stripe|platform)|放弃.{0,8}权利/iu.test(String(row.refund_terms || ""))) throw new PolicyInputError("PLATFORM_POLICY_CONFLICT");
+  if (/waiv(?:e|er).{0,35}(?:rights|care)|ignore.{0,30}(?:law|stripe|platform)|放弃.{0,8}权利/iu.test(String(row.business_policy_text || ""))) throw new PolicyInputError("PLATFORM_POLICY_CONFLICT");
   return { ...row } as BusinessPolicy;
 }
 
@@ -66,3 +70,15 @@ export const POLICY_CHOICES: Record<string, string> = {
   case_by_case: "Requests reviewed individually", redo_or_refund: "Service correction or refund considered",
 };
 export const policyOptions = (field: string) => options[field] || [];
+
+/** Lossless, explicit editor conversion. Published legacy revisions are never
+ * rewritten. Free text remains original, and enforced numeric rules stay data. */
+export function businessPolicyText(policy: BusinessPolicy, translate: (text: string) => string = value => value) {
+  if (typeof policy.business_policy_text === "string") return policy.business_policy_text;
+  return POLICY_FIELDS.filter(([key]) => key !== "preparation").flatMap(([key, label]) => {
+    const value = policy[key];
+    if (value === undefined || value === null || value === "") return [];
+    const prose = key === "notes" || key === "refund_terms";
+    return [`${translate(label)}: ${prose ? value : typeof value === "number" ? value : translate(POLICY_CHOICES[String(value)] || String(value))}`];
+  }).join("\n\n");
+}

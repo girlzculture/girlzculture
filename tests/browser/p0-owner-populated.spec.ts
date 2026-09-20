@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test';
 import { test, screenshotCaret } from './helpers/hydration';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
+import { ownerReleaseLocales } from './helpers/releaseLocales';
 import { untranslatedOwnerCopy } from './helpers/ownerLocaleCoverage';
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -14,7 +15,7 @@ test(`P0 populated owner legacy and imported catalog order survives refresh at $
   test.setTimeout(60_000);
   const fixture = await p0OwnerFixture(page, { populated: true });
   await page.setViewportSize({ width, height });
-  for (const [table, route, price] of [['styles', 'styles', '180'], ['salon_products', 'products', '25']]) {
+  for (const [table, route] of [['styles', 'styles', '180'], ['salon_products', 'products', '25']]) {
     const base = fixture.records[table][0];
     fixture.records[table] = [
       { ...base, id: '33000000-0000-4000-8000-000000000011', name: 'Knotless', sort_order: null },
@@ -22,7 +23,7 @@ test(`P0 populated owner legacy and imported catalog order survives refresh at $
       { ...base, id: '33000000-0000-4000-8000-000000000013', name: 'Silk', sort_order: null },
     ];
     await page.goto(`/salon/dashboard/${route}`);
-    const names = page.getByRole('button').filter({ hasText: price }).locator('b[data-no-translate]');
+    const names = table === 'styles' ? page.getByRole('article').locator('h3[data-no-translate]') : page.getByRole('article').locator('h2[data-no-translate]');
     await expect(names).toHaveText(['Knotless', 'Boho', 'Silk']);
     await page.reload();
     await expect(names).toHaveText(['Knotless', 'Boho', 'Silk']);
@@ -105,7 +106,7 @@ test('P0 booking composer translates its interface placeholder without changing 
   await expect(composer).toHaveValue('  Original Save $180 GCABC12  ');
 });
 
-for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) for (const width of [390, 768, 1440]) {
+for (const locale of ownerReleaseLocales) for (const width of [390, 768, 1440]) {
 test(`P0 populated owner saves, validation, errors and message originals in ${locale} at ${width}px`, async ({ page }, testInfo) => {
   test.setTimeout(90_000);
   const fixture = await p0OwnerFixture(page, { populated: true });
@@ -170,12 +171,12 @@ test('P0 original service names remain unchanged when their text matches an inte
   await page.goto('/salon/dashboard/styles');
   await page.locator('select').filter({ has: page.locator('option[value="zh-CN"]') }).first().selectOption('fr');
   await expect.poll(fixture.accountLocale).toBe('fr');
-  const service = page.getByRole('button').filter({ hasText: '180' });
+  const service = page.locator('article').filter({ has: page.getByRole('heading', { name: 'Save', exact: true }) });
   await expect(service).toHaveCount(1);
-  await expect(service.locator('b').first()).toHaveText('Save');
+  await expect(service.getByRole('heading', { name: 'Save', exact: true })).toHaveText('Save');
 });
 
-for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) for (const width of [390, 768, 1440]) {
+for (const locale of ownerReleaseLocales) for (const width of [390, 768, 1440]) {
 test(`P0 populated owner route audit ${locale} at ${width}px`, async ({ page }, testInfo) => {
   test.setTimeout(180_000);
   const fixture = await p0OwnerFixture(page, { populated: true });

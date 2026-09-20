@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
+import {verifyWaitlistConcurrency} from './verify-waitlist-concurrency.mjs';
 
 const databaseUrl = process.env.CLEAN_DATABASE_URL;
 const psql = process.env.PSQL_BIN || "psql";
@@ -1244,10 +1245,58 @@ const deepLOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify
 if (deepLOutput) process.stdout.write(`${deepLOutput}\n`);
 const memoryOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-gcia-memory.sql")], "GCIA opt-in memory isolation and retention assertions");
 if (memoryOutput) process.stdout.write(`${memoryOutput}\n`);
+const redesignOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-dashboard-redesign.sql")], "Dashboard business isolation and metadata assertions");
+if (redesignOutput) process.stdout.write(`${redesignOutput}\n`);
+const paymentMethodOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-subscription-payment-method.sql")], "Subscription payment-method attempts, ownership and lease assertions");
+if (paymentMethodOutput) process.stdout.write(`${paymentMethodOutput}\n`);
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-subscription-payment-schedule.sql")], "Inherited payment schedule stages and shared lifecycle mutation guards"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-subscription-payment-explicit.sql")], "Explicit payment phase intent, immutable plans and owner-isolated durable stages"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-onboarding-draft.sql")], "Reviewed onboarding source, draft and owner-confirmation isolation"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-instagram-onboarding.sql")], "Private Instagram imports, exact owner review, deletion and retention isolation"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-assistant-manual-sale.sql")], "Reviewed assistant manual service sale and durable receipt readback"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-assistant-outstanding-balances.sql")], "Read-only assistant outstanding balance tool registration"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-assistant-booking-reschedule.sql")], "Assistant marketplace reschedule approval and canonical proposal isolation"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-assistant-profile-settings.sql")], "Assistant profile/settings audit registration and current settings permission isolation"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-assistant-authoritative-money.sql")], "Assistant authoritative money read audit registration and tenant permission isolation"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-customer-campaigns.sql")], "Own-client campaigns, consent, review and permanent delivery attempt isolation"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-rebooking-advice.sql")], "Returning-client advice: explicit own-business identities, evidence and current role scope"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-service-contribution.sql")], "Own-service recorded cost allocation, source limits and immutable finance evidence"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-marketing.sql")], "Business marketing sources, review, scheduling and public projection isolation"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-reusable-replies.sql")], "Reusable replies: current business permission, stale revisions, idempotence and private draft isolation"));
+console.log(runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-referrals.sql")], "Business referral campaign, qualification, evidence and reward isolation"));
+const businessFinanceOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-finances.sql")], "Business finance isolation and reconciliation assertions");
+if (businessFinanceOutput) process.stdout.write(`${businessFinanceOutput}\n`);
+const businessDepositOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-deposits.sql")], "Business deposit, attendance and protected-offer assertions");
+if (businessDepositOutput) process.stdout.write(`${businessDepositOutput}\n`);
 if (deployedMigration !== expectedMigration) {
   console.error(
     `Engine expected migration ${deployedMigration || "<missing>"} does not match repository head ${expectedMigration}.`,
   );
   process.exit(1);
 }
+const clientCardsOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-client-cards.sql")], "Private client cards, field permissions and two-business assertions");
+if (clientCardsOutput) console.log(clientCardsOutput);
+const clientLinksOutput=runPsql(["--file",path.join(root,"scripts","sql","verify-business-client-links.sql")],"Explicit client links and two-business boundaries");
+if(clientLinksOutput) console.log(clientLinksOutput);
+const catalogOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-catalog.sql")], "Featured service persistence and isolation assertions");
+if (catalogOutput) console.log(catalogOutput);
+const assignmentOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-professional-service-assignments.sql")], "Professional assignments, checkout enforcement and two-business isolation assertions");
+if (assignmentOutput) console.log(assignmentOutput);
+const stockOutput = runPsql(["--file", path.join(root, "scripts", "sql", "verify-business-inventory.sql")], "Business inventory, stock reconciliation and two-business isolation assertions");
+if(stockOutput) console.log(stockOutput);
+const businessReviewsOutput=runPsql(["--file",path.join(root,"scripts","sql","verify-business-reviews.sql")],"Business review revisions and private moderation assertions");
+if(businessReviewsOutput)console.log(businessReviewsOutput);
 process.stdout.write(`Executed ${migrations.length} migrations successfully against an empty database.\n`);
+
+const conversationOutput=runPsql(["--file",path.join(root,"scripts","sql","verify-booking-conversation.sql")],"Booking conversation window and recipient isolation");
+console.log(conversationOutput);
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-booking-substitution.sql")],"Customer approved professional substitution and retry isolation"));
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-booking-reminder-revisions.sql")],"Reminder schedule, cancellation and retry isolation"));
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-business-communication-preferences.sql")],"Two-business communication consent, guest access and delivery isolation"));
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-booking-followups.sql")],"Opt-in post-visit scheduling, lease and business isolation"));
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-subscription-recorded-price.sql")],"Recorded subscription price integrity and business isolation"));
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-appointment-waitlist.sql")],"Appointment waitlist lifecycle and isolation"));
+await verifyWaitlistConcurrency(databaseUrl,psql);
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-google-business-profile.sql")],"Google connection state, retry, disconnect and two-business isolation"));

@@ -29,9 +29,9 @@ test("plans page publishes the exact founder-approved catalog and application li
   await expect(page.getByRole("heading", { name: "Starter", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Growth", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Premium", exact: true })).toBeVisible();
-  await expect(page.getByText(/\$59\s*\/ month/).first()).toBeVisible();
-  await expect(page.getByText(/\$69\s*\/ month/).first()).toBeVisible();
   await expect(page.getByText(/\$89\s*\/ month/).first()).toBeVisible();
+  await expect(page.getByText(/\$109\s*\/ month/).first()).toBeVisible();
+  await expect(page.getByText(/\$129\s*\/ month/).first()).toBeVisible();
   await expect(page.getByText("Most Popular", { exact: true })).toBeVisible();
 
   await expect(page.getByRole("link", { name: "Choose Starter" })).toHaveAttribute(
@@ -148,7 +148,7 @@ test("plan comparison remains keyboard-reachable and horizontally usable on mobi
   });
   expect(finalScrollLeft).toBeGreaterThan(0);
   await expect(
-    page.getByRole("columnheader", { name: /Premium \$89\/month/ }),
+    page.getByRole("columnheader", { name: /Premium \$129\/month/ }),
   ).toBeAttached();
   await expect(page.getByRole("rowheader")).toHaveCount(18);
 });

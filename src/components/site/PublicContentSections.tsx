@@ -3,6 +3,7 @@ import type { ContentSection } from "@/lib/content";
 import RichTextBody from "@/components/site/RichTextBody";
 import AutoContentCarousel from "@/components/site/AutoContentCarousel";
 import PublicContentCard from "@/components/site/PublicContentCard";
+import { customerDiscoverySections } from "@/lib/customerDiscoveryContent";
 
 export default function PublicContentSections({
   sections,
@@ -13,7 +14,8 @@ export default function PublicContentSections({
   className?: string;
   variant?: "default" | "homepage";
 }) {
-  const visible = (Array.isArray(sections) ? sections : []).filter(
+  const source = Array.isArray(sections) ? sections : [];
+  const visible = (variant === "homepage" ? customerDiscoverySections(source) : source).filter(
     (section) => section && section.is_visible !== false,
   );
   if (!visible.length) return null;

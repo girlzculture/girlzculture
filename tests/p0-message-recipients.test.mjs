@@ -8,11 +8,11 @@ test('notification destinations exclude revoked and wrong-role identities and du
     calls.push({ name, ...args });
     return { data: ['owner', 'permitted-team'].includes(args.p_user), error: null };
   } };
-  const recipients = await authorizedMessageRecipients(admin, 'business-a', ['owner', 'revoked-team', 'wrong-role', 'permitted-team', 'owner', '']);
+  const recipients = await authorizedMessageRecipients(admin, 'business-a', 'booking-a', ['owner', 'revoked-team', 'wrong-role', 'permitted-team', 'owner', '']);
   assert.equal(JSON.stringify(recipients), JSON.stringify(['owner', 'permitted-team']));
   assert.equal(calls.length, 4);
-  for (const call of calls) { assert.equal(call.name, 'p0_actor_has_permission'); assert.equal(call.p_salon, 'business-a'); assert.equal(call.p_permission, 'bookings'); }
+  for (const call of calls) { assert.equal(call.name, 'booking_message_business_recipient'); assert.equal(call.p_salon, 'business-a'); assert.equal(call.p_booking, 'booking-a'); }
 });
 test('recipient lookup errors stop delivery instead of retaining stale recipients', async () => {
-  await assert.rejects(authorizedMessageRecipients({ rpc: async () => ({ error: new Error('local lookup failed') }) }, 'business-a', ['owner']), /local lookup failed/);
+  await assert.rejects(authorizedMessageRecipients({ rpc: async () => ({ error: new Error('local lookup failed') }) }, 'business-a', 'booking-a', ['owner']), /local lookup failed/);
 });

@@ -40,13 +40,16 @@ export function notificationDeliveryKey({
   eventType,
   recipientType,
   channel,
+  scheduleRevision,
 }: {
   bookingId: string;
   eventType: string;
   recipientType: string;
   channel: string;
+  scheduleRevision?: number;
 }) {
-  return `${bookingId}:${eventType}:${recipientType}:${channel}`.slice(0, 240);
+  if (scheduleRevision !== undefined && (!Number.isSafeInteger(scheduleRevision) || scheduleRevision < 0)) throw new Error("REMINDER_REVISION_INVALID");
+  return `${bookingId}:${eventType}:${recipientType}:${channel}${scheduleRevision ? `:r${scheduleRevision}` : ""}`.slice(0, 240);
 }
 
 export async function runIsolatedReminderBatch<TDelivery>({

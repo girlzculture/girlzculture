@@ -1,7 +1,6 @@
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import {
   parseOfficialPlan,
-  parseStoredPlan,
   planDowngradeLimitConflicts,
   planFromStripePriceId,
   planRank,
@@ -9,7 +8,7 @@ import {
 } from "@/lib/plans";
 import { cleanText, enforceRateLimit, errorResponse, RateLimitError } from "@/lib/requestSecurity";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
-import { stripeGet, stripeRequest } from "@/lib/stripeServer";
+import { stripeGet } from "@/lib/stripeServer";
 import {
   isSubscriptionPriceValidationError,
   SubscriptionPriceValidationError,
@@ -22,6 +21,8 @@ import {
   safeFailure,
 } from "@/lib/platformErrors";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { existingAgreementPlan, subscriptionPriceSnapshot, type SubscriptionPriceItem } from "@/lib/subscriptionAgreement";
+import { withSubscriptionMutation } from "@/lib/subscriptionMutationGuard";
 
 type StripeInvoice = {
   id?: string;
@@ -53,10 +54,32 @@ type StripeSubscription = {
   latest_invoice?: string | StripeInvoice | null;
   pending_update?: Record<string, unknown> | null;
   discounts?: Array<string | { id?: string }>;
-  items?: { data?: Array<{ id?: string; quantity?: number; current_period_start?: number; current_period_end?: number; price?: { id?: string }; tax_rates?: Array<string | { id?: string }> }> };
+  items?: { data?: Array<SubscriptionPriceItem & { id?: string; current_period_start?: number; current_period_end?: number; tax_rates?: Array<string | { id?: string }> }> };
 };
 
-type StripeSchedule = { id: string };
+type StripeSchedule = { id: string; status?: string; customer?: string; subscription?: string; phases?: Array<Record<string, unknown>>; [key:string]:unknown };
+
+function ordered(value:unknown):unknown {
+  if(Array.isArray(value))return value.map(ordered);
+  if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,ordered(item)]));
+  return value;
+}
+
+function assertDowngradeReadback(schedule:StripeSchedule,after:StripeSubscription,before:StripeSubscription,values:Record<string,string|number|boolean>) {
+  if(schedule.status!=='active'||schedule.subscription!==before.id||schedule.customer!==before.customer||after.id!==before.id||stripeId(after.schedule)!==schedule.id||!Array.isArray(schedule.phases)||schedule.phases.length!==2)throw new Error('SUBSCRIPTION_DOWNGRADE_READBACK_FAILED');
+  if(JSON.stringify(ordered({...after,schedule:null}))!==JSON.stringify(ordered({...before,schedule:null})))throw new Error('SUBSCRIPTION_DOWNGRADE_READBACK_FAILED');
+  for(const [key,expected] of Object.entries(values)){
+    // Top-level proration_behavior and phase duration are request-only values.
+    // The concrete period boundaries and unchanged live subscription are read below.
+    if(key==='proration_behavior'||key.includes('[duration]')||key.endsWith('[iterations]'))continue;
+    let actual:unknown=schedule;
+    for(const part of key.split(/[\[\]]/).filter(Boolean))actual=actual&&typeof actual==='object'?(actual as Record<string,unknown>)[part]:undefined;
+    if(actual&&typeof actual==='object'&&typeof expected==='string')actual=(actual as {id?:unknown}).id;
+    if(actual!==expected)throw new Error('SUBSCRIPTION_DOWNGRADE_READBACK_FAILED');
+  }
+  const future=schedule.phases[1];
+  if(!Number.isSafeInteger(future.end_date)||Number(future.end_date)<=Number(future.start_date))throw new Error('SUBSCRIPTION_DOWNGRADE_READBACK_FAILED');
+}
 
 function stripeId(value: string | { id?: string } | null | undefined) {
   return typeof value === "string" ? value : value?.id || null;
@@ -66,10 +89,10 @@ function isoFromSeconds(value?: number) {
   return value ? new Date(value * 1000).toISOString() : null;
 }
 
-async function invoiceDetails(value: StripeSubscription["latest_invoice"]) {
+async function invoiceDetails(value: StripeSubscription["latest_invoice"],get= stripeGet) {
   if (!value) return null;
   if (typeof value !== "string") return value;
-  return stripeGet<StripeInvoice>(`/invoices/${value}?expand[]=payment_intent`);
+  return get<StripeInvoice>(`/invoices/${value}?expand[]=payment_intent`);
 }
 
 async function enforceDowngradePlanLimits(input: {
@@ -142,8 +165,9 @@ async function POSTHandler(request: Request) {
       .maybeSingle();
     if (storedError) throw storedError;
     if (!stored?.stripe_subscription_id) rejectRequest("No active Stripe subscription was found. Start a new subscription instead.", 409);
-
+    return await withSubscriptionMutation({admin,salonId:salon.id,actorId:user.id,subscriptionId:stored.stripe_subscription_id},async({get:stripeGet,post:stripeRequest,intentKey})=>{
     const current = await stripeGet<StripeSubscription>(`/subscriptions/${stored.stripe_subscription_id}?expand[]=latest_invoice.payment_intent`);
+    if(current.id!==stored.stripe_subscription_id)throw new Error('SUBSCRIPTION_DOWNGRADE_IDENTITY_CONFLICT');
     if (!["active", "trialing"].includes(String(current.status || "").toLowerCase())) {
       rejectRequest("This subscription needs billing attention before its plan can be changed. Open Manage payment method to continue.", 409);
     }
@@ -153,8 +177,7 @@ async function POSTHandler(request: Request) {
     const currentPeriodStart = current.current_period_start || item.current_period_start;
     const currentPeriodEnd = current.current_period_end || item.current_period_end;
 
-    const currentPlan = planFromStripePriceId(item.price.id)
-      || parseStoredPlan(stored.tier || salon.subscription_tier);
+    const currentPlan = existingAgreementPlan({ subscriptionId: current.id, priceId: item.price.id, configuredPlan: planFromStripePriceId(item.price.id), stored });
     if (!currentPlan) {
       throw new SubscriptionPriceValidationError(
         "CURRENT_SUBSCRIPTION_IDENTITY_UNRECOGNIZED",
@@ -163,7 +186,7 @@ async function POSTHandler(request: Request) {
     }
     if (item.price.id === priceId) return Response.json({ changed: false, plan, message: `${plan} is already active.` });
     const isUpgrade = planRank(plan) > planRank(currentPlan);
-    const requestKey = `plan-change:${current.id}:${item.price.id}:${priceId}:${currentPeriodEnd || "current"}`;
+    const requestKey = isUpgrade ? `plan-change:${current.id}:${item.price.id}:${priceId}:${currentPeriodEnd || "current"}` : intentKey('downgrade-record');
     const trackChange = async (values: Record<string, unknown>) => {
       const result = await admin.from("subscription_change_requests").upsert({
         salon_id: salon.id,
@@ -203,11 +226,12 @@ async function POSTHandler(request: Request) {
       if (!currentPeriodStart || !currentPeriodEnd) throw new Error("Stripe did not return the paid billing period for this subscription.");
 
       let schedule: StripeSchedule | null = null;
+      let verifyingSchedule = false;
       try {
         schedule = await stripeRequest<StripeSchedule>("/subscription_schedules", {
           from_subscription: current.id,
         }, {
-          idempotencyKey: `downgrade-schedule:${current.id}:${item.price.id}:${priceId}:${currentPeriodEnd}`,
+          idempotencyKey: intentKey('downgrade-create'),
         });
         const scheduleValues: Record<string, string | number | boolean> = {
           end_behavior: "release",
@@ -218,8 +242,7 @@ async function POSTHandler(request: Request) {
           "phases[0][items][0][quantity]": item.quantity || 1,
           "phases[0][proration_behavior]": "none",
           "phases[1][start_date]": currentPeriodEnd,
-          "phases[1][duration][interval]": "month",
-          "phases[1][duration][interval_count]": 1,
+          "phases[1][iterations]": 1,
           "phases[1][items][0][price]": priceId,
           "phases[1][items][0][quantity]": item.quantity || 1,
           "phases[1][proration_behavior]": "none",
@@ -244,11 +267,19 @@ async function POSTHandler(request: Request) {
           scheduleValues[`phases[1][items][0][tax_rates][${index}]`] = taxRateId;
         });
         await stripeRequest<StripeSchedule>(`/subscription_schedules/${schedule.id}`, scheduleValues, {
-          idempotencyKey: `downgrade-phases:${schedule.id}:${item.price.id}:${priceId}:${currentPeriodEnd}`,
+          idempotencyKey: intentKey('downgrade-phases'),
+          apiVersion: '2025-06-30.basil',
         });
+        verifyingSchedule = true;
+        const verifiedSchedule=await stripeGet<StripeSchedule>(`/subscription_schedules/${schedule.id}`,{apiVersion:'2025-06-30.basil'});
+        const verifiedSubscription=await stripeGet<StripeSubscription>(`/subscriptions/${current.id}?expand[]=latest_invoice.payment_intent`);
+        if(verifiedSchedule.id!==schedule.id)throw new Error('SUBSCRIPTION_DOWNGRADE_READBACK_FAILED');
+        assertDowngradeReadback(verifiedSchedule,verifiedSubscription,current,scheduleValues);
       } catch (scheduleError) {
-        if (schedule?.id) {
-          await stripeRequest(`/subscription_schedules/${schedule.id}/release`, {}, { idempotencyKey: `release-failed-schedule:${schedule.id}` }).catch((releaseError) => {
+        // A mismatched authoritative snapshot can be an external edit. Never
+        // compensate by releasing an agreement whose state was not verified.
+        if (schedule?.id && !verifyingSchedule && (scheduleError as {code?:string})?.code!=='SUBSCRIPTION_MUTATION_REVIEW_REQUIRED') {
+          await stripeRequest(`/subscription_schedules/${schedule.id}/release`, {preserve_cancel_date:true}, { idempotencyKey: intentKey('release-failed-schedule') }).catch((releaseError) => {
             noteOperationalFailure("Failed downgrade schedule cleanup failed", { salonId: salon.id, scheduleId: schedule?.id, releaseError });
           });
         }
@@ -266,8 +297,8 @@ async function POSTHandler(request: Request) {
         updated_at: new Date().toISOString(),
       }).eq("salon_id", salon.id);
       if (updateError) {
-        await stripeRequest(`/subscription_schedules/${schedule.id}/release`, {}, {
-          idempotencyKey: `release-unpersisted-schedule:${schedule.id}`,
+        await stripeRequest(`/subscription_schedules/${schedule.id}/release`, {preserve_cancel_date:true}, {
+          idempotencyKey: intentKey('release-unpersisted-schedule'),
         }).catch((releaseError) => {
           noteOperationalFailure("Unpersisted downgrade schedule cleanup failed", {
             salonId: salon.id,
@@ -408,7 +439,7 @@ async function POSTHandler(request: Request) {
       idempotencyKey: `upgrade:${current.id}:${item.price.id}:${priceId}:${currentPeriodEnd || "current"}`,
     });
 
-    const invoice = await invoiceDetails(updated.latest_invoice);
+    const invoice = await invoiceDetails(updated.latest_invoice,stripeGet);
     const failureReason = typeof invoice?.payment_intent === "object" ? invoice.payment_intent?.last_payment_error?.message : null;
     const paymentReference = typeof invoice?.payment_intent === "string" ? invoice.payment_intent : invoice?.payment_intent?.id || null;
     const prorationCredit = (invoice?.lines?.data || []).filter((line) => Number(line.amount || 0) < 0).reduce((sum, line) => sum + Math.abs(Number(line.amount || 0)), 0);
@@ -467,6 +498,7 @@ async function POSTHandler(request: Request) {
       tier: plan,
       status,
       price_id: priceId,
+      recurring_price_snapshot: subscriptionPriceSnapshot(updated.items?.data, new Date().toISOString()),
       current_period_start: periodStart,
       current_period_end: periodEnd,
       cancel_at_period_end: Boolean(updated.cancel_at_period_end),
@@ -514,7 +546,13 @@ async function POSTHandler(request: Request) {
       paymentConfirmation: { invoiceStatus: invoice?.status || null, subscriptionStatus: status, priceId: updatedPriceId || null },
       message: `${plan} is active. Stripe successfully collected the prorated invoice amount of ${new Intl.NumberFormat("en-US", { style: "currency", currency: String(invoice?.currency || "usd").toUpperCase() }).format(Number(invoice?.amount_paid || 0) / 100)}.`,
     });
+    });
   } catch (error) {
+    if((error as {code?:string})?.code==='SUBSCRIPTION_MUTATION_REVIEW_REQUIRED'){
+      const safeMessage="The earlier subscription update has an uncertain result. Billing support must reconcile it before another change; no further change was sent.";
+      const reference=await capturePlatformError({request,admin:monitoringAdmin,error,feature:'subscriptions',action:'reconcile_plan_change',actorRole:'salon-owner',actorId,salonId,provider:'stripe',safeMessage});
+      return safeFailure(safeMessage,reference,409,{code:'SUBSCRIPTION_MUTATION_REVIEW_REQUIRED'});
+    }
     if (error instanceof RateLimitError) return errorResponse(error, error.message);
     if (isSubscriptionPriceValidationError(error)) {
       const reference = await capturePlatformError({

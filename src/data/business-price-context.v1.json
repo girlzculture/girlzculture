@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "definition_id": "bls-cpi-personal-care-us-nsa-v1",
+  "series_id": "CUUR0000SEGC",
+  "publisher": "U.S. Bureau of Labor Statistics",
+  "source_url": "https://api.bls.gov/publicAPI/v2/timeseries/data/CUUR0000SEGC",
+  "source_page": "https://www.bls.gov/cpi/",
+  "metadata_url": "https://fred.stlouisfed.org/series/CUUR0000SEGC",
+  "methodology_url": "https://www.bls.gov/opub/hom/cpi/design.htm",
+  "geography": "US_CITY_AVERAGE",
+  "population": "CPI_U",
+  "category": "personal_care_services",
+  "unit": "index_points",
+  "reference_base": "1982-1984=100",
+  "seasonal_adjustment": "not_seasonally_adjusted",
+  "frequency": "monthly",
+  "sample_count": null,
+  "sample_count_status": "not_published_in_selected_series",
+  "currency": null,
+  "service_dollar_benchmark_available": false,
+  "local_price_comparison_available": false,
+  "price_recommendation_available": false,
+  "status": "verified",
+  "retrieved_at": "2026-09-19T19:26:29.133Z",
+  "source_release_at": null,
+  "source_sha256": "021e118095c85fd3258894056d6c56b2ffb76bd58876f1264e073aac99841e43",
+  "next_expected_release_at": null,
+  "observations": [
+    {
+      "month": "2026-08",
+      "index_value": 374.865
+    },
+    {
+      "month": "2026-07",
+      "index_value": 373.473
+    },
+    {
+      "month": "2026-06",
+      "index_value": 373.279
+    },
+    {
+      "month": "2026-05",
+      "index_value": 368.328
+    },
+    {
+      "month": "2026-04",
+      "index_value": 366.634
+    },
+    {
+      "month": "2026-03",
+      "index_value": 369.354
+    },
+    {
+      "month": "2026-02",
+      "index_value": 370.31
+    },
+    {
+      "month": "2026-01",
+      "index_value": 369.2
+    },
+    {
+      "month": "2025-12",
+      "index_value": 366.953
+    },
+    {
+      "month": "2025-11",
+      "index_value": 364.342
+    },
+    {
+      "month": "2025-09",
+      "index_value": 362.968
+    },
+    {
+      "month": "2025-08",
+      "index_value": 359.588
+    },
+    {
+      "month": "2025-07",
+      "index_value": 357.824
+    },
+    {
+      "month": "2025-06",
+      "index_value": 357.641
+    },
+    {
+      "month": "2025-05",
+      "index_value": 355.642
+    },
+    {
+      "month": "2025-04",
+      "index_value": 353.939
+    },
+    {
+      "month": "2025-03",
+      "index_value": 353.554
+    },
+    {
+      "month": "2025-02",
+      "index_value": 353.165
+    },
+    {
+      "month": "2025-01",
+      "index_value": 351.736
+    },
+    {
+      "month": "2024-12",
+      "index_value": 350.024
+    },
+    {
+      "month": "2024-11",
+      "index_value": 349.909
+    },
+    {
+      "month": "2024-10",
+      "index_value": 347.814
+    },
+    {
+      "month": "2024-09",
+      "index_value": 347.077
+    },
+    {
+      "month": "2024-08",
+      "index_value": 346.821
+    },
+    {
+      "month": "2024-07",
+      "index_value": 344.819
+    },
+    {
+      "month": "2024-06",
+      "index_value": 344.506
+    },
+    {
+      "month": "2024-05",
+      "index_value": 342.45
+    },
+    {
+      "month": "2024-04",
+      "index_value": 341.653
+    },
+    {
+      "month": "2024-03",
+      "index_value": 337.564
+    },
+    {
+      "month": "2024-02",
+      "index_value": 337.358
+    },
+    {
+      "month": "2024-01",
+      "index_value": 336.316
+    }
+  ],
+  "unavailable_observations": [
+    {
+      "month": "2025-10",
+      "reason": "source_data_unavailable",
+      "source_value": "-",
+      "footnote_code": "X",
+      "footnote_text": "Data unavailable due to the 2025 lapse in appropriations"
+    }
+  ]
+}

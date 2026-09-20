@@ -325,6 +325,14 @@
     {
       "source": "Français",
       "reason": "Native language autonym retained in the language selector so speakers can identify their language."
+    },
+    {
+      "source": "简体中文",
+      "reason": "Native Simplified Chinese language autonym in the communication language selector."
+    },
+    {
+      "source": "· USD",
+      "reason": "ISO currency code identifying the recorded currency; numeric amounts are locale formatted."
     }
   ]
 }

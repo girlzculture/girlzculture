@@ -1,3 +1,4 @@
+import { DASHBOARD_REDESIGN_SOURCE_MESSAGES } from "@/i18n/dashboard-redesign-source-catalog";
 // Launch workspace copy. Source completeness is automated; native-language review remains a release check.
 const rows: readonly (readonly [string, string, string, string, string])[] = [
   [
@@ -791,6 +792,6 @@ export const LAUNCH_WORKSPACE_SOURCE_MESSAGES: Record<string, Record<string, str
 );
 
 export function launchWorkspaceText(source: string, locale: string, values: Record<string, string | number> = {}) {
-  const template = LAUNCH_WORKSPACE_SOURCE_MESSAGES[locale]?.[source] || source;
+  const template = DASHBOARD_REDESIGN_SOURCE_MESSAGES[locale]?.[source] || LAUNCH_WORKSPACE_SOURCE_MESSAGES[locale]?.[source] || source;
   return template.replace(/\{(\w+)\}/g, (token, key: string) => Object.hasOwn(values, key) ? String(values[key]) : token);
 }

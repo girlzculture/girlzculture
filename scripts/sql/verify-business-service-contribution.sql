@@ -1,0 +1,55 @@
+-- Disposable local database only; all synthetic records roll back.
+\set ON_ERROR_STOP on
+begin;
+create function pg_temp.contribution_assert(ok boolean,label text) returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'Contribution assertion: %',label;end if;end $$;
+create function pg_temp.contribution_reject(command text,expected text) returns void language plpgsql as $$declare rejected boolean:=false;begin begin execute command;exception when others then if position(expected in sqlerrm)>0 then rejected:=true;else raise;end if;end;perform pg_temp.contribution_assert(rejected,expected);end $$;
+do $$
+declare oa uuid:=gen_random_uuid();ob uuid:=gen_random_uuid();staff uuid:=gen_random_uuid();a uuid:=gen_random_uuid();b uuid:=gen_random_uuid();sa uuid:=gen_random_uuid();sb uuid:=gen_random_uuid();other_service uuid:=gen_random_uuid();ba uuid:=gen_random_uuid();bb uuid:=gen_random_uuid();expense uuid:=gen_random_uuid();foreign_expense uuid:=gen_random_uuid();req uuid:=gen_random_uuid();
+ from_day date:=current_date-28;to_day date:=current_date-1;e jsonb;p jsonb;r jsonb;again jsonb;source_before jsonb;n integer;
+begin
+ insert into auth.users(id,email,encrypted_password,email_confirmed_at,raw_user_meta_data) values(oa,'cost-owner-a@example.test','',now(),'{"role":"salon_owner"}'),(ob,'cost-owner-b@example.test','',now(),'{"role":"salon_owner"}'),(staff,'cost-staff@example.test','',now(),'{"role":"salon_team"}');
+ update public.platform_identities set primary_role='salon_team' where user_id=staff;
+ insert into public.salons(id,user_id,name,slug,email,status,subscription_status,subscription_tier,time_zone) values(a,oa,'Cost A','cost-fixture-a','cost-owner-a@example.test','Active','active','Premium','UTC'),(b,ob,'Cost B','cost-fixture-b','cost-owner-b@example.test','Active','active','Premium','UTC');
+ insert into public.subscriptions(salon_id,tier,status) values(a,'Premium','active'),(b,'Premium','active');
+ insert into public.salon_team_members(salon_id,user_id,email,name,role,status,permissions) values(a,staff,'cost-staff@example.test','Manager','Manager','Active','{"earnings":true,"bookings":true,"styles":true,"finance_manage":true}');
+ insert into public.styles(id,salon_id,service_group_id,name,duration_min_hours,duration_max_hours,base_price,is_draft) select sa,a,id,'Cost own service',1,1,100,false from public.service_groups limit 1;
+ insert into public.styles(id,salon_id,service_group_id,name,duration_min_hours,duration_max_hours,base_price,is_draft) select other_service,a,id,'Cost second service',1,1,100,false from public.service_groups limit 1;
+ insert into public.styles(id,salon_id,service_group_id,name,duration_min_hours,duration_max_hours,base_price,is_draft) select sb,b,id,'Cost foreign service',1,1,100,false from public.service_groups limit 1;
+ insert into public.bookings(id,salon_id,style_id,appointment_datetime,duration_hours,estimated_total,deposit_amount,balance_due,deposit_status,status,guest_name) values(ba,a,sa,now()-interval '3 days',1,100,0,100,'Not paid','Completed','Own synthetic client'),(bb,a,other_service,now()-interval '4 days',1,100,0,100,'Not paid','Completed','Other synthetic client');
+ insert into public.business_finance_expenses(id,salon_id,occurred_at,category,amount_cents,treatment,created_by) values(expense,a,now()-interval '4 days','Supplies',5000,'operating',oa),(foreign_expense,b,now()-interval '4 days','Foreign supplies',9000,'operating',ob);
+ select to_jsonb(x) into source_before from public.business_finance_expenses x where id=expense;
+ perform set_config('request.jwt.claim.role','service_role',true);set local role service_role;
+ e:=public.read_service_contribution_evidence(a,oa,from_day,to_day);
+ again:=public.read_service_contribution_evidence(a,staff,from_day,to_day);perform pg_temp.contribution_assert(again->'finance'->'scope'->>'kind'='business','authorized full-finance staff read');
+ perform pg_temp.contribution_assert(e->'finance'->'scope'->>'kind'='business' and jsonb_array_length(e->'services')=2 and jsonb_array_length(e->'booking_services')=2,'own-only source projection');
+ perform pg_temp.contribution_reject(format('select public.read_service_contribution_evidence(%L,%L,%L,%L)',b,oa,from_day,to_day),'CONTRIBUTION_ACCESS_DENIED');
+ perform pg_temp.contribution_reject(format('select public.read_service_contribution_evidence(%L,%L,%L,%L)',a,oa,from_day,current_date),'CONTRIBUTION_INVALID_PERIOD');
+ p:=jsonb_build_object('from',from_day,'to',to_day,'service_id',sa,'revision',0,'fingerprint',e->>'fingerprint','complete',true,'zero_confirmed',false,'allocations',jsonb_build_array(jsonb_build_object('kind','expense','id',expense,'cents',3000)),'note','Owner reviewed materials, labor and overhead from own recorded costs');
+ perform pg_temp.contribution_reject(format('select public.save_service_contribution_review(%L,%L,%L,%L)',a,staff,req,p),'CONTRIBUTION_OWNER_REQUIRED');
+ perform pg_temp.contribution_reject(format('select public.save_service_contribution_review(%L,%L,%L,%L)',a,oa,req,jsonb_set(p,'{complete}','null')),'CONTRIBUTION_REVIEW_INVALID');
+ perform pg_temp.contribution_reject(format('select public.save_service_contribution_review(%L,%L,%L,%L)',a,oa,req,jsonb_set(p,'{allocations,0,id}',to_jsonb(foreign_expense))),'CONTRIBUTION_ALLOCATION_EXCEEDS_SOURCE');
+ r:=public.save_service_contribution_review(a,oa,req,p);again:=public.save_service_contribution_review(a,oa,req,p);
+ perform pg_temp.contribution_assert(r->>'verified'='true' and r->>'revision'='1' and again->>'replayed'='true','durable exact replay');
+ select count(*) into n from public.business_finance_operations where salon_id=a and action='service_cost_review';perform pg_temp.contribution_assert(n=1,'single canonical audit operation');
+ perform pg_temp.contribution_assert((select to_jsonb(x) from public.business_finance_expenses x where id=expense)=source_before and not exists(select 1 from public.business_finance_receipts where salon_id=a),'allocation never changes source money or creates receipt');
+ e:=public.read_service_contribution_evidence(a,oa,from_day,to_day);perform pg_temp.contribution_assert(jsonb_array_length(e->'reviews')=1 and e->'reviews'->0->>'fingerprint'=e->>'fingerprint','fresh exact readback');
+ perform pg_temp.contribution_reject(format('select public.save_service_contribution_review(%L,%L,%L,%L)',a,oa,gen_random_uuid(),jsonb_set(p,'{service_id}',to_jsonb(other_service))),'CONTRIBUTION_ALLOCATION_EXCEEDS_SOURCE');
+ perform pg_temp.contribution_reject(format('select public.save_service_contribution_review(%L,%L,%L,%L)',a,oa,gen_random_uuid(),p),'CONTRIBUTION_REVIEW_CONFLICT');
+ perform pg_temp.contribution_reject(format('select public.save_service_contribution_review(%L,%L,%L,%L)',a,oa,req,jsonb_set(p,'{note}','"Changed replay"')),'CONTRIBUTION_REQUEST_CONFLICT');
+ p:=jsonb_set(jsonb_set(p,'{service_id}',to_jsonb(other_service)),'{allocations}','[]');
+ perform pg_temp.contribution_reject(format('select public.save_service_contribution_review(%L,%L,%L,%L)',a,oa,gen_random_uuid(),p),'CONTRIBUTION_REVIEW_INVALID');
+ p:=jsonb_set(p,'{zero_confirmed}','true');r:=public.save_service_contribution_review(a,oa,gen_random_uuid(),p);perform pg_temp.contribution_assert(r->>'verified'='true','explicit owner zero allocation');
+ reset role;
+ update public.business_finance_expenses set amount_cents=6000 where id=expense;
+ set local role service_role;
+ again:=public.read_service_contribution_evidence(a,oa,from_day,to_day);perform pg_temp.contribution_assert(again->>'fingerprint'<>e->>'fingerprint','changed canonical cost invalidates old review');
+ p:=jsonb_set(p,'{revision}','1');perform pg_temp.contribution_reject(format('select public.save_service_contribution_review(%L,%L,%L,%L)',a,oa,gen_random_uuid(),p),'CONTRIBUTION_SOURCE_CHANGED');
+ reset role;
+ update public.salon_team_members set permissions='{"earnings":true,"bookings":true}' where salon_id=a and user_id=staff;
+ set local role service_role;
+ perform pg_temp.contribution_reject(format('select public.read_service_contribution_evidence(%L,%L,%L,%L)',a,staff,from_day,to_day),'CONTRIBUTION_ACCESS_DENIED');
+ reset role;
+ perform pg_temp.contribution_assert(not has_table_privilege('authenticated','public.business_service_cost_reviews','SELECT') and not has_function_privilege('authenticated','public.save_service_contribution_review(uuid,uuid,uuid,jsonb)','EXECUTE'),'private grants');
+ raise notice 'Contribution183: actual service_role own scope, owner review, source budget, explicit zero, replay, stale evidence and immutable money PASS';
+end $$;
+rollback;

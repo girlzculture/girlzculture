@@ -15,8 +15,6 @@ export default function DocumentLocalizationBridge() {
   );
 
   useEffect(() => {
-    let frame = 0;
-
     function excluded(element: Element | null) {
       return (
         !element ||
@@ -92,11 +90,6 @@ export default function DocumentLocalizationBridge() {
       }
     }
 
-    function schedule() {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => scan(document.body));
-    }
-
     scan(document.body);
     // Native browser validation follows the browser's own UI language, which
     // can differ from an owner's account language. Keep the validity rules and
@@ -119,7 +112,22 @@ export default function DocumentLocalizationBridge() {
     document.body.addEventListener("invalid", invalid, true);
     document.body.addEventListener("input", clearValidation, true);
     document.body.addEventListener("change", clearValidation, true);
-    const observer = new MutationObserver(schedule);
+    // Translate each committed subtree in the mutation microtask, before paint.
+    // Deferring a whole-document scan to requestAnimationFrame left newly loaded
+    // legacy panels in English for a frame; later mutations could postpone it
+    // again. Our own writes settle because translations only write changed values.
+    const observer = new MutationObserver((records) => {
+      const roots = new Set<Node>();
+      for (const record of records) {
+        if (record.type === "childList") {
+          for (const node of record.addedNodes) roots.add(node);
+        } else roots.add(record.target);
+      }
+      for (const root of roots) if (root.isConnected) {
+        if (root.nodeType === Node.ELEMENT_NODE && records.some(record => record.type === "attributes" && record.target === root)) translateElement(root as Element);
+        else scan(root);
+      }
+    });
     observer.observe(document.body, {
       subtree: true,
       childList: true,
@@ -133,7 +141,6 @@ export default function DocumentLocalizationBridge() {
       document.body.removeEventListener("change", clearValidation, true);
       for (const [field, original] of validationMessages) field.setCustomValidity(original);
       observer.disconnect();
-      window.cancelAnimationFrame(frame);
     };
   }, [locale, translateSource]);
 

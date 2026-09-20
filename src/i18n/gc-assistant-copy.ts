@@ -1,3 +1,4 @@
+import {rescheduleAssistantCopy} from "@/i18n/assistant-reschedule-copy";
 export const localeNames: Record<string, string> = {
   en: "en-US",
   fr: "fr-FR",
@@ -66,6 +67,7 @@ export const copy = {
 } as const;
 
 export function presentPreparedAssistantAction(tool: string, locale = "en") {
+  if (tool === "prepare_booking_reschedule_proposal") return rescheduleAssistantCopy(locale).prepared;
   const language = Object.hasOwn(copy, locale) ? locale as keyof typeof copy : "en";
   const label = tool === "prepare_customer_message" ? "message" : tool.includes("appointment") ? "appointment change" : "change";
   if (language === "fr") return `J’ai préparé cette ${label === "message" ? "proposition de message" : "modification"}. Vérifiez les détails ci-dessous. Rien ne sera enregistré avant votre confirmation.`;

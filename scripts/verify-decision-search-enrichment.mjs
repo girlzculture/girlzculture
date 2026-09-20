@@ -371,6 +371,7 @@ assert.equal(
   95,
   "null display fields must not become a false $0 price",
 );
+assert.equal(decisionDisplayedStylePrice({base_price:100,price_display_min:80,price_display_max:120}),100,"search must price the same base selection as checkout, not invent a cheaper available offer");
 assert.equal(
   decisionDisplayedStylePrice({
     base_price: null,

@@ -172,10 +172,11 @@ jobs:
           PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL: http://127.0.0.1:3105
           PLAYWRIGHT_USE_PRODUCTION_SERVER: "true"
       - name: Exercise responsive and affected browser workflows
-        # The expanded serial collection finished all 447 cases but exhausted
-        # this total step budget while completing. Keep the same full suite
-        # and production evidence boundary; run two independent workers.
-        timeout-minutes: 60
+        # Run 35456360465 reached this overall step's 60-minute limit with 1236
+        # passes, 2 failures, 4 skips and 82 of 1324 cases without a result. Give
+        # the expanded full collection 90 minutes; individual test budgets,
+        # both workers, zero retries and all assertions remain unchanged.
+        timeout-minutes: 90
         run: npm run test:browser
         env:
           PLAYWRIGHT_CI_WORKERS: "2"

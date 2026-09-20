@@ -14,18 +14,14 @@ import {
   estimateStripeCommerceTax,
 } from "@/lib/commerceCheckoutServer";
 import { hasPlanFeature } from "@/lib/plans";
-import { customerMarketplaceLive, marketplaceUnavailable } from "@/lib/marketplaceLaunchCore";
 import { rejectRegisteredTestCheckout } from "@/lib/marketplaceEligibilityServer";
 import { currentBusinessPolicy } from "@/lib/businessPolicyServer";
+import { readBookingDepositTerms } from "@/lib/businessDepositServer";
+import { protectedBookingDiscount } from "@/lib/businessDepositRules";
 
-type PriceOption = { value?: string; label?: string; price_add?: number | string };
-const options = (value: unknown): PriceOption[] => Array.isArray(value) ? value as PriceOption[] : [];
-type ServiceOption = PriceOption & { duration_add_minutes?: number | string };
-type ServiceOptionGroup = { id?: string; label?: string; selection?: string; required?: boolean; options?: ServiceOption[] };
-const optionGroups = (value: unknown): ServiceOptionGroup[] => Array.isArray(value) ? value as ServiceOptionGroup[] : [];
+import { calculateBookingServiceSelection } from "@/lib/bookingServiceSelection";
 
 async function POSTHandler(request: Request) {
-  if (!customerMarketplaceLive()) return marketplaceUnavailable();
   const admin = getSupabaseAdmin();
   let intentId = "";
   let commerceIntentId = "";
@@ -40,6 +36,10 @@ async function POSTHandler(request: Request) {
     const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
     const { data: authData } = token ? await admin.auth.getUser(token) : { data: { user: null } };
     const customerId = authData.user?.id || null;
+    const waitlistOffer = typeof body.waitlist_offer_id === "string" ? body.waitlist_offer_id : null;
+    if (body.waitlist_offer_id != null && (!customerId || !waitlistOffer || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(waitlistOffer))) {
+      return Response.json({code:"WAITLIST_OFFER_UNAVAILABLE",error:"Sign in to the customer account that joined the waitlist."},{status:403});
+    }
     const salonId = cleanText(body.salon_id, 50);
     const styleId = cleanText(body.style_id, 50);
     if (!salonId || !styleId) throw new Error("The salon or style selection is missing. Please return to the salon page and try again.");
@@ -96,36 +96,21 @@ async function POSTHandler(request: Request) {
     const selectedAddons = Array.isArray(body.selected_addons) ? body.selected_addons.map((item) => cleanText(item, 80)).slice(0, 20) : [];
     const rawSelectedOptions = body.selected_options && typeof body.selected_options === "object" && !Array.isArray(body.selected_options) ? body.selected_options as Record<string, unknown> : {};
     const selectedOptions = Object.fromEntries(Object.entries(rawSelectedOptions).slice(0, 30).map(([key, value]) => [cleanText(key, 40), Array.isArray(value) ? value.map((item) => cleanText(item, 80)).filter(Boolean).slice(0, 30) : []]).filter(([key]) => key)) as Record<string, string[]>;
-    const groups = optionGroups(style.option_groups);
-    const groupIds = new Set(groups.map((group) => cleanText(group.id, 40)).filter(Boolean));
-    if (Object.keys(selectedOptions).some((key) => !groupIds.has(key))) throw new Error("A selected service option is no longer available.");
-    let genericPriceAdjustment = 0;
-    let genericDurationAdjustmentMinutes = 0;
-    for (const group of groups) {
-      const groupId = cleanText(group.id, 40);
-      const values = selectedOptions[groupId] || [];
-      if (group.required && values.length === 0) throw new Error(`Choose ${cleanText(group.label, 80) || "a required service option"}.`);
-      if (group.selection !== "multiple" && values.length > 1) throw new Error(`Choose only one ${cleanText(group.label, 80) || "service option"}.`);
-      for (const value of values) {
-        const option = options(group.options).find((item) => item.value === value || item.label === value) as ServiceOption | undefined;
-        if (!option) throw new Error("A selected service option is no longer available.");
-        genericPriceAdjustment += Number(option.price_add || 0);
-        genericDurationAdjustmentMinutes += Number(option.duration_add_minutes || 0);
-      }
-    }
-    const add = (rows: PriceOption[], value: string) => Number(rows.find((item) => item.value === value || item.label === value)?.price_add || 0);
-    let total = Number(style.base_price || style.price_display_min || 0) + add(options(style.size_options), selectedSize) + add(options(style.length_options), selectedLength);
-    total += selectedAddons.reduce((sum: number, value: string) => sum + add(options(style.addons), value), 0);
-    total += genericPriceAdjustment;
     const materialId: string | null = cleanText(body.selected_material_id, 50) || null;
+    let selectedMaterial = null;
     if (materialId) {
-      const { data: material } = await admin.from("style_materials").select("price").eq("id", materialId).eq("style_id", styleId).single();
-      if (!material) throw new Error("The selected material is not available.");
-      total += Number(material.price || 0);
+      const materialResult = await admin.from("style_materials").select("id,style_id,name,price").eq("id", materialId).eq("style_id", styleId).single();
+      if (materialResult.error || !materialResult.data) throw new Error("The selected material is not available.");
+      selectedMaterial = materialResult.data;
     }
-    total = Math.max(0, Math.round(total * 100) / 100);
-    if (!Number.isFinite(total) || total > 10000) throw new Error("The booking total could not be verified.");
+    const selectionPrice = calculateBookingServiceSelection(style, { selected_size: selectedSize || null, selected_length: selectedLength || null, selected_addons: selectedAddons, selected_options: selectedOptions, selected_material_id: materialId }, selectedMaterial);
+    const genericDurationAdjustmentMinutes = selectionPrice.duration_adjustment_minutes;
+    let total = selectionPrice.subtotal;
     const subtotalBeforeSalonPromotion = total;
+    const depositTerms = await readBookingDepositTerms(admin, salonId, total, authData.user);
+    const depositPercentage = depositTerms.rate;
+    const originalDeposit = depositTerms.deposit;
+    const deposit = originalDeposit;
     const salonPromotionId = cleanText(body.salon_promotion_id, 50) || null;
     let salonPromotionDiscount = 0;
     let salonPromotionSnapshot: Record<string, unknown> = {};
@@ -135,18 +120,16 @@ async function POSTHandler(request: Request) {
       const promotionResult = await admin.from("salon_promotions").select("id,salon_id,title,description,public_headline,promotion_type,discount_value,discount_label,status,target_scope,target_ids,restrictions,starts_at,ends_at,is_active,archived_at").eq("id", salonPromotionId).eq("salon_id", salonId).maybeSingle();
       if (promotionResult.error) throw promotionResult.error;
       if (!promotionResult.data) throw new Error("This salon offer is no longer available.");
-      const selectedAddonDetails = selectedAddons.map((value) => {
-        const option = options(style.addons).find((item) => item.value === value || item.label === value);
-        return { value, label: option?.label || value, price: Number(option?.price_add || 0) };
-      });
+      const selectedAddonDetails = selectionPrice.selected_addons;
       const priceResult = calculateSalonPromotion(promotionResult.data as SalonPromotion, {
         salonId,
         styleId,
         serviceGroupId: style.service_group_id,
         masterStyleId: style.master_style_id,
-        basePrice: Number(style.base_price || style.price_display_min || 0),
+        basePrice: Number(style.base_price ?? style.price_display_min ?? 0),
         selectedAddons: selectedAddonDetails,
         subtotal: total,
+        protectedDeposit: deposit,
       });
       const restrictions = promotionResult.data.restrictions && typeof promotionResult.data.restrictions === "object" ? promotionResult.data.restrictions as Record<string, unknown> : {};
       if (priceResult.eligible && restrictions.new_customers_only === true) {
@@ -171,25 +154,32 @@ async function POSTHandler(request: Request) {
         subtotal_before_promotion: subtotalBeforeSalonPromotion,
         discount_amount: salonPromotionDiscount,
         adjusted_total: total,
+        protected_deposit: deposit,
+        calculation: "eligible_subtotal_capped_at_unpaid_balance",
         captured_at: new Date().toISOString(),
       };
     }
-    const depositPercentage = await getEngineNumber("booking.deposit_percentage", 10, 0, 100);
     const cancellationGraceMinutes = await getEngineNumber(
       "booking.customer_cancellation_grace_minutes",
       30,
       0,
       1440,
     );
-    const originalDeposit = Math.round(total * depositPercentage) / 100;
     const promoCode = cleanText(body.promo_code, 40);
-    const promoPreview = promoCode ? await previewPromoCode(promoCode, "booking", originalDeposit) : null;
-    const calculatedDeposit = promoPreview?.amountAfterDiscount ?? originalDeposit;
-    const deposit = Math.round(calculatedDeposit * 100) >= 50 ? calculatedDeposit : 0;
-    const discount = promoPreview?.discount || 0;
+    if (promoCode && salonPromotionId) throw new Error("Choose either the business offer or a promo code. Booking discounts cannot be combined.");
+    const promoPreview = promoCode ? await previewPromoCode(promoCode, "booking", subtotalBeforeSalonPromotion) : null;
+    const codePrice = protectedBookingDiscount(subtotalBeforeSalonPromotion, deposit, promoPreview?.discount || 0);
+    const discount = codePrice.discount;
+    if (promoPreview) total = codePrice.total;
+    // Never create a payment/reservation for different terms than the customer saw.
+    if (typeof body.expected_deposit !== "number" || typeof body.expected_total !== "number" || !Number.isFinite(body.expected_deposit) || !Number.isFinite(body.expected_total)
+      || Math.round(body.expected_deposit * 100) !== Math.round(deposit * 100) || Math.round(body.expected_total * 100) !== Math.round(total * 100)) {
+      return Response.json({code:"BOOKING_PRICE_CHANGED",error:"Review the current booking price and deposit before continuing.",deposit_terms:depositTerms,total,discount,salon_promotion_discount:salonPromotionDiscount},{status:409,headers:{"Cache-Control":"private, no-store"}});
+    }
     const durationHours = Math.max(0.25, Number(style.duration_min_hours || style.duration_max_hours || 0) + genericDurationAdjustmentMinutes / 60);
     const bufferMinutes = Math.max(0, Number(style.buffer_minutes ?? liveAvailability.bufferMinutes ?? 15));
     const payload: Record<string, unknown> = {
+      ...(waitlistOffer ? {waitlist_offer_id:waitlistOffer} : {}),
       business_policy_revision_id: policyAtCheckout?.id || null,
       business_policy_captured_at: new Date().toISOString(),
       business_policy_accepted_at: policyAtCheckout ? new Date().toISOString() : null,
@@ -213,6 +203,7 @@ async function POSTHandler(request: Request) {
       subtotal_before_promotion: subtotalBeforeSalonPromotion,
       deposit_amount: deposit,
       deposit_percentage: depositPercentage,
+      deposit_rule_snapshot: depositTerms,
       cancellation_grace_minutes_snapshot: cancellationGraceMinutes,
       original_deposit_amount: originalDeposit,
       discount_amount: discount,
@@ -344,7 +335,7 @@ async function POSTHandler(request: Request) {
             admin
               .from("bookings")
               .select(
-                "id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot",
+                "id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot,deposit_rule_snapshot,estimated_total,deposit_amount,balance_due",
               )
               .eq("id", String(commerceTotals.booking_id))
               .single(),
@@ -388,6 +379,12 @@ async function POSTHandler(request: Request) {
       reservationError = bookingReservation.error;
     }
     if (reservationError || !reservationId) {
+      if (reservationError?.message === "WAITLIST_OFFER_UNAVAILABLE") {
+        return Response.json({code:"WAITLIST_OFFER_UNAVAILABLE",error:"This waitlist offer is no longer available. Review your waitlist for another opening."},{status:409,headers:{"Cache-Control":"private, no-store"}});
+      }
+      if (reservationError?.message === "PROFESSIONAL_SERVICE_UNAVAILABLE") {
+        return Response.json({ error: "The selected professional no longer offers this service. Choose another professional or service.", code: "PROFESSIONAL_SERVICE_UNAVAILABLE" }, { status: 409, headers: { "Cache-Control": "private, no-store" } });
+      }
       if (/CONFLICT|exclusion/i.test(reservationError?.message || "")) {
         const next = await nextAvailableSlot({ salonId, styleId, stylistId: requestedStylistId, customerId, guestEmail, afterDate: localDate, afterTime: localTime });
         return Response.json({ error: "That time was just reserved by another customer.", next_available: next }, { status: 409 });
@@ -487,6 +484,7 @@ async function POSTHandler(request: Request) {
     if (promoCode) {
       try {
         promoReservation = await reservePromoCode(promoCode, "booking", { userId: customerId, salonId, bookingIntentId: intentId });
+        if (promoReservation.discount_type !== promoPreview?.promo.discount_type || Number(promoReservation.discount_value) !== promoPreview.promo.discount_value) throw new Error("This promo code changed. Review the current offer before continuing.");
         await admin.from("booking_checkout_intents").update({ promo_code_id: promoReservation.promo_code_id }).eq("id", intentId);
       } catch (promoError) {
         if (commerceIntentId)
@@ -509,13 +507,14 @@ async function POSTHandler(request: Request) {
         stripe_payment_id: null,
         stripe_checkout_session_id: `no_payment_required:${intentId}`,
         payment_method_label: "No payment required",
-        payment_mode: "test",
+        origin_checkout_intent_id: intentId,
+        payment_mode: "live",
         payment_verified_at: new Date().toISOString(),
         platform_fee: 0,
         stripe_processing_fee: 0,
         net_amount_owed_salon: deposit,
         payout_status: "Not required",
-      }).select("id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot").single();
+      }).select("id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot,deposit_rule_snapshot,estimated_total,deposit_amount,balance_due").single();
       if (bookingError || !booking) throw bookingError || new Error("The booking could not be confirmed.");
       const { error: intentError } = await admin.from("booking_checkout_intents").update({ status: "Paid", booking_id: booking.id }).eq("id", intentId);
       if (intentError) throw intentError;
@@ -548,7 +547,7 @@ async function POSTHandler(request: Request) {
         salonPromotionDiscount,
         total,
         noPaymentRequired: true,
-        testMode: true,
+        testMode: false,
         warning: notificationReference
           ? {
               message: `Your booking was confirmed, but one notification could not be delivered. Reference ${notificationReference}.`,
@@ -571,7 +570,7 @@ async function POSTHandler(request: Request) {
         {
           id: `no_payment_required:${commerceIntentId}`,
           payment_status: "no_payment_required",
-          livemode: false,
+          livemode: true,
           metadata: {
             type: "combined_checkout",
             commerce_intent_id: commerceIntentId,
@@ -593,7 +592,7 @@ async function POSTHandler(request: Request) {
         ? await admin
             .from("bookings")
             .select(
-              "id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot",
+              "id,public_reference,confirmation_code,status,appointment_datetime,business_policy_revision_id,business_policy_version,business_policy_snapshot,deposit_rule_snapshot,estimated_total,deposit_amount,balance_due",
             )
             .eq("id", completion.bookingId)
             .single()
@@ -614,7 +613,7 @@ async function POSTHandler(request: Request) {
         order_id: completion?.orderId,
         combined: true,
         noPaymentRequired: true,
-        testMode: true,
+        testMode: false,
       });
     }
 
@@ -627,7 +626,7 @@ async function POSTHandler(request: Request) {
         expires_at: checkoutExpiresAtSeconds,
         "line_items[0][price_data][currency]": "usd",
         "line_items[0][price_data][unit_amount]": Math.round(
-          (commerceIntentId ? combinedCharge : originalDeposit) * 100,
+          (commerceIntentId ? combinedCharge : deposit) * 100,
         ),
         "line_items[0][price_data][product_data][name]": commerceIntentId
           ? `${salon.name} products and appointment deposit`
@@ -651,10 +650,9 @@ async function POSTHandler(request: Request) {
         "payment_intent_data[description]": commerceIntentId
           ? `Products and ${depositPercentage}% reservation deposit for ${style.name}`
           : `${depositPercentage}% reservation deposit for ${style.name}`,
-        allow_promotion_codes: commerceIntentId ? false : !promoReservation,
-        ...(!commerceIntentId && promoReservation?.stripe_coupon_id
-          ? { "discounts[0][coupon]": promoReservation.stripe_coupon_id }
-          : {}),
+        // All booking discounts are already captured against the unpaid service
+        // balance. Stripe must collect the unchanged deposit without another coupon.
+        allow_promotion_codes: false,
         ...(connectedAccount
           ? {
               "payment_intent_data[transfer_data][destination]":

@@ -37,7 +37,7 @@ test("required launch viewports remain readable without page overflow", async ({
 
   for (const viewport of requiredViewports) {
     await page.setViewportSize(viewport);
-    await page.goto("/");
+    await page.goto("/site-access");
     await expect(
       page.getByRole("region", { name: "Featured Girlz Culture promotions" }),
     ).toBeVisible();

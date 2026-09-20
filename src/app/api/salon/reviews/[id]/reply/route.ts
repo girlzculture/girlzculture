@@ -23,11 +23,23 @@ async function POSTHandler(
     if (!/^[0-9a-f-]{36}$/i.test(id)) {
       return Response.json({ error: "Review not found." }, { status: 404 });
     }
-    const body = await request.json() as Record<string, unknown>;
+    const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key=>!['reply','request_id','expected_revision'].includes(key))) {
+      return Response.json({error:'Check the reply and try again.'},{status:400});
+    }
+    const revised = body.request_id !== undefined || body.expected_revision !== undefined;
+    if(revised && (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(body.request_id)) || !Number.isSafeInteger(body.expected_revision) || Number(body.expected_revision)<0)) {
+      return Response.json({error:'Check the reply and try again.'},{status:400});
+    }
     const reply = cleanText(body.reply, 2_000);
     if (!reply) {
       return Response.json({ error: "Write a reply before saving." }, { status: 400 });
     }
+    // Resolve the selected authenticated business before any provider call.
+    // A permission at one business never authorizes another business's review.
+    const authorized = await admin.from('reviews').select('id').eq('id',id).eq('salon_id',salonContext.salon.id).maybeSingle();
+    if(authorized.error) throw authorized.error;
+    if(!authorized.data) return Response.json({error:'Review not found.'},{status:404});
     const moderation = await moderatePublicContent(admin, { body: reply });
     if (moderation.outcome === "block") {
       return Response.json({
@@ -38,7 +50,11 @@ async function POSTHandler(
       }, { status: 422 });
     }
     const pending = moderation.outcome === "review";
-    const { data, error } = await admin.rpc("submit_salon_review_reply", {
+    const { data, error } = revised ? await admin.rpc('save_business_review_reply',{
+      p_salon:salonContext.salon.id,p_review:id,p_actor:salonContext.user.id,
+      p_request:body.request_id,p_revision:body.expected_revision,p_reply:reply,
+      p_moderation:pending?'Pending':'Clear',p_reason:pending?moderation.reason||'provider-context-review':null,p_source:pending?moderation.source:null,
+    }) : await admin.rpc("submit_salon_review_reply", {
       target_review_id: id,
       reply_text: reply,
       content_moderation_status: pending ? "Pending" : "Clear",
@@ -47,6 +63,12 @@ async function POSTHandler(
       acting_user_id: salonContext.user.id,
     });
     if (error) {
+      if (/REPLY_STALE/i.test(error.message)) {
+        return Response.json({error:'This reply changed elsewhere. Your draft is kept; reload the current review before saving.',code:'REVIEW_REPLY_STALE'},{status:409});
+      }
+      if (/REQUEST_REUSED|INPUT_INVALID/i.test(error.message)) {
+        return Response.json({error:'Check the reply and try again.'},{status:400});
+      }
       if (/NOT_FOUND/i.test(error.message)) {
         return Response.json({ error: "Review not found." }, { status: 404 });
       }
@@ -64,10 +86,11 @@ async function POSTHandler(
       }
       throw error;
     }
+    const held = revised ? data.content_status==='pending' : pending;
     return Response.json({
-      review: data,
-      content_status: pending ? "pending" : "published",
-      message: pending
+      review: revised ? data.review : data,
+      content_status: held ? "pending" : "published",
+      message: revised && data.replayed ? 'This request was already processed. The current review has been loaded.' : held
         ? "Your reply is pending platform moderation and is not public yet."
         : "Your reply is now public.",
     }, { headers: { "Cache-Control": "private, no-store" } });

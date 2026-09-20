@@ -11,6 +11,9 @@ import { normalizeUsState } from "@/lib/usStates";
 import { completeCommerceCheckout } from "@/lib/commerceCheckoutServer";
 import { completePickupReservation } from "@/lib/pickupReservationsServer";
 import { productRefundSummary } from "@/lib/productCommerceCore";
+import { existingAgreementPlan, subscriptionPriceSnapshot, type SubscriptionPriceItem } from "@/lib/subscriptionAgreement";
+import { completeSubscriptionPaymentMethod } from "@/lib/subscriptionPaymentMethodServer";
+import { optionalReferralPaymentEvidence } from "@/lib/businessReferralProofServer";
 
 type StripeLine = {
   amount?: number;
@@ -59,7 +62,7 @@ type StripeObject = Record<string, unknown> & {
   amount_reversed?: number;
   last_finalization_error?: { message?: string };
   parent?: { subscription_details?: { subscription?: string | { id?: string }; metadata?: Record<string, string> } };
-  items?: { data?: Array<{ price?: { id?: string }; current_period_start?: number; current_period_end?: number }> };
+  items?: { data?: Array<SubscriptionPriceItem & { current_period_start?: number; current_period_end?: number }> };
   lines?: { data?: StripeLine[] };
   phases?: Array<{ start_date?: number; end_date?: number }>;
   discounts?: Array<{ coupon?: { id?: string } | string; promotion_code?: { id?: string } | string }>;
@@ -127,7 +130,7 @@ async function syncSubscription(object: StripeObject) {
     if (bySalonId.error) throw bySalonId.error;
     existing = bySalonId.data as StoredSubscription | null;
   }
-  const plan = planFromObject(object);
+  const plan = existingAgreementPlan({ subscriptionId: object.id, priceId: object.items?.data?.[0]?.price?.id, configuredPlan: planFromObject(object), stored: existing });
   if (!plan) throw new Error("STRIPE_SUBSCRIPTION_PLAN_UNRECOGNIZED");
   const status = String(object.status || "inactive");
   const subscriptionItem = object.items?.data?.[0];
@@ -145,6 +148,7 @@ async function syncSubscription(object: StripeObject) {
     stripe_subscription_id: object.id,
     stripe_customer_id: object.customer || null,
     price_id: object.items?.data?.[0]?.price?.id || null,
+    recurring_price_snapshot: subscriptionPriceSnapshot(object.items?.data, new Date().toISOString()),
     current_period_start: periodStart,
     current_period_end: periodEnd,
     cancel_at_period_end: Boolean(object.cancel_at_period_end),
@@ -335,7 +339,8 @@ async function recordBillingEvent(event: StripeEvent, object: StripeObject) {
     failure_reason: failureReason,
     cancellation_date: cancellationDate,
     paid_through_date: paidThrough,
-    metadata: { stripe_object_id: object.id || null, billing_reason: object.billing_reason || null },
+    metadata: { stripe_object_id: object.id || null, billing_reason: object.billing_reason || null,
+      referral_payment: await optionalReferralPaymentEvidence(context.admin, { eventType: event.type, invoice: object, subscription: context.subscription, stored: context.stored, salonId: context.salonId }, stripeGet) },
   });
   if (error?.code === "23505") return;
   if (error) throw error;
@@ -771,6 +776,8 @@ async function completeBookingCheckout(session: StripeObject, request: Request) 
   }
   const payload: Record<string, unknown> = {
     ...(intent.payload as Record<string, unknown>),
+    // Link the verified checkout to its waitlist claim when payment completes.
+    ...((intent.payload as Record<string, unknown>)?.waitlist_offer_id ? {origin_checkout_intent_id:intent.id} : {}),
     salon_promotion_redemption_id: intent.salon_promotion_redemption_id || null,
     promotion_snapshot: intent.promotion_snapshot || {},
     stripe_payment_id: paymentIntentId || session.id,
@@ -924,6 +931,18 @@ async function POSTHandler(request: Request) {
   if (!shouldProcess) return Response.json({ received: true, duplicate: true });
   try {
     const object = eventObject;
+    const paymentMethodSetup = object.mode === "setup" && object.metadata?.type === "subscription_payment_method"
+      && ["checkout.session.completed","checkout.session.expired"].includes(event.type);
+    const previousKeys=Object.keys(event.data.previous_attributes || {});
+    const paymentMethodOnlyChange=event.type === "customer.subscription.updated"
+      && previousKeys.length === 1 && previousKeys[0] === "default_payment_method";
+    if (paymentMethodSetup) {
+      if (!object.id) throw new Error("PAYMENT_METHOD_WEBHOOK_SESSION_MISSING");
+      const result=await completeSubscriptionPaymentMethod(admin,object.id);
+      // Do not acknowledge a competing return handler until its leased work is
+      // durable. Stripe retry then observes the completed attempt safely.
+      if ("pending" in result && result.pending) throw new Error("PAYMENT_METHOD_COMPLETION_PENDING");
+    } else if (!paymentMethodOnlyChange) {
     await syncBookingRefund(event,object);
     await syncBookingTransferReversal(event, object);
     await syncProductOrderRefund(event, object);
@@ -965,6 +984,7 @@ async function POSTHandler(request: Request) {
     }
     if (["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"].includes(event.type)) await syncSubscription(object);
     if (event.type.startsWith("subscription_schedule.")) await syncScheduleState(object, event.type);
+    }
     const { error: processedError } = await admin
       .from("stripe_webhook_events")
       .update({

@@ -7,6 +7,7 @@ import {
   zonedLocalToUtc,
 } from "@/lib/dateTime";
 import { isSalonClosedOn } from "@/lib/salonOpenStatus";
+import { professionalOffersService } from "@/lib/professionalServices";
 
 type Row = Record<string, unknown>;
 type HoursRange = { open: string; close: string; closed: boolean };
@@ -18,8 +19,11 @@ type AvailabilityInput = {
   guestEmail?: string | null;
   excludeBookingId?: string | null;
   includeAllStylists?: boolean;
+  /** Trusted existing appointment terms; public callers do not accept these fields. */
+  durationMinutes?: number;
+  bufferMinutes?: number;
 };
-type AvailabilityData = {
+export type AvailabilityData = {
   salon: Row;
   style: Row;
   roster: Row[];
@@ -104,6 +108,7 @@ async function loadAvailabilityData(
   input: AvailabilityInput,
   fromDate: string,
   days: number,
+  strict = false,
 ): Promise<AvailabilityData> {
   const admin = getSupabaseAdmin();
   const [salonResult, styleResult, stylistResult] = await Promise.all([
@@ -122,9 +127,9 @@ async function loadAvailabilityData(
       .single() : Promise.resolve({ data: {}, error: null }),
     admin
       .from("stylists")
-      .select("id,name,availability,is_active", { count: "exact" })
+      .select("id,salon_id,name,availability,is_active,is_draft,assigned_service_ids", { count: "exact" })
       .eq("salon_id", input.salonId)
-      .eq("is_active", true).is("archived_at", null),
+      .is("archived_at", null),
   ]);
   if (salonResult.error || styleResult.error)
     throw new Error("SALON_OR_STYLE_QUERY_FAILED");
@@ -149,14 +154,14 @@ async function loadAvailabilityData(
   ] = await Promise.all([
     admin
       .from("bookings")
-      .select("id,stylist_id,appointment_datetime,blocked_until,status", { count: "exact" })
+      .select("id,salon_id,stylist_id,appointment_datetime,blocked_until,status", { count: "exact" })
       .eq("salon_id", input.salonId)
       .lt("appointment_datetime", rangeEnd.toISOString())
       .gt("blocked_until", rangeStart.toISOString()),
     admin
       .from("booking_checkout_intents")
       .select(
-        "id,stylist_id,appointment_datetime,blocked_until,status,expires_at", { count: "exact" },
+        "id,salon_id,stylist_id,appointment_datetime,blocked_until,status,expires_at", { count: "exact" },
       )
       .eq("salon_id", input.salonId)
       .eq("status", "Pending")
@@ -165,7 +170,7 @@ async function loadAvailabilityData(
       .gt("blocked_until", rangeStart.toISOString()),
     admin
       .from("salon_blockouts")
-      .select("id,stylist_id,starts_at,ends_at", { count: "exact" })
+      .select("id,salon_id,stylist_id,starts_at,ends_at", { count: "exact" })
       .eq("salon_id", input.salonId)
       .is("released_at", null)
       .lt("starts_at", rangeEnd.toISOString())
@@ -210,6 +215,14 @@ async function loadAvailabilityData(
   const active = (row: Row) =>
     row.id !== input.excludeBookingId &&
     !["cancelled", "canceled"].includes(String(row.status).toLowerCase());
+  if (strict) {
+    // Opportunity totals must never label a truncated response as full capacity.
+    for (const result of [stylistResult, bookingsResult, intentsResult, blockoutsResult]) {
+      if (result.error || !Array.isArray(result.data) || typeof result.count !== "number" || result.count !== result.data.length || result.count > 1000) throw Error("SCHEDULE_EVIDENCE_INCOMPLETE");
+      if (result.data.some(row => row.salon_id !== input.salonId)) throw Error("SCHEDULE_ACCESS_DENIED");
+    }
+    if (salon.id !== input.salonId || (stylistResult.data || []).length > 50) throw Error("SCHEDULE_EVIDENCE_INCOMPLETE");
+  }
   return {
     salon,
     style,
@@ -224,6 +237,33 @@ async function loadAvailabilityData(
       ...assertResult(emailIntents, "email intents"),
     ].filter(active),
     timeZone,
+  };
+}
+
+/** Server-only, bounded canonical evidence for the protected operating view.
+ * No customer lookup, discovery query or service-fit promise is introduced. */
+export function loadCalendarOpportunityEvidence(salonId: string, date: string) {
+  return loadAvailabilityData({ salonId }, date, 7, true);
+}
+
+/** Private service-fit reader. Callers supply only server-verified duration;
+ * unlike the public endpoint this requires complete own-business evidence. */
+export async function serviceAvailabilityWindow(input: { salonId: string; styleId: string; stylistId: string | null; date: string; days: number; durationMinutes: number; bufferMinutes?: number }) {
+  if (!Number.isInteger(input.days) || input.days < 1 || input.days > 7 || !Number.isInteger(input.durationMinutes) || input.durationMinutes < 15 || input.durationMinutes > 1440) throw Error("SERVICE_CAPACITY_INVALID_INPUT");
+  const data = await loadAvailabilityData(input, input.date, input.days, true);
+  if (data.style.id !== input.styleId || data.style.salon_id !== input.salonId) throw Error("SCHEDULE_ACCESS_DENIED");
+  // Unknown occupancy must never become apparently available time.
+  for (const [rows, start, end] of [[data.bookings, "appointment_datetime", "blocked_until"], [data.intents, "appointment_datetime", "blocked_until"], [data.blockouts, "starts_at", "ends_at"]] as const) {
+    for (const row of rows) if (!Number.isFinite(Date.parse(String(row[start]))) || !Number.isFinite(Date.parse(String(row[end]))) || Date.parse(String(row[end])) <= Date.parse(String(row[start]))) throw Error("SCHEDULE_EVIDENCE_INCOMPLETE");
+  }
+  const buffer = input.bufferMinutes ?? data.style.buffer_minutes ?? (data.salon.booking_settings as Row | null)?.buffer_minutes ?? 15;
+  const step = (data.salon.booking_settings as Row | null)?.slot_minutes ?? 30;
+  if (typeof buffer !== "number" || !Number.isInteger(buffer) || buffer < 0 || buffer > 180 || typeof step !== "number" || !Number.isInteger(step) || step < 15 || step > 1440) throw Error("SCHEDULE_EVIDENCE_INCOMPLETE");
+  return { style: data.style, timeZone: data.timeZone, bufferMinutes: buffer,
+    dates: Array.from({ length: input.days }, (_, offset) => {
+      const date = addMinutesToLocal(input.date, "00:00", offset * 1440).date;
+      return { date, ...availabilityForDate(data, { ...input, bufferMinutes: buffer, includeAllStylists: true }, date) };
+    }),
   };
 }
 
@@ -252,12 +292,13 @@ function availabilityForDate(
       timeZone,
       reason: "This salon is closed today. Choose another date.",
     };
+  const eligible = data.roster.filter(row => professionalOffersService(row, String(style.id || input.styleId || "")));
   const requested = input.stylistId
-    ? data.roster.filter((row) => row.id === input.stylistId)
-    : data.roster;
+    ? eligible.filter((row) => row.id === input.stylistId)
+    : eligible;
   const resources = requested.length
     ? requested
-    : input.stylistId
+    : input.stylistId || data.roster.length
       ? []
       : [{ id: null, availability: {} }];
   const day = dayName(date);
@@ -270,12 +311,12 @@ function availabilityForDate(
     };
   const durationMinutes = Math.max(
     1,
-    Math.round(Number(style.duration_min_hours || 0) * 60),
+    Math.round(input.durationMinutes ?? Number(style.duration_min_hours || 0) * 60),
   );
   const bufferMinutes = Math.max(
     0,
     Number(
-      style.buffer_minutes ??
+      input.bufferMinutes ?? style.buffer_minutes ??
         (salon.booking_settings as Row | null)?.buffer_minutes ??
         15,
     ),
@@ -400,7 +441,7 @@ export async function calendarAvailability(input: { salonId: string; date: strin
   const hours = hoursRange((data.salon.hours as Row | null)?.[day]);
   const gaps: { start: string; end: string; stylist_id: string | null; professional_name: string | null }[] = [];
   if (!hours || hours.closed || isSalonClosedOn(data.salon, input.date)) return { date: input.date, time_zone: data.timeZone, gaps };
-  const resources = data.roster.length ? data.roster : [{ id: null, name: null, availability: {} }];
+  const resources = data.roster.length ? data.roster.filter(row => row.is_active !== false) : [{ id: null, name: null, availability: {} }];
   for (const resource of resources) {
     const id = resource.id ? String(resource.id) : null;
     if (input.stylistId && input.stylistId !== id) continue;

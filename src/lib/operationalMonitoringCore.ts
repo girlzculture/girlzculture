@@ -9,6 +9,8 @@ export function classifyOperationalRoute(
   route: string,
   method: string,
 ): MonitoringClassification {
+  if (route === "/api/salon/onboarding-instagram/deletion-status") return "public-read-only";
+  if (/^\/api\/salon\/onboarding-instagram(?:\/|$)/.test(route)) return "provider-backed";
   if (/^\/api\/admin\/team\/\[id\]\/activity$/.test(route)) {
     return "protected";
   }

@@ -62,6 +62,7 @@ for (const recipient of ['customer', 'team', 'support'] as const) {
     const url = recipient === 'customer' ? `/account?tab=inbox&booking=${fixture.ids.booking}` : recipient === 'team' ? `/salon/dashboard/messages/${fixture.ids.booking}` : `/admin/bookings/${fixture.ids.booking}`;
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(url);
+    if (recipient === 'team') await page.locator('summary').filter({ hasText: 'Booking and customer context' }).click();
     await expect(page.getByRole('heading', { name: 'Your booking conversation', exact: true })).toBeVisible();
     const gallery = `docs/screenshots/p0/${testInfo.project.name}/recipient-${recipient}`;
     await mkdir(gallery, { recursive: true });
@@ -71,11 +72,14 @@ for (const recipient of ['customer', 'team', 'support'] as const) {
       await expect.poll(fixture.accountLocale).toBe(locale);
       await expect(page.getByRole('heading', { name: t('Your booking conversation'), exact: true })).toBeVisible();
       if (recipient === 'support') {
-        await expect(page.getByRole('heading', { name: 'Save', exact: true, level: 2 })).toBeVisible();
+        const originalHeadings = page.getByRole('heading', { name: 'Save', exact: true, level: 2 });
+        await expect(originalHeadings).toHaveCount(2);
+        await expect(originalHeadings.first()).toBeVisible();
+        await expect(originalHeadings.last()).toBeVisible();
         expect(await page.locator('option').filter({ hasText: /^Save$/ }).count()).toBe(2);
       }
       await expect(page.locator('article').filter({ hasText: translated[locale].trim() }).last()).toBeVisible();
-      const evidence = page.locator('details').filter({ has: page.locator('summary').filter({ hasText: t('Policy recorded for this booking') }) }).first();
+      const evidence = page.locator('details').filter({ has: page.locator(':scope > summary').filter({ hasText: t('Policy recorded for this booking') }) }).first();
       await expect(evidence).toHaveJSProperty('open', false);
       await clickPolicySummary(evidence.locator(':scope > summary'));
       await expect(evidence).toHaveJSProperty('open', true);

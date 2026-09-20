@@ -502,7 +502,7 @@ test("homepage and header searches produce the same canonical URL by button and 
   const surfaces = [
     {
       name: "homepage",
-      path: "/",
+      path: "/site-access",
       form: () => page.locator("[data-home-search] form[role='search']"),
       inputRole: "combobox" as const,
       inputName: "e.g., Knotless Braids",

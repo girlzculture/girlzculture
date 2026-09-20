@@ -18,6 +18,9 @@ import {
   sendSms,
 } from "@/lib/supabaseAdmin";
 import { capturePlatformError } from "@/lib/platformErrors";
+import { bookingAvailability } from "@/lib/bookingAvailabilityServer";
+import { rescheduleLocalTimestamp } from "@/lib/bookingRescheduleCore";
+import { salonTimeZone } from "@/lib/dateTime";
 import { getEngineNumber } from "@/lib/engineConfigServer";
 import {
   requestBookingDepositRefund,
@@ -68,7 +71,7 @@ async function loadManagedBooking(
   const { data: booking, error } = await admin
     .from("bookings")
     .select(
-      "business_policy_revision_id,business_policy_version,business_policy_snapshot,id,public_reference,confirmation_code,status,created_at,payment_verified_at,appointment_datetime,duration_hours,estimated_total,deposit_amount,balance_due,deposit_status,refund_status,refund_amount,refund_funding_state,stripe_payment_id,stripe_transfer_id,guest_name,selected_size,selected_length,selected_addons,selected_options,client_notes,salon_id,style_id,stylist_id,cancelled_by,cancellation_reason,cancellation_customer_reason,cancellation_customer_message,cancellation_initiated_by",
+      "business_policy_revision_id,business_policy_version,business_policy_snapshot,deposit_rule_snapshot,id,public_reference,confirmation_code,status,created_at,payment_verified_at,appointment_datetime,duration_hours,estimated_total,deposit_amount,balance_due,deposit_status,refund_status,refund_amount,refund_funding_state,stripe_payment_id,stripe_transfer_id,guest_name,selected_size,selected_length,selected_addons,selected_options,client_notes,salon_id,style_id,stylist_id,cancelled_by,cancellation_reason,cancellation_customer_reason,cancellation_customer_message,cancellation_initiated_by",
     )
     .eq("id", bookingId)
     .single();
@@ -342,6 +345,19 @@ async function POSTHandler(request: Request) {
       }
       const response =
         action === "accept_reschedule" ? "accept" : "decline";
+      if (response === "accept") {
+        const optionResult = await admin.from("booking_reschedule_options").select("appointment_datetime,stylist_id,duration_hours").eq("id", optionId).eq("proposal_id", proposalId).maybeSingle();
+        if (optionResult.error) throw optionResult.error;
+        const option = optionResult.data;
+        if (!option) throw new GuestBookingError("This appointment option is no longer available.", 409);
+        // Fetch identity/buffer only for the secure booking; do not expose contact fields.
+        const terms = await admin.from("bookings").select("customer_id,guest_email,buffer_minutes").eq("id", access.bookingId).eq("salon_id", current.booking.salon_id).single();
+        if (terms.error) throw terms.error;
+        const local = rescheduleLocalTimestamp(option.appointment_datetime, salonTimeZone(current.salon.time_zone));
+        const [date, time] = local.split("T");
+        const available = await bookingAvailability({ salonId: String(current.booking.salon_id), styleId: String(current.booking.style_id), stylistId: option.stylist_id, customerId: terms.data.customer_id, guestEmail: terms.data.guest_email, date, excludeBookingId: access.bookingId, includeAllStylists: true, durationMinutes: Number(current.booking.duration_hours) * 60, bufferMinutes: Number(terms.data.buffer_minutes ?? 15) });
+        if (!available.slots.some(slot => slot.value === time && slot.stylistId === option.stylist_id)) throw new GuestBookingError("That time or professional is no longer available. Ask the salon for another option.", 409);
+      }
       const { data: updated, error: responseError } = await admin.rpc(
         "respond_booking_reschedule",
         {
@@ -421,13 +437,9 @@ async function POSTHandler(request: Request) {
         }
       }
       if (response === "accept") {
-        const { error: resetError } = await admin
-          .from("bookings")
-          .update({ notifications_sent_at: null })
-          .eq("id", access.bookingId);
-        if (resetError) throw resetError;
         const confirmation = await deliverBookingNotifications(access.bookingId, {
           manageUrl: rotated.url,
+          acceptedProposalId: proposalId,
         });
         warningReferences.push(
           ...(confirmation.warnings || []).map((warning) => warning.request_id),

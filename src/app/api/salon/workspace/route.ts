@@ -47,59 +47,74 @@ async function GETHandler(request: Request) {
         // Platform Admin hid or resolved. Public review queries remain limited
         // to Published/non-Removed rows; this protected projection intentionally
         // returns only salon-safe moderation evidence.
-        const reviewResult = await context.admin
-          .from("reviews")
-          .select(
-            "id,booking_id,salon_id,stylist_id,rating_overall,rating_price_accuracy,rating_punctuality,rating_quality,rating_cleanliness,would_return,written_review,review_title,result_photos,salon_reply,display_name,dispute_status,dispute_reason,disputed_at,moderation_status,moderation_reason,moderated_at,created_at",
-          )
-          .eq("salon_id", context.salon.id)
-          .order("created_at", { ascending: false });
-        if (reviewResult.error) throw reviewResult.error;
-        const reviewIds = (reviewResult.data || []).map((review) => review.id);
-        if (!reviewIds.length) return [table, []] as const;
-        const [moderationResult, disputeResult] = await Promise.all([
-          context.admin
-            .from("review_moderation_events")
-            .select("id,review_id,action,actor_role,reason,created_at")
-            .in("review_id", reviewIds)
-            .order("created_at", { ascending: false }),
-          context.admin
-            .from("review_dispute_events")
-            .select("id,review_id,action,actor_role,reason,created_at")
-            .in("review_id", reviewIds)
-            .order("created_at", { ascending: false }),
-        ]);
-        if (moderationResult.error) throw moderationResult.error;
-        if (disputeResult.error) throw disputeResult.error;
-        const reviews = (reviewResult.data || []).map((review) => ({
-          ...review,
-          moderation_events: (moderationResult.data || []).filter(
-            (event) => event.review_id === review.id,
-          ),
-          dispute_events: (disputeResult.data || []).filter(
-            (event) => event.review_id === review.id,
-          ),
-        }));
+        const reviews: Record<string, unknown>[] = [];
+        for(let offset=0;;offset+=1000) {
+          const result=await context.admin.from("reviews")
+            .select("id,booking_id,salon_id,stylist_id,rating_overall,rating_price_accuracy,rating_punctuality,rating_quality,rating_cleanliness,would_return,written_review,review_title,result_photos,salon_reply,reply_revision,display_name,dispute_status,dispute_reason,disputed_at,moderation_status,moderation_reason,moderated_at,archived_at,created_at")
+            .eq("salon_id",context.salon.id).order("created_at",{ascending:false}).order("id").range(offset,offset+999);
+          if(result.error)throw result.error;
+          reviews.push(...result.data || []);
+          if((result.data||[]).length<1000)break;
+          if(offset>=99000)throw new Error("Workspace review limit exceeded.");
+        }
+        // Chunk authorized IDs to avoid URI limits, then page every event table.
+        // Private moderation/provider internals are never part of this projection.
+        const sources=[
+          ["review_moderation_events","moderation_events","id,review_id,action,actor_role,reason,created_at"],
+          ["review_dispute_events","dispute_events","id,review_id,action,actor_role,reason,created_at"],
+          ["review_reply_moderation_queue","reply_queue","id,review_id,submitted_reply,status,updated_at"],
+          ["business_review_reply_versions","reply_versions","id,review_id,submitted_reply,content_status,created_at"],
+        ] as const;
+        for(let index=0;index<reviews.length;index+=200){
+          const batch=reviews.slice(index,index+200),ids=batch.map(r=>String(r.id));
+          await Promise.all(sources.map(async([source,field,columns])=>{
+            const events:Record<string,unknown>[]=[];
+            for(let offset=0;;offset+=1000){
+              const result=await context.admin.from(source).select(columns).in("review_id",ids).order("id").range(offset,offset+999);
+              if(result.error)throw result.error;events.push(...(result.data||[]) as unknown as Record<string,unknown>[]);
+              if((result.data||[]).length<1000)break;
+              if(offset>=99000)throw new Error("Workspace review history limit exceeded.");
+            }
+            for(const review of batch)review[field]=events.filter(e=>e.review_id===review.id);
+          }));
+        }
         return [table, reviews] as const;
       }
-      let query = context.admin
-        .from(table)
-        .select(
-          table === "subscriptions" && !context.isOwner
-            ? "id,salon_id,tier,status,current_period_end"
-            : "*",
-        )
-        .eq("salon_id", context.salon.id);
-      if (ARCHIVED_RECORD_TABLES.has(table)) {
-        query = query.is("archived_at", null);
+      const rows: Record<string, unknown>[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        let query = context.admin
+          .from(table)
+          .select(
+            table === "subscriptions" && !context.isOwner
+              ? "id,salon_id,tier,status,current_period_end"
+              : "*",
+          )
+          .eq("salon_id", context.salon.id);
+        if (ARCHIVED_RECORD_TABLES.has(table)) {
+          query = query.is("archived_at", null);
+        }
+        if (!context.isOwner && context.teamMember?.stylist_id) {
+          if (table === "bookings") query = query.eq("stylist_id", context.teamMember.stylist_id);
+          if (table === "salon_blockouts") query = query.or(`stylist_id.is.null,stylist_id.eq.${context.teamMember.stylist_id}`);
+        }
+        if (table === "notifications" && !context.isOwner) query = query.eq("user_id", context.user.id);
+        const result = await query.order("created_at", { ascending: false }).order("id").range(offset, offset + 999);
+        if (result.error) throw result.error;
+        rows.push(...(result.data || []) as unknown as Record<string, unknown>[]);
+        if ((result.data || []).length < 1000) break;
+        // Never silently present truncated appointment totals as the full book.
+        if (offset >= 99000) throw new Error("Workspace record limit exceeded.");
       }
-      const result = await query.order("created_at", { ascending: false });
-      if (result.error) throw result.error;
-      return [table, result.data || []] as const;
+      return [table, rows] as const;
     }));
+    const records: Record<string, Record<string, unknown>[]> = Object.fromEntries(entries);
+    if (!context.isOwner && context.teamMember?.stylist_id) {
+      const assignedBookings = new Set(records.bookings.map(row => row.id));
+      records.notifications = records.notifications.filter(row => !row.booking_id || assignedBookings.has(row.booking_id));
+    }
     return Response.json({
       salon: context.salon,
-      records: Object.fromEntries(entries),
+      records,
       permissions: context.isOwner ? null : permissions,
       isTeamMember: !context.isOwner,
     }, { headers: { "Cache-Control": "private, no-store" } });
