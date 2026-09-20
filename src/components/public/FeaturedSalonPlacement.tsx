@@ -11,6 +11,12 @@ import type { PublicSalonResult } from "@/lib/discoveryServer";
 import { readApiResponse } from "@/lib/apiResponseClient";
 
 type Promo = { title: string; body: string; href: string };
+type FeaturedSnapshot = { key: string; salons: PublicSalonResult[]; total: number; promo: Promo; error: string };
+const DEFAULT_PROMO: Promo = {
+  title: "Own a business? Get featured here.",
+  body: "Put your salon in front of nearby clients with a clearly labeled featured placement.",
+  href: "/partner",
+};
 const SESSION_SEED_KEY = "girlz-culture-featured-rotation-v1";
 
 function rotationSeed() {
@@ -34,29 +40,27 @@ export default function FeaturedSalonPlacement({
   maxCards?:number;
 }) {
   const customerLocation = useCustomerLocation();
-  const [salons, setSalons] = useState<PublicSalonResult[]>([]);
-  const [total, setTotal] = useState(0);
-  const [promo, setPromo] = useState<Promo>({
-    title: "Own a business? Get featured here.",
-    body: "Put your salon in front of nearby clients with a clearly labeled featured placement.",
-    href: "/partner",
-  });
-  const [loading, setLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState("");
+  const [snapshot, setSnapshot] = useState<FeaturedSnapshot | null>(null);
+  const [pending, setPending] = useState<{ key: string; append: boolean } | null>(null);
+  const requestEpoch = useRef({ value: 0 });
   const carousel = useRef<HTMLDivElement>(null);
   const location = customerLocation.location;
   const limit = viewAll ? 24 : Math.max(1,Math.min(24,Math.round(maxCards)));
+  const queryKey = location && validCoordinates(location)
+    ? JSON.stringify([location.lat, location.lng, customerLocation.radiusMiles, limit, viewAll]) : null;
+  const current = snapshot?.key === queryKey ? snapshot : null;
+  const salons = current?.salons || [];
+  const total = current?.total || 0;
+  const promo = current?.promo || DEFAULT_PROMO;
+  // Pending begins in the first render for this query, before its request timer.
+  const loading = queryKey !== null && (!current || (pending?.key === queryKey && !pending.append));
+  const loadingMore = pending?.key === queryKey && pending?.append;
+  const error = pending?.key === queryKey ? "" : current?.error || "";
 
   async function load(offset = 0, append = false, signal?: AbortSignal) {
-    if (!location || !validCoordinates(location)) {
-      setSalons([]);
-      setTotal(0);
-      return;
-    }
-    if (append) setLoadingMore(true);
-    else setLoading(true);
-    setError("");
+    if (!location || !queryKey) return;
+    const epoch = ++requestEpoch.current.value;
+    setPending({ key: queryKey, append });
     try {
       const params = new URLSearchParams({
         lat: String(location.lat),
@@ -77,42 +81,49 @@ export default function FeaturedSalonPlacement({
         error?: string;
       };
       if (!response.ok) throw new Error(body.error || "Featured salons could not be loaded.");
+      if (epoch !== requestEpoch.current.value || signal?.aborted) return;
       const next = Array.isArray(body.salons) ? body.salons : [];
-      setSalons((current) =>
-        append
-          ? [
-              ...current,
-              ...next.filter(
-                (row) => !current.some((item) => item.id === row.id),
-              ),
-            ]
-          : next,
-      );
-      setTotal(Number(body.total || 0));
-      if (body.promo) setPromo(body.promo);
+      setSnapshot((previous) => {
+        const matching = previous?.key === queryKey ? previous : null;
+        return {
+          key: queryKey,
+          salons: append && matching ? [...matching.salons, ...next.filter(row => !matching.salons.some(item => item.id === row.id))] : next,
+          total: Number(body.total || 0),
+          promo: body.promo || matching?.promo || DEFAULT_PROMO,
+          error: "",
+        };
+      });
     } catch (loadError) {
-      if ((loadError as Error).name !== "AbortError")
-        setError(loadError instanceof Error ? loadError.message : "Featured salons could not be loaded. Please try again.");
+      if (epoch === requestEpoch.current.value && !signal?.aborted && (loadError as Error).name !== "AbortError") {
+        setSnapshot(previous => ({
+          key: queryKey,
+          salons: previous?.key === queryKey ? previous.salons : [],
+          total: previous?.key === queryKey ? previous.total : 0,
+          promo: previous?.key === queryKey ? previous.promo : DEFAULT_PROMO,
+          error: loadError instanceof Error ? loadError.message : "Featured salons could not be loaded. Please try again.",
+        }));
+      }
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (epoch === requestEpoch.current.value) setPending(null);
     }
   }
 
   useEffect(() => {
-    if (!location || !validCoordinates(location)) return;
+    if (!queryKey) return;
+    const epochCounter = requestEpoch.current;
     const controller = new AbortController();
     const timer = window.setTimeout(
       () => void load(0, false, controller.signal),
       80,
     );
     return () => {
+      ++epochCounter.value;
       window.clearTimeout(timer);
       controller.abort();
     };
-    // Location coordinates are the complete public placement inputs.
+    // The key includes all effective inputs and separates carousel/grid requests.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location?.lat, location?.lng, customerLocation.radiusMiles, viewAll,maxCards]);
+  }, [queryKey]);
 
   function scroll(direction: -1 | 1) {
     const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
@@ -148,7 +159,7 @@ export default function FeaturedSalonPlacement({
       </div>
       {!customerLocation.ready ? (
         <SalonCardSkeletons label="Loading featured salons" count={viewAll ? 8 : 4} grid={viewAll} />
-      ) : !location ? (
+      ) : !queryKey ? (
         <div className="rounded-[15px] border border-plum/10 bg-white p-6 text-center">
           <h3 className="font-serif text-xl text-plum">
             Local featured salons need a search area
