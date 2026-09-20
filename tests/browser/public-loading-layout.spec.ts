@@ -18,29 +18,69 @@ async function locationFixture(page: Page) {
   await page.addInitScript(stored => {
     localStorage.setItem('girlz-culture-customer-location-v1', JSON.stringify(stored));
     localStorage.setItem('girlz-culture-mobile-location-prompt-v1', JSON.stringify({ dismissedAt: Date.now(), outcome: 'dismissed' }));
+    localStorage.setItem('girlz-culture-location-native-request-v1', JSON.stringify({ attemptedAt: Date.now(), outcome: 'denied' }));
   }, createStoredCustomerLocation({ lat: 40.71, lng: -74, label: 'Example city', source: 'explicit' }));
 }
+
+// Hold the existing 80ms placement timers, rather than racing hydration or
+// sleeping long enough to miss the first ready-location render.
+async function holdPlacementTimers(page: Page) {
+  await page.addInitScript(() => {
+    const originalSet = window.setTimeout.bind(window);
+    const originalClear = window.clearTimeout.bind(window);
+    const pending = new Map<number, () => void>();
+    let nextId = -1;
+    window.setTimeout = ((handler: TimerHandler, delay?: number, ...args: unknown[]) => {
+      if (delay !== 80 || typeof handler !== 'function') return originalSet(handler, delay, ...args);
+      const id = nextId--;
+      pending.set(id, () => handler(...args));
+      return id;
+    }) as typeof window.setTimeout;
+    window.clearTimeout = (id: Parameters<typeof window.clearTimeout>[0]) => {
+      if (typeof id === 'number' && pending.delete(id)) return;
+      originalClear(id);
+    };
+    Object.assign(window, { publicPlacementTimers: {
+      count: () => pending.size,
+      release: () => { const callbacks = [...pending.values()]; pending.clear(); callbacks.forEach(callback => callback()); },
+    } });
+  });
+}
+const timerCount = (page: Page) => page.evaluate(() => (window as unknown as { publicPlacementTimers: { count: () => number } }).publicPlacementTimers.count());
+const releasePlacementTimers = (page: Page) => page.evaluate(() => (window as unknown as { publicPlacementTimers: { release: () => void } }).publicPlacementTimers.release());
 
 for (const width of [320, 390, 768, 1440]) {
   test('Public salon loading rows retain compact card layout at ' + width + 'px', async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });
     await locationFixture(page);
+    await holdPlacementTimers(page);
     let release!: () => void;
     const gate = new Promise<void>(resolve => { release = resolve; });
+    let releaseChanged!: () => void;
+    const changedGate = new Promise<void>(resolve => { releaseChanged = resolve; });
+    const changedSalons = salons.slice(0, 2).map((salon, index) => ({ ...salon, id: 'changed-' + index, name: 'Changed Area Studio ' + (index + 1) }));
     let nearbyReads = 0, featuredReads = 0;
     await page.route('**/api/discovery/salons?*', async route => {
       nearbyReads++;
-      await gate;
-      await route.fulfill({ json: { salons, total: salons.length } });
+      const changed = new URL(route.request().url()).searchParams.get('lat') === '41';
+      await (changed ? changedGate : gate);
+      await route.fulfill({ json: { salons: changed ? changedSalons : salons, total: changed ? 2 : salons.length } });
     });
     await page.route('**/api/discovery/featured?*', async route => {
       featuredReads++;
-      await gate;
-      await route.fulfill({ json: { salons, total: salons.length } });
+      const changed = new URL(route.request().url()).searchParams.get('lat') === '41';
+      await (changed ? changedGate : gate);
+      await route.fulfill({ json: { salons: changed ? changedSalons : salons, total: changed ? 2 : salons.length } });
     });
     await page.goto('/site-access');
-    await expect.poll(() => nearbyReads > 0 && featuredReads > 0).toBe(true);
     const sections = page.locator('[data-home-salon-section]');
+    await expect.poll(() => timerCount(page)).toBeGreaterThanOrEqual(2);
+    expect(nearbyReads).toBe(0); expect(featuredReads).toBe(0);
+    for (const section of await sections.all()) await expect(section.getByRole('status')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'No salons are nearby yet', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /Own a business\? Get featured here/ })).toHaveCount(0);
+    await releasePlacementTimers(page);
+    await expect.poll(() => nearbyReads > 0 && featuredReads > 0).toBe(true);
     const measured: number[] = [];
     for (const section of await sections.all()) {
       const loading = section.getByRole('status');
@@ -69,6 +109,30 @@ for (const width of [320, 390, 768, 1440]) {
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     await page.screenshot({ path: info.outputPath('public-loaded-' + width + '.png'), fullPage: false });
+    const priorReads = { nearby: nearbyReads, featured: featuredReads };
+    await page.evaluate(stored => {
+      const key = 'girlz-culture-customer-location-v1';
+      const value = JSON.stringify(stored);
+      localStorage.setItem(key, value);
+      window.dispatchEvent(new StorageEvent('storage', { key, newValue: value }));
+    }, createStoredCustomerLocation({ lat: 41, lng: -74, label: 'Changed area', source: 'explicit' }));
+    await expect.poll(() => timerCount(page)).toBeGreaterThanOrEqual(2);
+    for (const section of await sections.all()) {
+      await expect(section.getByRole('status')).toBeVisible();
+      await expect(section.locator('[data-salon-card]')).toHaveCount(0);
+    }
+    expect(nearbyReads).toBe(priorReads.nearby); expect(featuredReads).toBe(priorReads.featured);
+    await expect(page.getByRole('heading', { name: 'No salons are nearby yet', exact: true })).toHaveCount(0);
+    await releasePlacementTimers(page);
+    await expect.poll(() => nearbyReads > priorReads.nearby && featuredReads > priorReads.featured).toBe(true);
+    for (const section of await sections.all()) await expect(section.getByRole('status')).toBeVisible();
+    releaseChanged();
+    for (const section of await sections.all()) {
+      await expect(section.getByRole('status')).toHaveCount(0);
+      await expect(section.locator('[data-salon-card]')).toHaveCount(2);
+      await expect(section.getByRole('link', { name: 'View Changed Area Studio 1', exact: true })).toHaveAttribute('href', '/salon/acceptance-salon');
+      await expect(section.getByRole('link', { name: 'View Example Hair Studio 1', exact: true })).toHaveCount(0);
+    }
   });
 }
 

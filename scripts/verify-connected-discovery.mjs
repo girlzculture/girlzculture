@@ -20,7 +20,9 @@ assert.match(autocomplete, /No matching styles or salons found/);
 const nearby = read("src/components/public/NearbySalonPlacement.tsx");
 assert.match(nearby, /api\/discovery\/salons/);
 assert.match(nearby, /maxCards=6/);
-assert.match(nearby, /limit:\s*String\(Math\.max/);
+assert.match(nearby, /const\s+limit\s*=\s*Math\.max\(\s*1,\s*Math\.min\(\s*24,\s*Math\.round\(maxCards\)\s*\)\s*\)/);
+assert.match(nearby, /new URLSearchParams\(\{[^}]*\blimit:\s*String\(limit\)/);
+assert.match(nearby, /JSON\.stringify\(\[location\.lat,\s*location\.lng,\s*locationState\.radiusMiles,\s*limit\]\)/);
 assert.match(nearby, /No salons are nearby yet/);
 assert.doesNotMatch(nearby, /fake|placeholder salon/i);
 
