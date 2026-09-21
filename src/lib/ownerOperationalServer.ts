@@ -5,6 +5,7 @@ import { calendarAvailability } from "@/lib/bookingAvailabilityServer";
 import { zonedLocalToUtc } from "@/lib/dateTime";
 import { validateSalonRecordEntitlements } from "@/lib/salonRecordEntitlements";
 import { sanitizeSalonRecord } from "@/lib/salonRecordValidation";
+import { matchBusinessCatalog } from "@/lib/businessCatalogSearch";
 
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row = Record<string, unknown>;
@@ -70,19 +71,63 @@ export async function prepareOwnerOperation(context: Context, tool: AssistantToo
       if (duration === null) throw new AssistantError("ASSISTANT_DURATION_CLARIFICATION_REQUIRED", 409);
       if (duration < min || duration > max) throw new AssistantError("ASSISTANT_INVALID_DURATION", 409);
       buffer = Number(service.buffer_minutes);
-    } else if (!String(values.service_name || "").trim()) throw new AssistantError("ASSISTANT_SERVICE_CLARIFICATION_REQUIRED", 409);
+    } else {
+      const requestedService = String(values.service_name || "").trim();
+      const servicePreference = values.service_preference === "any" ? "any" : values.service_preference === "custom" ? "custom" : "named";
+      if (!requestedService && servicePreference !== "any") throw new AssistantError("ASSISTANT_SERVICE_CLARIFICATION_REQUIRED", 409);
+      if (servicePreference === "any") {
+        const inventory = await admin.from("styles").select("id,name,duration_min_hours,duration_max_hours,buffer_minutes,is_draft,archived_at").eq("salon_id", salon.id).is("archived_at", null).eq("is_draft", false).order("name").order("id").limit(1000);
+        if (inventory.error) throw inventory.error;
+        const rows = Array.isArray(inventory.data) ? inventory.data as Row[] : [];
+        if (!rows.length) throw new AssistantError("ASSISTANT_SERVICE_CLARIFICATION_REQUIRED", 409);
+        service = rows[0];
+      } else if (servicePreference === "named" && requestedService) {
+        const inventory = await admin.from("styles").select("id,name,duration_min_hours,duration_max_hours,buffer_minutes,is_draft,archived_at").eq("salon_id", salon.id).is("archived_at", null).eq("is_draft", false).order("name").order("id").limit(1000);
+        if (inventory.error) throw inventory.error;
+        const rows = Array.isArray(inventory.data) ? inventory.data as Row[] : [];
+        const matches = matchBusinessCatalog(rows, requestedService);
+        // Natural-language names are resolved only from this business's own
+        // active catalog. A unique fuzzy candidate is safe; two candidates
+        // remain an explicit clarification rather than an invented identity.
+        const exact = matches.filter(match => match.exact);
+        if (exact.length === 1) service = exact[0].record;
+        else if (matches.length === 1) service = matches[0].record;
+        else if (matches.length > 1) throw new AssistantError("ASSISTANT_SERVICE_CLARIFICATION_REQUIRED", 409);
+      }
+      if (service) {
+        const min = Number(service.duration_min_hours) * 60, max = Number(service.duration_max_hours || service.duration_min_hours) * 60;
+        if (!Number.isFinite(min) || min < 15 || max < min) throw new AssistantError("ASSISTANT_DURATION_CLARIFICATION_REQUIRED", 409);
+        // An explicit "any service" request gets a deterministic safe
+        // catalog default. Reserve the full saved range so a shorter-than-
+        // expected selection cannot create an overlap.
+        if (duration === null && servicePreference === "any" && min === max) duration = min;
+        if (duration === null && servicePreference === "any" && max > min) duration = max;
+        if (duration === null && min === max) duration = min;
+        if (duration === null) throw new AssistantError("ASSISTANT_DURATION_CLARIFICATION_REQUIRED", 409);
+        if (duration < min || duration > max) throw new AssistantError("ASSISTANT_INVALID_DURATION", 409);
+        buffer = Number(service.buffer_minutes);
+      } else if (duration === null) {
+        throw new AssistantError("ASSISTANT_DURATION_CLARIFICATION_REQUIRED", 409);
+      }
+    }
     if (duration === null) throw new AssistantError("ASSISTANT_DURATION_CLARIFICATION_REQUIRED", 409);
     if (!Number.isInteger(duration) || duration < 15 || duration > 1440 || !Number.isInteger(buffer) || buffer < 0 || buffer > 180) throw new AssistantError("ASSISTANT_INVALID_DURATION");
-    const roster = await admin.from("stylists").select("id,name").eq("salon_id", salon.id).eq("is_active", true).is("archived_at", null);
+    const roster = await admin.from("stylists").select("id,name").eq("salon_id", salon.id).eq("is_active", true).is("archived_at", null).order("name").order("id");
     if (roster.error) throw roster.error;
-    let professional = args.stylist_id || null;
-    if (!professional && (roster.data || []).length > 1) throw new AssistantError("ASSISTANT_PROFESSIONAL_CLARIFICATION_REQUIRED", 409);
+    let professional = values.stylist_id || null;
+    const stylistPreference = values.stylist_preference === "any" ? "any" : values.stylist_preference === "named" ? "named" : "unspecified";
+    if (!professional && stylistPreference !== "any" && (roster.data || []).length > 1) throw new AssistantError("ASSISTANT_PROFESSIONAL_CLARIFICATION_REQUIRED", 409);
     if (!professional && roster.data?.length === 1) professional = roster.data[0].id;
     if (professional && !roster.data?.some(row => row.id === professional)) throw new AssistantError("ASSISTANT_RECORD_NOT_FOUND", 404);
     if (context.teamMember?.stylist_id && professional !== context.teamMember.stylist_id) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
-    const calendar = await calendarAvailability({ salonId: salon.id, date: String(args.date), stylistId: professional ? String(professional) : null, excludeBookingId: tool === "prepare_manual_reschedule" ? String(args.booking_id) : null });
-    const start = zonedLocalToUtc(`${args.date}T${args.time}`, calendar.time_zone);
+    const calendar = await calendarAvailability({ salonId: salon.id, date: String(values.date), stylistId: professional ? String(professional) : null, excludeBookingId: tool === "prepare_manual_reschedule" ? String(args.booking_id) : null });
+    const start = zonedLocalToUtc(`${values.date}T${values.time}`, calendar.time_zone);
     const end = new Date(start.getTime() + (duration + buffer) * 60000);
+    if (!professional && stylistPreference === "any") {
+      const available = (roster.data || []).find(row => calendar.gaps.some(gap => gap.stylist_id === row.id && Date.parse(gap.start) <= start.getTime() && Date.parse(gap.end) >= end.getTime()));
+      professional = available?.id || null;
+      if (context.teamMember?.stylist_id && professional !== context.teamMember.stylist_id) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
+    }
     if (!calendar.gaps.some(gap => gap.stylist_id === professional && Date.parse(gap.start) <= start.getTime() && Date.parse(gap.end) >= end.getTime())) throw new AssistantError("ASSISTANT_AVAILABILITY_CONFLICT", 409);
     payload = { ...payload, appointment_datetime: start.toISOString(), duration_minutes: duration, buffer_minutes: buffer, stylist_id: professional, professional_name: roster.data?.find(row => row.id === professional)?.name || null, service_name: service?.name || values.service_name, time_zone: calendar.time_zone, payment_status: "Not collected by Girlz Culture", customer_policy_acceptance: "Not accepted through Girlz Culture", service_facts: service };
     notices.push("BUSINESS_ADDED_NO_GC_PAYMENT");

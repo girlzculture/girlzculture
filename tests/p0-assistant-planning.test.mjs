@@ -265,7 +265,9 @@ test('shared planner definitions preserve the complete pre-factoring owner schem
   const schema = ownerPlannerSchema(new Set(all), false), expanded = expandedPlannerSchema(schema);
   // Captured from origin/main 8a4ee043 before factoring, including descriptions,
   // strict required fields, patterns, limits, enum order and all 41 tool choices.
-  assert.equal(createHash('sha256').update(JSON.stringify(expanded)).digest('hex'), '4f14e29e4c130ff87827c54d3c8b7873f5281584a5c27ff23a7ce443f6472d52');
+  // The manual-appointment plan now carries explicit service/stylist preference
+  // fields so terse follow-ups can preserve “any” versus named selections.
+  assert.equal(createHash('sha256').update(JSON.stringify(expanded)).digest('hex'), 'cc7c1c67ea8d9a275e6a369d686cdaf12ce26a05f5586948ffea171cce5e9d6a');
   assert.ok(Buffer.byteLength(JSON.stringify(schema)) < Buffer.byteLength(JSON.stringify(expanded)) - 7000);
   for (const granted of [[], ...all.map(permission => [permission]), all, all.filter(permission => permission !== 'client_history'), all.filter(permission => permission !== 'my_page')]) {
     const current = ownerPlannerSchema(new Set(granted), false), unfolded = expandedPlannerSchema(current);

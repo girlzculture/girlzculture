@@ -18,8 +18,8 @@ const policy = object({ business_policy_text: { type: ["string", "null"], maxLen
 const date = { ...string(10), pattern: "^\\d{4}-\\d{2}-\\d{2}$" };
 const manualAppointment = {
   guest_name: { ...string(120), minLength: 1 }, guest_phone: string(40), guest_email: string(254),
-  style_id: nullableId, service_name: string(120), duration_minutes: { type: ["integer", "null"], minimum: 15, maximum: 1440 } as ToolSchema,
-  stylist_id: nullableId, date, time: clockTime, source: enumeration("phone", "walk_in", "instagram", "whatsapp", "other"), notes: string(1200),
+  style_id: nullableId, service_name: string(120), service_preference: enumeration("named", "any", "custom"), duration_minutes: { type: ["integer", "null"], minimum: 15, maximum: 1440 } as ToolSchema,
+  stylist_id: nullableId, stylist_preference: enumeration("named", "any", "unspecified"), date, time: clockTime, source: enumeration("phone", "walk_in", "instagram", "whatsapp", "other"), notes: string(1200),
 };
 export const ASSISTANT_TOOLS = {
   get_business_summary: { risk: 1, permission: "overview", schema: object(range) },
@@ -101,14 +101,16 @@ export function validateTool(name: unknown, input: unknown) {
   if (typeof name !== "string" || !Object.hasOwn(ASSISTANT_TOOLS, name)) throw new AssistantError("ASSISTANT_UNKNOWN_TOOL");
   const tool = name as AssistantTool;
   const schema: ToolSchema = ASSISTANT_TOOLS[tool].schema;
-  const candidate = tool === "prepare_business_policy_update" && input && typeof input === "object" && "policy" in input && input.policy && typeof input.policy === "object"
+  const candidate = tool === "prepare_manual_appointment" && input && typeof input === "object" && !Array.isArray(input)
+    ? { service_preference: "named", stylist_preference: "unspecified", ...input as Record<string, unknown> }
+    : tool === "prepare_business_policy_update" && input && typeof input === "object" && "policy" in input && input.policy && typeof input.policy === "object"
     ? { ...input, policy: {
       ...(!Object.hasOwn(input.policy, "refund_satisfaction") && !Object.hasOwn(input.policy, "refund_terms") ? { refund_satisfaction: "contact_business", refund_terms: "" } : {}),
       business_policy_text: null,
       ...input.policy,
     } } : tool === "get_availability" && input && typeof input === "object" && !Array.isArray(input) ? { days: 1, selected_options: [], ...input } : input;
   assertSchema(candidate, schema);
-  const args = input as Record<string, unknown>;
+  const args = candidate as Record<string, unknown>;
   if (tool === "get_availability") {
     const groups = (candidate as { selected_options: { group_id: string; values: string[] }[] }).selected_options;
     if (new Set(groups.map(group => group.group_id)).size !== groups.length || groups.some(group => new Set(group.values).size !== group.values.length) || !args.style_id && (Number(args.days ?? 1) !== 1 || groups.length)) throw new AssistantError("ASSISTANT_INVALID_INPUT");

@@ -159,6 +159,21 @@ test('explicit noncatalog service and duration create no master style or fake cu
   assert.equal(result.request.execution_payload.service_facts,null);assert.equal(result.request.arguments.style_id,null);
   assert.equal(result.request.execution_payload.duration_minutes,30);
 });
+test('natural-language service matching stays inside the business catalog',async()=>{
+  const f=fixture({tables:{styles:[{id:service,salon_id:business,name:'Boho / Goddess Braids',duration_min_hours:5,duration_max_hours:7,buffer_minutes:15,is_draft:false,archived_at:null}]}});
+  const result=await f.run('prepare_manual_appointment',{...manual,style_id:null,service_name:'boho brads',service_preference:'named',duration_minutes:300});
+  assert.equal(result.request.execution_payload.service_name,'Boho / Goddess Braids');
+  assert.equal(result.request.execution_payload.service_facts.name,'Boho / Goddess Braids');
+  assert.equal(result.request.execution_payload.duration_minutes,300);
+});
+test('explicit any-service and any-stylist requests choose safe own-business defaults',async()=>{
+  const f=fixture({professional:professional,tables:{styles:[{id:service,salon_id:business,name:'Silk Press',duration_min_hours:1,duration_max_hours:2,buffer_minutes:15,is_draft:false,archived_at:null}],stylists:[{id:professional,salon_id:business,name:'Aisha',is_active:true,archived_at:null},{id:actor,salon_id:business,name:'Bri',is_active:true,archived_at:null}]}});
+  const result=await f.run('prepare_manual_appointment',{...manual,style_id:null,service_name:'any service',service_preference:'any',duration_minutes:null,stylist_id:null,stylist_preference:'any'});
+  assert.equal(result.request.execution_payload.service_name,'Silk Press');
+  assert.equal(result.request.execution_payload.duration_minutes,120);
+  assert.equal(result.request.execution_payload.stylist_id,professional);
+  assert.equal(result.request.execution_payload.professional_name,'Aisha');
+});
 test('existing marketplace bookings cannot be changed with manual-only actions',async()=>{
   const f=fixture({tables:{bookings:[{id:service,salon_id:business,booking_origin:'marketplace',status:'Confirmed'}]}});
   await assert.rejects(f.run('prepare_manual_cancellation',{booking_id:service,reason:'Phone call'}),/ASSISTANT_MANUAL_APPOINTMENT_REQUIRED/);
