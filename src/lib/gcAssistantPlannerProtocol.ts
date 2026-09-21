@@ -50,6 +50,40 @@ const object = (properties: Record<string, unknown>, description?: string) => ({
   type: "object", additionalProperties: false, properties, required: Object.keys(properties), ...(description ? { description } : {}),
 });
 
+/** Share only byte-identical schema nodes after permission filtering. No tool,
+ * description, constraint or context fact is removed to fit the input budget.
+ * Structured Outputs supports local definitions:
+ * https://developers.openai.com/api/docs/guides/structured-outputs#definitions-are-supported
+ */
+function withSharedDefinitions<T extends Record<string, unknown>>(schema: T): T & { $defs?: Record<string, unknown> } {
+  const repeated = new Map<string, { value: Record<string, unknown>; count: number }>();
+  function collect(value: unknown) {
+    if (Array.isArray(value)) { value.forEach(collect); return; }
+    if (!value || typeof value !== "object") return;
+    const node = value as Record<string, unknown>;
+    if (typeof node.type === "string" || Array.isArray(node.type) && node.type.every(type => typeof type === "string") || Array.isArray(node.anyOf)) {
+      const key = JSON.stringify(node), existing = repeated.get(key);
+      if (existing) existing.count++;
+      else repeated.set(key, { value: node, count: 1 });
+    }
+    Object.values(node).forEach(collect);
+  }
+  collect(schema);
+  const shared = new Map([...repeated].filter(([key, node]) => key.length >= 80 && node.count > 1)
+    .map(([key, node], index) => [key, { ...node, name: `shared${index}` }]));
+  if (!shared.size) return schema;
+  function rewrite(value: unknown, definitionRoot = false): unknown {
+    if (Array.isArray(value)) return value.map(child => rewrite(child));
+    if (!value || typeof value !== "object") return value;
+    const entry = shared.get(JSON.stringify(value));
+    if (entry && !definitionRoot) return { $ref: `#/$defs/${entry.name}` };
+    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, rewrite(child)]));
+  }
+  const $defs = Object.fromEntries([...shared.values()].map(node => [node.name, rewrite(node.value, true)]));
+  const compact = { ...rewrite(schema, true) as T, $defs };
+  return JSON.stringify(compact).length < JSON.stringify(schema).length ? compact : schema;
+}
+
 /** A single discriminated decision prevents the provider from emitting a tool
  * and a clarification/navigation together. The answer phase has no tool shape. */
 export function ownerPlannerSchema(granted: ReadonlySet<string>, answerOnly: boolean) {
@@ -57,11 +91,11 @@ export function ownerPlannerSchema(granted: ReadonlySet<string>, answerOnly: boo
   const tools = Object.entries(ASSISTANT_TOOLS).filter(([name, definition]) => granted.has(definition.permission) && (name !== "get_outstanding_balances" || granted.has("bookings") && granted.has("client_history")) && (name !== "calculate_service_selection" || granted.has("my_page")) && (name !== "get_booking_price_details" || granted.has("earnings") && granted.has("client_history"))).map(([name, definition]) => object({
     tool: { type: "string", enum: [name] }, args: definition.schema,
   }, purposes[name as AssistantTool]));
-  return object({ language_switch: { type: ["string", "null"], enum: [null, ...ASSISTANT_LANGUAGES], description: "Only an explicit request in the current user message to change the response language sets this code. Otherwise null; preserve the existing response language." }, decision: { anyOf: [
+  return withSharedDefinitions(object({ language_switch: { type: ["string", "null"], enum: [null, ...ASSISTANT_LANGUAGES], description: "Only an explicit request in the current user message to change the response language sets this code. Otherwise null; preserve the existing response language." }, decision: { anyOf: [
     ...tools,
     object({ clarification: { type: "string", minLength: 1, maxLength: 240 } }, "Ask one necessary missing-detail question, or greet the owner. Never answer business-data questions here."),
     object({ navigate: { type: "string", enum: destinations } }, "Open a controlled dashboard workflow when requested, or for financial/security actions that cannot be prepared here."),
-  ] } });
+  ] } }));
 }
 
 export class AssistantPlannerError extends AssistantError {
