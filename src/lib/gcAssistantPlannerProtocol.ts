@@ -105,6 +105,9 @@ export class AssistantPlannerError extends AssistantError {
 }
 
 const isObject = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
+// Reject punctuation/control-only fragments, not valid non-Latin or numeric
+// responses. This checks readable content, not factual or semantic correctness.
+const hasProseContent = (value: string) => /[\p{L}\p{N}]/u.test(value);
 
 export function parseOwnerPlannerResponse(text: string, granted: ReadonlySet<string>, answerOnly: boolean) {
   let payload: unknown;
@@ -113,7 +116,7 @@ export function parseOwnerPlannerResponse(text: string, granted: ReadonlySet<str
   if (!isObject(payload) || Object.keys(payload).length !== (answerOnly ? 1 : 2) || !Object.hasOwn(payload, key) || (!answerOnly && payload.language_switch !== null && !isAssistantLanguage(payload.language_switch))) throw new AssistantPlannerError("ENVELOPE");
   const result: { plan: { tool: string; args: Record<string, unknown> } | null; reply: string | null; clarification: string | null; navigate: string | null; language_switch: AssistantLanguage | null } = { plan: null, reply: null, clarification: null, navigate: null, language_switch: answerOnly ? null : payload.language_switch as AssistantLanguage | null };
   if (answerOnly) {
-    if (typeof payload.reply !== "string" || !payload.reply.trim() || payload.reply.length > 900) throw new AssistantPlannerError("ANSWER");
+    if (typeof payload.reply !== "string" || !payload.reply.trim() || payload.reply.length > 900 || !hasProseContent(payload.reply)) throw new AssistantPlannerError("ANSWER");
     result.reply = payload.reply; return result;
   }
   const decision = payload.decision;
@@ -126,7 +129,7 @@ export function parseOwnerPlannerResponse(text: string, granted: ReadonlySet<str
     if (checked.tool === "calculate_service_selection" && (!granted.has("my_page") || checked.args.promotion_id && !granted.has("promotions")) || checked.tool === "get_booking_price_details" && (!granted.has("earnings") || !granted.has("client_history"))) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
     result.plan = { tool: checked.tool, args: checked.args }; return result;
   }
-  if (keys.length === 1 && typeof decision.clarification === "string" && decision.clarification.trim() && decision.clarification.length <= 240) {
+  if (keys.length === 1 && typeof decision.clarification === "string" && decision.clarification.trim() && decision.clarification.length <= 240 && hasProseContent(decision.clarification)) {
     result.clarification = decision.clarification; return result;
   }
   if (keys.length === 1 && typeof decision.navigate === "string" && destinations.some(value => value === decision.navigate)) {

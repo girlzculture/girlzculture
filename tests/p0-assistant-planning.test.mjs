@@ -689,6 +689,37 @@ test('one service decision is normalized and a revoked tool is absent from the p
   await assert.rejects(rejected.run(),/ASSISTANT_ACCESS_DENIED/);
 });
 
+const proseGuardHistory = [{ tool: 'get_services_and_prices', permission: 'styles', arguments: { query: 'Boho' }, result: { services: [{ name: 'Boho / Goddess Braids', duration_min_hours: 5, duration_max_hours: 7, buffer_minutes: 45 }] } }];
+
+for (const answerOnly of [false, true]) test(`structured prose guard rejects punctuation-only ${answerOnly ? 'answers' : 'clarifications'} without retry or false completion`, async () => {
+  for (const prose of ['{', '[]', ' \u200b\u0000 ', '…']) {
+    const f = fixture({ answerOnly, history: proseGuardHistory, output: answerOnly ? { reply: prose } : { clarification: prose } });
+    await assert.rejects(f.run('fr', 'Et combien de temps faut-il prévoir pour ce service, pause comprise ? Réponds en français.'), /ASSISTANT_INVALID_PLAN/);
+    assert.deepEqual(JSON.parse(JSON.stringify(f.updates)), [{ outcome: 'failed', safe_error_code: answerOnly ? 'PLANNER_ANSWER' : 'PLANNER_DECISION' }]);
+    assert.equal(f.requests.length, 1, 'Invalid structured prose must not cause a hidden retry');
+  }
+});
+
+test('structured prose guard keeps raw incomplete JSON on the bounded JSON failure path', async () => {
+  const f = fixture({ rawText: '{' });
+  await assert.rejects(f.run(), /ASSISTANT_INVALID_PLAN/);
+  assert.deepEqual(JSON.parse(JSON.stringify(f.updates)), [{ outcome: 'failed', safe_error_code: 'PLANNER_JSON' }]);
+  assert.equal(f.requests.length, 1);
+});
+
+test('structured prose guard preserves French, Chinese, Wolof and numeric content in both phases', async () => {
+  for (const answerOnly of [false, true]) for (const [locale, prose] of [['fr', 'Quelle durée souhaitez-vous prévoir ?'], ['zh-CN', '请选择日期。'], ['wo', 'Ñaata?'], ['en', '3'], ['en', '0'], ['en', '$250']]) {
+    const f = fixture({ answerOnly, history: proseGuardHistory, output: answerOnly ? { reply: prose } : { clarification: prose } });
+    const result = await f.run(locale);
+    assert.equal(result[answerOnly ? 'reply' : 'clarification'], prose);
+    assert.deepEqual(JSON.parse(JSON.stringify(f.updates)), [{ outcome: 'completed', safe_error_code: null }]);
+    assert.equal(f.requests.length, 1);
+    const schema = f.requests[0].response_format.json_schema.schema;
+    assert.equal(answerOnly ? schema.properties.reply.maxLength : schema.properties.decision.anyOf.find(row => row.properties?.clarification).properties.clarification.maxLength, answerOnly ? 900 : 240);
+    assert.equal(f.requests[0].max_completion_tokens, answerOnly ? 900 : 1800);
+  }
+});
+
 test('malformed, truncated and competing provider outputs retain bounded diagnostic codes without raw output', async () => {
   for (const [options,code] of [
     [{rawText:'Private model output is not JSON'},'PLANNER_JSON'],
