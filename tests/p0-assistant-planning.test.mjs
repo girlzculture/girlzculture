@@ -215,6 +215,49 @@ function expandedPlannerSchema(schema) {
   return expand(schema);
 }
 
+test('service duration information follow-ups keep appointment-only clarification separate in both outgoing phases', async () => {
+  const request = 'Et combien de temps faut-il prévoir pour ce service, pause comprise ? Réponds en français.';
+  const saved = { services: [{ id: booking.id, name: 'Boho / Goddess Braids', base_price: 250, duration_min_hours: 5, duration_max_hours: 7, buffer_minutes: 30 }] };
+  const current = { services: [{ ...saved.services[0], buffer_minutes: 45 }] };
+  for (const answerOnly of [false, true]) {
+    const output = answerOnly ? { reply: 'Le service dure de 5 à 7 heures. La marge de planning supplémentaire est de 45 minutes ; elle ne prouve pas une pause pendant la prestation.' } : { plan: { tool: 'get_services_and_prices', args: { query: 'Boho / Goddess Braids' } } };
+    const f = fixture({ answerOnly, page: 'styles', history: [{ tool: 'get_services_and_prices', permission: 'styles', arguments: { query: 'Bohemian / Mermaid Braids' }, result: saved }], historyRead: current, output });
+    const result = await f.run('fr', request), wire = f.requests[0], context = JSON.parse(wire.messages[1].content);
+    assert.match(wire.messages[0].content, /Only when preparing a new or rescheduled appointment, ask which duration applies/);
+    assert.doesNotMatch(wire.messages[0].content, /If a service has a duration range ask which duration applies/);
+    if (!answerOnly) assert.match(wire.messages[0].content, /For service information questions, including duration and buffer follow-ups, select a fresh get_services_and_prices read/);
+    else {
+      assert.doesNotMatch(wire.messages[0].content, /select a fresh get_services_and_prices read/);
+      assert.match(wire.messages[0].content, /The authorized read for this question has now completed/);
+    }
+    assert.match(wire.messages[0].content, /return the saved duration range without asking the owner to choose its shorter or longer end/);
+    assert.match(wire.messages[0].content, /French/);
+    assert.equal(context.previous[0].result.services[0].buffer_minutes, 45);
+    assert.equal(context.previous[0].result.services[0].duration_min_hours, 5);
+    assert.equal(context.previous[0].result.services[0].duration_max_hours, 7);
+    assert.equal(context.previous[0].result.services[0].name, 'Boho / Goddess Braids');
+    assert.deepEqual(JSON.parse(wire.messages.at(-1).content), { request });
+    assert.equal(f.calls.filter(call => call.refresh === 'get_services_and_prices').length, 1);
+    assert.equal(f.requests.length, 1, 'no automatic provider retry');
+    assert.equal(wire.max_completion_tokens, answerOnly ? 900 : 1800);
+    const schema = wire.response_format.json_schema.schema;
+    if (answerOnly) { assert.equal(schema.properties.reply.maxLength, 900); assert.equal(result.reply, output.reply); }
+    else { assert.equal(schema.properties.decision.anyOf.find(row => row.properties?.clarification).properties.clarification.maxLength, 240); assert.equal(result.plan.tool, 'get_services_and_prices'); }
+  }
+});
+
+test('projected service buffer means additional calendar occupancy, not an evidenced customer break', async () => {
+  for (const answerOnly of [false, true]) {
+    const f = fixture({ answerOnly, history: [{ tool: 'get_services_and_prices', permission: 'styles', arguments: { query: 'Boho' }, result: { services: [{ id: booking.id, name: 'Boho / Goddess Braids', duration_min_hours: 5, duration_max_hours: 7, buffer_minutes: 45 }] } }], ...(answerOnly ? { output: { reply: 'La durée du service et la marge de planning sont distinctes.' } } : {}) });
+    await f.run('fr', 'Quelle est la durée, marge de planning comprise ?');
+    const facts = JSON.parse(f.requests[0].messages[1].content).previous[0].result;
+    assert.match(facts.duration_definition ?? '', /buffer_minutes is additional calendar occupancy/);
+    assert.match(facts.duration_definition, /not evidence of a break during the service or extra customer attendance/);
+    assert.match(facts.duration_definition, /Unselected options may change service duration/);
+    assert.deepEqual([facts.services[0].duration_min_hours, facts.services[0].duration_max_hours, facts.services[0].buffer_minutes], [5, 7, 45]);
+  }
+});
+
 test('shared planner definitions preserve the complete pre-factoring owner schema and every permitted tool argument', () => {
   const load = typescriptLoader(root), { ASSISTANT_TOOLS } = load('src/lib/gcAssistantCore.ts');
   const { ownerPlannerSchema } = load('src/lib/gcAssistantPlannerProtocol.ts');
@@ -831,7 +874,9 @@ test('the answer receives a named response language and unchanged authorized fac
     assert.ok(f.requests[0].messages[0].content.includes(`RESPONSE LANGUAGE: ${name}`));
     assert.match(f.requests[0].messages[0].content, /Write the entire reply in this language/);
     const facts = JSON.parse(f.requests[0].messages[1].content).previous[0].result;
-    assert.deepEqual(facts, { services: [{ name: 'Silk Press', base_price: 120, option_groups: [], choices_are_excerpt: false }], currency: 'USD', shown_count: 1, is_excerpt: false, generic_option_choices: [], generic_option_choice_count: 0, generic_options_are_excerpt: false });
+    assert.deepEqual(facts, { services: [{ name: 'Silk Press', base_price: 120, option_groups: [], choices_are_excerpt: false }], currency: 'USD',
+      duration_definition: 'duration_min_hours and duration_max_hours are saved service-time bounds. buffer_minutes is additional calendar occupancy, not evidence of a break during the service or extra customer attendance. Calendar occupancy adds the buffer to service duration. Unselected options may change service duration.',
+      shown_count: 1, is_excerpt: false, generic_option_choices: [], generic_option_choice_count: 0, generic_options_are_excerpt: false });
     assert.equal(f.requests.length, 1, 'No hidden translation provider or retry');
   }
 });

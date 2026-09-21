@@ -137,7 +137,9 @@ export function assistantServiceFacts(value: unknown, inventoryOnly = false): un
     const group = rowObject(value);
     return group && Array.isArray(group.options) ? group.options.map(value => ({ service_id: service.id, group_id: group.id, group_label: group.label, required: group.required, selection: group.selection, ...rowObject(value) })) : [];
   }));
-  return { ...result, is_excerpt: result.services.length > limit || Number(result.total) > result.services.length, shown_count: services.length,
+  return { ...result,
+    duration_definition: "duration_min_hours and duration_max_hours are saved service-time bounds. buffer_minutes is additional calendar occupancy, not evidence of a break during the service or extra customer attendance. Calendar occupancy adds the buffer to service duration. Unselected options may change service duration.",
+    is_excerpt: result.services.length > limit || Number(result.total) > result.services.length, shown_count: services.length,
     services: services.map(service => {
       if (inventoryOnly) return { id: service.id, name: service.name, base_price: service.base_price, price_display_min: service.price_display_min, price_display_max: service.price_display_max, duration_min_hours: service.duration_min_hours, duration_max_hours: service.duration_max_hours, price_completeness: service.price_completeness, monetary_quote_available: false };
       const groups = Array.isArray(service.option_groups) ? service.option_groups.map(value => {
