@@ -126,8 +126,11 @@ async function fixture(page:Page,locale='en') {
     expect(body.action).toBe('cancel');expect(body.confirm).toBe(true);expect(body.revision).toBe(post.revision);state.cancellations++;Object.assign(post,{status:'cancelled',revision:post.revision+1});return route.fulfill({json:{post,verified:true,external_posting:false}});
   };
   await page.route('**/api/salon/marketing',handler);
-  await page.route('https://maps.gstatic.com/gc-marketing-fixture/**',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#006677"/><text x="45" y="155" fill="white" font-size="25">Owner portfolio fixture</text></svg>'}));
+  await marketingPhotoFixture(page);
   return {auth,state,handler,source,snapshot};
+}
+async function marketingPhotoFixture(page:Page) {
+  await page.route('https://maps.gstatic.com/gc-marketing-fixture/own.svg',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#006677"/><text x="45" y="155" fill="white" font-size="25">Owner portfolio fixture</text></svg>'}));
 }
 async function prepare(page:Page,locale='en'){
   const t=(value:string)=>text(locale,value);const panel=page.getByRole('region',{name:t('Marketing content'),exact:true});
@@ -151,10 +154,50 @@ for(const [locale,width,height] of [['en',390,844],['fr',768,1024],['es',1440,10
     await expect(panel.getByRole('status')).toContainText(t('Approved and scheduled for your Girlz Culture business page. Nothing was posted externally.'));expect(f.state.publications).toBe(1);const localTime=(value:unknown)=>new Intl.DateTimeFormat('sv-SE',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(String(value))).replace(' ','T');expect(localTime(f.state.approvalBodies[0].scheduled_at)).toBe(starts);expect(localTime(f.state.approvalBodies[0].expires_at)).toBe(ends);
     await page.reload();await panel.getByRole('button',{name:t('Open marketing content'),exact:true}).click();await expect(panel.getByLabel(t('Caption title'),{exact:true})).toHaveValue('Boho / Goddess Braids · Maison Étoile GC123');expect(f.state.approvalCalls).toBe(1);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);const image=panel.getByRole('img',{name:'Own portfolio GC123',exact:true});await image.scrollIntoViewIfNeeded();await expect(image).toHaveJSProperty('naturalWidth',400);await panel.screenshot({path:info.outputPath(`marketing-${locale}-${width}.png`)});
     const context=await browser.newContext({baseURL:new URL(page.url()).origin,viewport:{width:width===390?1440:390,height:844},serviceWorkers:'block'});
-    try{const second=await context.newPage();await p0OwnerFixture(second,{locale,populated:true});await second.route('**/api/salon/marketing',f.handler);await second.goto('/salon/dashboard/promotions');const secondPanel=second.getByRole('region',{name:t('Marketing content'),exact:true});await secondPanel.getByRole('button',{name:t('Open marketing content'),exact:true}).click();await secondPanel.getByRole('button',{name:t('Cancel publication and remove from business page'),exact:true}).click();await expect(secondPanel.getByRole('status')).toContainText(t('Marketing publication cancelled and verified.'));expect(f.state.cancellations).toBe(1);}finally{await context.close();}
+    try{const second=await context.newPage();await p0OwnerFixture(second,{locale,populated:true});await second.route('**/api/salon/marketing',f.handler);await marketingPhotoFixture(second);await second.goto('/salon/dashboard/promotions');const secondPanel=second.getByRole('region',{name:t('Marketing content'),exact:true});await secondPanel.getByRole('button',{name:t('Open marketing content'),exact:true}).click();await secondPanel.getByRole('button',{name:t('Cancel publication and remove from business page'),exact:true}).click();await expect(secondPanel.getByRole('status')).toContainText(t('Marketing publication cancelled and verified.'));expect(f.state.cancellations).toBe(1);}finally{await context.close();}
     await panel.getByRole('button',{name:t('Refresh marketing status'),exact:true}).click();await expect(panel.getByRole('button',{name:t('Cancel publication and remove from business page'),exact:true})).toHaveCount(0);
   });
 }
+test('Business marketing failed portfolio image preserves the native Open target at 390px',async({page},info)=>{
+  const locale='zh-CN',f=await fixture(page,locale),t=(value:string)=>text(locale,value);
+  f.state.posts=[{id:'17500000-0000-4000-8000-000000000093',revision:1,status:'scheduled',source:f.source,snapshot:f.snapshot,copies:draftMarketingCopies(f.snapshot),...marketingDestinations(f.snapshot),scheduled_at:'2026-10-20T13:00:00.000Z',expires_at:'2026-10-21T21:00:00.000Z',published_at:null,updated_at:'2026-10-19T12:00:00.000Z',last_error:null}];
+  let release!:()=>void,observe!:()=>void;
+  const held=new Promise<void>(resolve=>release=resolve),observed=new Promise<void>(resolve=>observe=resolve);
+  await page.route(f.source.photo_urls[0],async route=>{observe();await held;await route.fulfill({status:404,contentType:'text/html',body:'Missing owner portfolio image'});});
+  await page.setViewportSize({width:390,height:844});await page.goto('/salon/dashboard/promotions');
+  const panel=page.getByRole('region',{name:t('Marketing content'),exact:true}),open=panel.getByRole('button',{name:t('Open marketing content'),exact:true}),photo=panel.getByRole('img',{name:'Own portfolio GC123',exact:true});
+  try{
+    await open.scrollIntoViewIfNeeded();await observed;
+    // Settle fonts independently so this regression isolates the real image
+    // error boundary rather than attributing a font swap to image geometry.
+    await open.evaluate(async element=>{element.getBoundingClientRect();await document.fonts.ready;const rect=element.getBoundingClientRect();window.scrollTo({top:scrollY+rect.top+rect.height/2-innerHeight/2,behavior:'instant'});});
+    await photo.evaluate((element:HTMLImageElement)=>{
+      Object.assign(window,{marketingImageFailure:new Promise<void>(resolve=>element.addEventListener('error',()=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())),{once:true}))});
+    });
+    const before=await open.evaluate(button=>{
+      const events:{type:string;isOpen:boolean}[]=[];
+      for(const type of ['pointerdown','pointerup','click'])document.addEventListener(type,event=>events.push({type,isOpen:button.contains(event.target as Node)}),{capture:true});
+      Object.assign(window,{marketingOpenEvents:events});
+      const rect=button.getBoundingClientRect();return{top:rect.top,bottom:rect.bottom,documentTop:scrollY+rect.top,x:rect.x+rect.width/2,y:rect.y+rect.height/2,hit:button.contains(document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2))};
+    });
+    expect(before.hit).toBe(true);expect(await photo.evaluate((element:HTMLImageElement)=>element.complete)).toBe(false);
+    await page.mouse.move(before.x,before.y);await page.mouse.down();release();
+    await page.evaluate(()=>(window as unknown as {marketingImageFailure:Promise<void>}).marketingImageFailure);
+    const after=await open.evaluate(button=>{const rect=button.getBoundingClientRect();return{top:rect.top,bottom:rect.bottom,documentTop:scrollY+rect.top};});
+    await page.mouse.up();
+    const events=await page.evaluate(()=>(window as unknown as {marketingOpenEvents:{type:string;isOpen:boolean}[]}).marketingOpenEvents);
+    await info.attach('marketing-failed-image-native-target',{body:JSON.stringify({before,after,events}),contentType:'application/json'});
+    await page.screenshot({path:info.outputPath('marketing-failed-image-native-open.png')});
+    expect(Math.abs(after.documentTop-before.documentTop),'A failed image must not move the Open control in the document').toBeLessThanOrEqual(1);
+    expect(Math.abs(after.top-before.top),'A failed image must not move the native pointer target').toBeLessThanOrEqual(1);
+    expect(events.map(event=>({type:event.type,isOpen:event.isOpen}))).toEqual([{type:'pointerdown',isOpen:true},{type:'pointerup',isOpen:true},{type:'click',isOpen:true}]);
+    await expect(panel.getByLabel(t('Caption title'),{exact:true})).toHaveValue('Boho / Goddess Braids · Maison Étoile GC123');
+    expect(f.state.cancellations).toBe(0);
+    await panel.getByRole('button',{name:t('Cancel publication and remove from business page'),exact:true}).click();
+    await expect(panel.getByRole('status')).toContainText(t('Marketing publication cancelled and verified.'));expect(f.state.cancellations).toBe(1);
+    expect(f.auth.actions).toEqual([]);expect(f.auth.unexpected).toEqual([]);
+  }finally{release();}
+});
 test('Business marketing failed save retains caption and id while pending prevents duplicate submission',async({page})=>{
   const f=await fixture(page);await page.goto('/salon/dashboard/promotions');const panel=await prepare(page);f.state.failSave=true;let release!:()=>void;f.state.holdSave=new Promise<void>(resolve=>{release=resolve;});
   const save=panel.getByRole('button',{name:'Save marketing draft',exact:true});await save.click();await expect(save).toBeDisabled();await expect.poll(()=>f.state.saveCalls).toBe(1);release();await expect(panel.getByRole('alert')).toContainText('17500000-0000-4000-8000-000000000091');await expect(panel.getByRole('textbox',{name:'Caption',exact:true})).toHaveValue(/USD 125\.00–USD 150\.00/);expect(f.state.posts).toHaveLength(0);
