@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import Ajv from 'ajv';
 import { fileURLToPath } from 'node:url';
 import { typescriptLoader } from './helpers/load-typescript.mjs';
@@ -118,6 +119,7 @@ test('historical patterns use the scoped complete booking read and reach planner
 });
 function fixture(options = {}) {
   const calls = []; const requests = []; const updates = [];
+  const inputMeasurements = [];
   const history = (options.history || []).map((row, index) => ({ id: `request-${index}`, ...row }));
   const admin = {
     async rpc(name, args) {
@@ -170,6 +172,10 @@ function fixture(options = {}) {
     '@/lib/gcAssistantServer': {readAssistantData:async(context,tool,args)=>{assert.equal(context.salon.id,'business-A');assert.equal(context.user.id,'owner-A');calls.push({refresh:tool,args});if(options.historyReadDenied){const e=Error('ASSISTANT_RECORD_NOT_FOUND');e.code='ASSISTANT_RECORD_NOT_FOUND';throw e;}return Object.hasOwn(options,'historyRead')?options.historyRead:history.find(row=>row.tool===tool && JSON.stringify(row.arguments)===JSON.stringify(args))?.result;}},
     '@/lib/aiAutomationServer': { approvedAiModels: () => [options.model || 'fixture-model'], approvedAiProviders: () => ['openai'], aiProviderConfigured: () => options.configured !== false, redactSensitiveText: options.redact || (value => value.replaceAll('secret@example.test', '[redacted]')) },
   }, {
+    Buffer: new Proxy(Buffer, { get(target, key) {
+      if (key === 'byteLength') return (value, encoding) => { const bytes = Buffer.byteLength(value, encoding); inputMeasurements.push(bytes); return bytes; };
+      return Reflect.get(target, key);
+    } }),
     process: { env: { ...(options.missingRates ? {} : { AI_OWNER_INPUT_USD_PER_MILLION: '1', AI_OWNER_OUTPUT_USD_PER_MILLION: '4' }), OPENAI_API_KEY: 'local-fixture-only' } },
     TextDecoder,
     fetch: async (url, init) => {
@@ -189,8 +195,120 @@ function fixture(options = {}) {
   });
   const { planOwnerRequest } = load('src/lib/gcAssistantPlanningServer.ts');
   const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ context:{admin,salon:{id:'business-A',time_zone:'America/New_York'},user:{id:'owner-A'},isOwner:!options.assigned,teamMember:options.assigned?{stylist_id:options.assigned}:null}, admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: options.previousRequestIds || history.map(row => row.id), conversationRequestIds: options.conversationRequestIds, conversation: options.conversation, answerOnly: options.answerOnly, page: options.page });
-  return { run, calls, requests, updates };
+  return { run, calls, requests, updates, inputMeasurements };
 }
+
+function expandedPlannerSchema(schema) {
+  schema = JSON.parse(JSON.stringify(schema));
+  const expand = value => {
+    if (Array.isArray(value)) return value.map(expand);
+    if (!value || typeof value !== 'object') return value;
+    if (value.$ref) {
+      assert.deepEqual(Object.keys(value), ['$ref']);
+      assert.match(value.$ref, /^#\/\$defs\/[A-Za-z0-9]+$/);
+      const target = schema.$defs[value.$ref.split('/').at(-1)];
+      assert.ok(target, 'every local reference resolves');
+      return expand(target);
+    }
+    return Object.fromEntries(Object.entries(value).filter(([key]) => key !== '$defs').map(([key, child]) => [key, expand(child)]));
+  };
+  return expand(schema);
+}
+
+test('shared planner definitions preserve the complete pre-factoring owner schema and every permitted tool argument', () => {
+  const load = typescriptLoader(root), { ASSISTANT_TOOLS } = load('src/lib/gcAssistantCore.ts');
+  const { ownerPlannerSchema } = load('src/lib/gcAssistantPlannerProtocol.ts');
+  const all = [...new Set(Object.values(ASSISTANT_TOOLS).map(tool => tool.permission))];
+  const schema = ownerPlannerSchema(new Set(all), false), expanded = expandedPlannerSchema(schema);
+  // Captured from origin/main 8a4ee043 before factoring, including descriptions,
+  // strict required fields, patterns, limits, enum order and all 41 tool choices.
+  assert.equal(createHash('sha256').update(JSON.stringify(expanded)).digest('hex'), '4f14e29e4c130ff87827c54d3c8b7873f5281584a5c27ff23a7ce443f6472d52');
+  assert.ok(Buffer.byteLength(JSON.stringify(schema)) < Buffer.byteLength(JSON.stringify(expanded)) - 7000);
+  for (const granted of [[], ...all.map(permission => [permission]), all, all.filter(permission => permission !== 'client_history'), all.filter(permission => permission !== 'my_page')]) {
+    const current = ownerPlannerSchema(new Set(granted), false), unfolded = expandedPlannerSchema(current);
+    new Ajv().compile(current);
+    const decisions = unfolded.properties.decision.anyOf.filter(row => row.properties.tool);
+    const expected = Object.entries(ASSISTANT_TOOLS).filter(([name, tool]) => granted.includes(tool.permission) &&
+      (name !== 'get_outstanding_balances' || granted.includes('bookings') && granted.includes('client_history')) &&
+      (name !== 'calculate_service_selection' || granted.includes('my_page')) &&
+      (name !== 'get_booking_price_details' || granted.includes('earnings') && granted.includes('client_history')));
+    assert.deepEqual(decisions.map(row => row.properties.tool.enum[0]), expected.map(([name]) => name));
+    for (const row of decisions) assert.deepEqual(row.properties.args, JSON.parse(JSON.stringify(ASSISTANT_TOOLS[row.properties.tool.enum[0]].schema)));
+    assert.equal(Object.hasOwn(ownerPlannerSchema(new Set(granted), true), '$defs'), false, 'answer schema stays unchanged');
+  }
+  const validate = new Ajv().compile(schema), args = { start: '2026-09-29T04:00:00Z', end: '2026-09-30T04:00:00Z', time_zone: 'America/New_York', stylist_id: null, reason: '' };
+  const decision = { language_switch: null, decision: { tool: 'prepare_availability_block', args } };
+  assert.equal(validate(decision), true);
+  for (const patch of [{ salon_id: booking.id }, { stylist_id: 'invented-id' }, { start: 'tomorrow' }, { time_zone: 'a'.repeat(81) }]) assert.equal(validate({ ...decision, decision: { ...decision.decision, args: { ...args, ...patch } } }), false);
+});
+
+test('shared planner definitions keep property maps with fields named type and anyOf as property maps', () => {
+  const properties = { type: { type: 'string', enum: ['Original saved type'] }, anyOf: { type: 'string', maxLength: 240 }, name: { type: 'string', minLength: 1, maxLength: 120 } };
+  const args = { type: 'object', properties, required: Object.keys(properties), additionalProperties: false };
+  const { ownerPlannerSchema } = typescriptLoader(root, { '@/lib/gcAssistantCore': {
+    ...typescriptLoader(root)('src/lib/gcAssistantCore.ts'),
+    ASSISTANT_TOOLS: { get_business_profile: { permission: 'my_page', schema: { ...args, description: 'First argument schema' } }, get_business_settings: { permission: 'settings', schema: { ...args, description: 'Different argument schema' } } },
+  } })('src/lib/gcAssistantPlannerProtocol.ts');
+  const schema = ownerPlannerSchema(new Set(['my_page', 'settings']), false), validate = new Ajv().compile(schema);
+  for (const tool of ['get_business_profile', 'get_business_settings']) {
+    const decision = { language_switch: null, decision: { tool, args: { type: 'Original saved type', anyOf: 'Original field value', name: 'Original name' } } };
+    assert.equal(validate(decision), true);
+    assert.equal(validate({ ...decision, decision: { ...decision.decision, args: { ...decision.decision.args, unexpected: true } } }), false);
+    const expanded = expandedPlannerSchema(schema).properties.decision.anyOf.find(row => row.properties.tool?.enum[0] === tool);
+    assert.deepEqual(expanded.properties.args.properties, properties);
+  }
+});
+
+test('shared planner definitions fit projected photo service calendar history and ordinary follow-ups without omitting facts', async t => {
+  // Synthetic authorized records follow the observed tool sequence, not a
+  // reconstruction of the private hosted prompt (its exact bytes were not logged).
+  const id = n => `22222222-2222-4222-8222-${String(n).padStart(12, '0')}`;
+  const catalog = Array.from({ length: 77 }, (_, n) => ({ id: id(n), name: `Platform style ${String(n).padStart(2, '0')}` }));
+  const load = typescriptLoader(root, {}, { URLSearchParams });
+  const hours = Object.fromEntries(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => [day, { open: '09:00', close: '17:00' }]));
+  const schedule = load('src/lib/businessScheduleOpportunities.ts');
+  const opportunities = schedule.businessScheduleOpportunitiesSummary(schedule.businessScheduleOpportunities('business-A', {
+    salon: { id: 'business-A', hours }, roster: [{ id: id(90), salon_id: 'business-A', name: 'Original own professional', is_active: true, availability: hours }], bookings: [], intents: [], blockouts: [], timeZone: 'America/New_York',
+  }, Date.parse('2026-09-21T12:00:00Z')));
+  const sourceDefinition = 'Current saved service details belong to this business. Recorded display ranges are not a final quote. Selected sizes and lengths may change the service duration and price; required choices remain unselected. Materials are optional and their saved descriptions do not establish customer eligibility. Existing booked terms must be read separately. ';
+  const services = { services: [{ id: id(91), name: 'Boho / Goddess Braids', description: sourceDefinition.repeat(2), base_price: 250, price_display_min: 250, price_display_max: 420, duration_min_hours: 5, duration_max_hours: 7, buffer_minutes: 15, size_options: ['Small', 'Medium', 'Large'].map((label, n) => ({ value: label, label, price_add: n * 25, duration_add_minutes: n * 15 })), length_options: ['Shoulder', 'Mid back', 'Waist'].map((label, n) => ({ value: label, label, price_add: n * 30, duration_add_minutes: n * 20 })), option_groups: [], materials: [], included_items: ['Consultation', 'Wash'], price_completeness: 'catalog_only', monetary_quote_available: false }], inventory_total: 12, total: 12, matching_total: 1, query: 'Boho/Goddess', search_complete: true, exact_match: true, match_status: 'exact', currency: 'USD', definition: sourceDefinition.repeat(2) };
+  const media = { gallery_count: 3, distinct_saved_images: 4, photos: [1, 2, 3].map(n => ({ id: id(100 + n), title: `Original gallery photo ${n}`, caption: 'Saved own-business gallery metadata; no image content has been analyzed.', category: 'work', featured: false })), has_cover: true, has_logo: false, profile_public: true };
+  const summary = { start: '2026-09-29T04:00:00Z', end: '2026-09-30T04:00:00Z', time_zone: 'America/New_York', bookings: 0, upcoming: 0, currency: 'USD', schedule_opportunities: opportunities, calendar_gaps: { date: '2026-09-29', timeZone: 'America/New_York', gaps: [{ start: '2026-09-29T13:00:00Z', end: '2026-09-29T21:00:00Z' }] }, rebooking_advice: { available: false, definition: 'Returning-client history is unavailable, not zero. Do not invent clients or contact permission.' }, service_contribution: null, appointment_patterns: { available: false, definition: 'No completed historical local days in this future range.' }, no_show_definition: 'Recorded booking status only; an uncompleted appointment is not evidence of a no-show.' };
+  const performance = load('src/lib/assistantPerformance.ts'), metrics = performance.assistantPeriodMetrics([]);
+  summary.comparison = { method: 'preceding_equal_elapsed_duration', current: { start: summary.start, end: summary.end, ...metrics }, previous: { start: '2026-09-28T04:00:00.000Z', end: summary.start, ...metrics }, changes: performance.compareAssistantPeriods(metrics, metrics) };
+  const history = [
+    { tool: 'get_business_media', permission: 'photos', arguments: {}, result: media },
+    { tool: 'get_services_and_prices', permission: 'styles', arguments: { query: 'Boho/Goddess' }, result: services },
+    { tool: 'get_business_summary', permission: 'overview', arguments: { start: summary.start, end: summary.end }, result: summary },
+    ...[27, 28, 29].map(day => ({ tool: 'get_calendar_gaps', permission: 'availability', arguments: { date: `2026-09-${day}`, stylist_id: null }, result: { ...summary.calendar_gaps, date: `2026-09-${day}`, gaps: [{ start: `2026-09-${day}T13:00:00Z`, end: `2026-09-${day}T21:00:00Z` }] } })),
+  ];
+  const conversation = [
+    { role: 'user', text: 'How many photos have I saved? Read only.' },
+    { role: 'assistant', text: 'There are three saved gallery images and four distinct saved images including the cover. The saved metadata does not establish what is shown in each photo.' },
+    { role: 'user', text: 'And for my boho braids, what are the saved price and duration ranges? Read only.' },
+    { role: 'assistant', text: 'Boho / Goddess Braids has saved display prices of $250–$420 and a duration range of 5–7 hours. These are catalog facts, not a selected checkout subtotal or an existing booking balance.' },
+    { role: 'user', text: 'Show me a reviewable preview to close my salon on September 29, 2026 for the full day. Do not save or confirm it.' },
+    { role: 'assistant', text: 'The recorded calendar gaps for September 29 are 13:00Z–21:00Z. Do you mean all scheduled hours or only those free gaps?' },
+  ];
+  const request = 'All scheduled hours for the entire salon on September 29, 2026. Prepare only the reviewable closed-day preview; do not apply or save it.';
+  const f = fixture({ catalog, history, conversation, page: 'styles', output: { plan: { tool: 'prepare_availability_block', args: { start: summary.start, end: summary.end, time_zone: summary.time_zone, stylist_id: null, reason: '' } } } });
+  try { await f.run('en', request); } finally { t.diagnostic(`Representative projected input measurement: ${f.inputMeasurements.join(', ')} bytes; private incident exact bytes unknown.`); }
+  const wire = f.requests[0], context = JSON.parse(wire.messages[1].content), schema = wire.response_format.json_schema.schema;
+  const actualBytes = Buffer.byteLength(wire.messages.map(message => message.content).join('') + JSON.stringify(schema));
+  const originalBytes = actualBytes - Buffer.byteLength(JSON.stringify(schema)) + Buffer.byteLength(JSON.stringify(expandedPlannerSchema(schema)));
+  t.diagnostic(JSON.stringify({ actualBytes, originalBytes, margin: 64000 - actualBytes, projectedResults: Buffer.byteLength(JSON.stringify(context.previous)), catalogBytes: Buffer.byteLength(JSON.stringify(catalog)), historyCount: history.length, conversationTurns: conversation.length }));
+  assert.ok(originalBytes > 64000, 'this normal sequence must reproduce the original guard, not merely show an arbitrary size reduction');
+  assert.ok(actualBytes <= 64000);
+  assert.deepEqual(context.conversation, conversation); assert.deepEqual(context.platform_catalog_for_new_service_drafts, catalog);
+  assert.equal(context.previous.length, 6); assert.equal(context.previous[0].result.gallery_count, 3);
+  assert.equal(context.previous[1].result.services[0].id, id(91)); assert.equal(context.previous[1].result.services[0].price_display_max, 420);
+  assert.deepEqual(context.previous[2].result.schedule_opportunities, JSON.parse(JSON.stringify(opportunities)));
+  assert.deepEqual(context.previous[5].result, history[5].result);
+  assert.deepEqual(JSON.parse(wire.messages.at(-1).content), { request });
+  assert.equal(f.calls.filter(call => call.refresh).length, 5);
+  assert.equal(f.calls.find(call => call.name === 'reserve_gc_assistant_usage').args.p_cost_cents, Math.ceil((actualBytes + 1800 * 4) / 10000));
+  assert.equal(wire.max_completion_tokens, 1800); assert.equal(wire.store, false);
+});
 
 test('latest owner request follows supporting Boho history when requesting a whole-business closure preview', async () => {
   const request = 'Show me a reviewable preview to close my salon on September 29, 2026 for the full day. Do not save or confirm it.';
@@ -262,6 +380,7 @@ test('latest owner request does not restore a revoked closure tool or bypass inp
   assert.equal(exhausted.requests.length, 0);
   const oversized = fixture({ history: Array.from({ length: 6 }, () => ({ tool: 'get_services_and_prices', permission: 'styles', arguments: { query: '' }, result: { services: Array.from({ length: 12 }, () => ({ name: 'Own service', description: '界'.repeat(1000) })) } })) });
   await assert.rejects(oversized.run('en', 'Preview that closure.'), /ASSISTANT_INPUT_TOO_LONG/);
+  assert.ok(oversized.inputMeasurements.some(bytes => bytes > 64000), 'genuinely oversized UTF-8 context still fails before reservation and provider transport');
   assert.equal(oversized.requests.length, 0);
   assert.equal(oversized.calls.some(call => call.name === 'reserve_gc_assistant_usage'), false);
 });

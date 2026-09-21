@@ -5,16 +5,26 @@ import { mkdir } from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 
 // A dev-runtime replacement navigation can begin after goto() has resolved.
-// Read the current document's load state and the existing SSR-disabled menu's
-// hydration signal. No dimensions are polled and persistent overflow still fails.
+// Read the current document's load state, menu hydration and location render.
+// The location response can replace skeletons after load and introduce fonts.
+// No dimensions are polled and persistent overflow still fails.
 async function waitForMarketplaceDocument(page: Page) {
   await page.waitForLoadState('load');
   await expect(page.getByRole('button', { name: 'Open navigation menu', exact: true, includeHidden: true })).toBeEnabled();
-  await page.evaluate(async () => { await document.fonts.ready; });
+  for (const name of ['Loading nearby salons', 'Loading featured salons']) {
+    await expect(page.getByRole('status', { name, exact: true })).toBeHidden();
+  }
 }
 
-async function marketplaceGeometry(page: Page) {
-  return page.evaluate(() => {
+async function marketplaceGeometry(page: Page, settleFonts = true) {
+  return page.evaluate(async waitForFonts => {
+    if (waitForFonts) {
+      // Discover fonts used by the current layout before reading its ready
+      // promise. A previously resolved promise does not cover a later cycle.
+      // Measure in this same evaluation, without another protocol round trip.
+      void document.documentElement.offsetHeight;
+      await document.fonts.ready;
+    }
     const describe = (element: Element) => {
       const rect = element.getBoundingClientRect(), style = getComputedStyle(element);
       return { tag: element.tagName, id: element.id, class: element.getAttribute('class'), label: element.getAttribute('aria-label'), left: rect.left, right: rect.right, top: rect.top, width: rect.width, clientWidth: element.clientWidth, scrollWidth: element.scrollWidth, overflowX: style.overflowX, position: style.position, minWidth: style.minWidth, transform: style.transform };
@@ -32,7 +42,7 @@ async function marketplaceGeometry(page: Page) {
         return { ...describe(element), ancestors };
       }),
     };
-  });
+  }, settleFonts);
 }
 
 // Software-first founder decision: discovery closed; direct real-business
@@ -160,7 +170,7 @@ test('demonstration replacement document waits for its stylesheet before geometr
     await page.reload({ waitUntil: 'commit' });
     await stylesheetRequested;
     await expect(page.locator('main[data-homepage-variant]')).toBeVisible();
-    const premature = await marketplaceGeometry(page);
+    const premature = await marketplaceGeometry(page, false);
     await info.attach('marketplace-held-stylesheet-geometry', { body: JSON.stringify(premature, null, 2), contentType: 'application/json' });
     expect(premature.readyState).not.toBe('complete');
 
@@ -187,6 +197,54 @@ test('demonstration replacement document waits for its stylesheet before geometr
     releaseStylesheet();
     if (stylesheetStarted) await stylesheetFinished;
     await page.unroute('https://fonts.googleapis.com/**');
+  }
+});
+
+test('marketplace geometry waits for a font cycle that starts after document readiness at 390x844', async ({ page, context, baseURL }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await context.addCookies([{ name: 'gc_site_access', value: 'marketplace-demo', url: baseURL! }]);
+  await page.goto('/site-access');
+  await waitForMarketplaceDocument(page);
+
+  const fontPath = '/fonts/montserrat/Montserrat-Regular.woff2?readiness-regression';
+  let releaseFont!: () => void;
+  let markRequested!: () => void;
+  let markFinished!: () => void;
+  let started = false;
+  const gate = new Promise<void>(resolve => { releaseFont = resolve; });
+  const requested = new Promise<void>(resolve => { markRequested = resolve; });
+  const finished = new Promise<void>(resolve => { markFinished = resolve; });
+  await page.route(`**${fontPath}`, async route => {
+    started = true;
+    markRequested();
+    try { await gate; await route.continue(); }
+    finally { markFinished(); }
+  });
+  try {
+    // Reproduce the trace's second loading cycle after fonts.ready resolved.
+    // Use a real bundled font response, gated by an event rather than a delay.
+    await page.evaluate(path => {
+      const font = new FontFace('MarketplaceReadiness', `url("${path}")`);
+      document.fonts.add(font);
+      void font.load();
+    }, fontPath);
+    await requested;
+    expect(await page.evaluate(() => ({ document: document.readyState, fonts: document.fonts.status })))
+      .toEqual({ document: 'complete', fonts: 'loading' });
+    let measured = false;
+    const measurement = marketplaceGeometry(page).then(geometry => { measured = true; return geometry; });
+    // Protocol round trip, not an elapsed-time wait: the response is still held.
+    expect(await page.evaluate(() => document.fonts.status)).toBe('loading');
+    expect(measured).toBe(false);
+    releaseFont();
+    const geometry = await measurement;
+    expect(geometry.fonts).toBe('loaded');
+    expect(geometry.fits).toBe(true);
+    expect(await page.evaluate(() => [...document.fonts].find(font => font.family === 'MarketplaceReadiness')?.status)).toBe('loaded');
+  } finally {
+    releaseFont();
+    if (started) await finished;
+    await page.unroute(`**${fontPath}`);
   }
 });
 
