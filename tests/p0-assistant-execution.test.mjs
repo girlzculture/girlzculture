@@ -37,11 +37,36 @@ function fixture(options = {}) {
       }; return q;
     },
   };
-  const load = typescriptLoader(process.cwd(), { '@/lib/supabaseAdmin': {}, '@/lib/engineConfigServer': { getEngineNumber: async (_key, fallback) => fallback }, '@/lib/bookingAvailabilityServer': { serviceAvailabilityWindow: async input => ({ style: { id: input.styleId, salon_id: business, duration_min_hours: 1, buffer_minutes: 15 }, timeZone: 'America/New_York', bufferMinutes: 15, dates: [{ date: input.date, slots: [{ value: '13:00', stylistId: actor, stylistName: 'Save' }] }] }) }, '@/lib/contentModerationServer': { moderatePublicContent: async () => ({ allowed: true }) } }, {URLSearchParams});
+  const load = typescriptLoader(process.cwd(), { '@/lib/supabaseAdmin': {}, '@/lib/engineConfigServer': { getEngineNumber: async (_key, fallback) => fallback }, '@/lib/bookingAvailabilityServer': { serviceAvailabilityWindow: async input => ({ style: { id: input.styleId, salon_id: business, duration_min_hours: 1, buffer_minutes: 15 }, timeZone: 'America/New_York', bufferMinutes: 15, dates: [{ date: input.date, slots: [{ value: '13:00', stylistId: actor, stylistName: 'Save' }] }] }) }, '@/lib/contentModerationServer': { moderatePublicContent: async () => ({ allowed: true }) } }, {URLSearchParams, ...(options.now === undefined ? {} : { Date: class extends Date { static now() { return options.now; } } })});
   const server = load('src/lib/gcAssistantServer.ts');
   const context = { admin, user: { id: actor }, salon: { id: business, subscription_status: 'active', time_zone: 'America/New_York', description: 'Original Save' }, isOwner: !options.teamMember, teamMember: options.teamMember };
   return { calls, saved, context, server, run: (tool, args) => server.executeAssistantTool(context, { requestId, locale: 'fr', tool, args }) };
 }
+
+test('a whole-business closure preview saves only an unconfirmed own-business request and retains permission and assignment guards', async () => {
+  // A future date keeps this durable-boundary regression independent of the
+  // hosted September 2026 request used by the planning-wire regression.
+  const args = { start: '2098-09-29T04:00:00Z', end: '2098-09-30T04:00:00Z', time_zone: 'America/New_York', stylist_id: null, reason: '' };
+  const f = fixture();
+  const response = await f.run('prepare_availability_block', args);
+  assert.equal(response.preview_required, true);
+  assert.equal(f.saved.length, 1);
+  assert.equal(f.saved[0].salon_id, business);
+  assert.equal(f.saved[0].requested_by, actor);
+  assert.equal(f.saved[0].permission, 'availability');
+  assert.equal(f.saved[0].risk_class, 3);
+  assert.equal(f.saved[0].confirmed_at ?? null, null);
+  assert.deepEqual(JSON.parse(JSON.stringify(f.saved[0].arguments)), args);
+  assert.deepEqual(JSON.parse(JSON.stringify(f.saved[0].execution_payload)), { time_zone: 'America/New_York', all_professionals: true });
+  assert.deepEqual(f.calls.filter(call => call.name).map(call => call.name), ['p0_actor_has_permission', 'save_gc_assistant_request']);
+  assert.deepEqual(f.calls.filter(call => call.table).map(call => call.table), ['subscriptions', 'gc_assistant_requests']);
+  for (const restriction of [{ allowed: false }, { teamMember: { stylist_id: actor } }]) {
+    const scoped = fixture(restriction);
+    await assert.rejects(scoped.run('prepare_availability_block', args), /ASSISTANT_ACCESS_DENIED/);
+    assert.equal(scoped.saved.length, 0);
+    assert.equal(scoped.calls.some(call => call.name === 'confirm_gc_assistant_request'), false);
+  }
+});
 
 test('a replayed read rechecks current records instead of returning stale authorized data',async()=>{
   const f=fixture({tables:{gc_assistant_requests:[{id:requestId,salon_id:business,requested_by:actor,tool:'get_services_and_prices',arguments:{query:''},locale:'fr',result:{services:[{name:'Removed private service'}]}}],styles:[{id:actor,salon_id:business,name:'Current service',base_price:100}]}});
@@ -132,7 +157,7 @@ test('bookings are read only for the resolved business and requested interval', 
 });
 
 test('availability retains canonical professional identity for a subsequent scoped draft', async () => {
-  const f = fixture({tables:{salons:[{id:business,user_id:actor,time_zone:'America/New_York'}],styles:[{id:requestId,salon_id:business,name:'Own service',base_price:100,duration_min_hours:1,duration_max_hours:1,buffer_minutes:15,option_groups:[]}]}});
+  const f = fixture({now:Date.parse('2026-09-19T12:00:00Z'),tables:{salons:[{id:business,user_id:actor,time_zone:'America/New_York'}],styles:[{id:requestId,salon_id:business,name:'Own service',base_price:100,duration_min_hours:1,duration_max_hours:1,buffer_minutes:15,option_groups:[]}]}});
   const response = await f.run('get_availability', { style_id: requestId, stylist_id: null, date: '2026-09-20' });
   const slot = response.request.result.slots[0];
   assert.equal(slot.stylist_id, actor);

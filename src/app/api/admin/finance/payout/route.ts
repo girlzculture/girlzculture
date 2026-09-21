@@ -121,7 +121,7 @@ async function loadBooking(
   const result = await admin
     .from("bookings")
     .select(
-      "id,public_reference,confirmation_code,salon_id,customer_id,guest_name,guest_email,status,deposit_status,deposit_amount,refund_status,refund_amount,stripe_payment_id,stripe_checkout_session_id,stripe_charge_id,stripe_transfer_id,stripe_transfer_reversal_id,stripe_processing_fee,platform_fee,net_amount_owed_salon,payout_status,transfer_status,bank_payout_status,payment_mode,payment_verified_at,transfer_submitted_at,payout_completed_at,created_at,salon:salons(id,name,email,phone,stripe_account_id,address_city,address_state)",
+      "id,public_reference,confirmation_code,salon_id,customer_id,guest_name,guest_email,status,deposit_status,deposit_amount,refund_status,refund_amount,stripe_payment_id,stripe_checkout_session_id,stripe_charge_id,stripe_transfer_id,stripe_transfer_reversal_id,stripe_processing_fee,platform_fee,net_amount_owed_salon,payout_status,transfer_status,bank_payout_status,payment_mode,payment_verified_at,transfer_submitted_at,payout_completed_at,created_at,salon:salons!bookings_salon_id_fkey(id,name,email,phone,stripe_account_id,address_city,address_state)",
     )
     .eq("id", bookingId)
     .maybeSingle();

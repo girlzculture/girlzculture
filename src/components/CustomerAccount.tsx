@@ -84,7 +84,7 @@ export default function CustomerAccount({discoveryAvailable=false,homeHref="/"}:
       }
       const [profileResult, bookingResult, favoriteResponse, orderResult] = await Promise.all([
         supabase.from("customers").select("*").eq("id", data.user.id).maybeSingle(),
-        supabase.from("bookings").select("*,salon:salons(name,slug,address_city,address_state,cover_photo_url,time_zone),style:styles(name)").eq("customer_id", data.user.id).order("appointment_datetime", { ascending: false }).limit(100),
+        supabase.from("bookings").select("*,salon:salons!bookings_salon_id_fkey(name,slug,address_city,address_state,cover_photo_url,time_zone),style:styles(name)").eq("customer_id", data.user.id).order("appointment_datetime", { ascending: false }).limit(100),
         fetch("/api/customer/favorites", { credentials: "same-origin", cache: "no-store", redirect: "manual", headers: { Accept: "application/json", Authorization: `Bearer ${session.access_token}` } }),
         supabase.from("product_orders").select("*,salon:salons(name,slug,cover_photo_url),items:product_order_items(product_name,quantity,line_total,image_url)").eq("customer_id", data.user.id).order("created_at", { ascending: false }).limit(100),
       ]);
