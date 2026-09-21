@@ -14,13 +14,13 @@ import { bookingConversationWindow } from "@/lib/bookingConversation";
 
 type Row = Record<string, unknown>;
 type Role = "customer" | "salon" | "admin";
-async function messageFailure(request: Request, error: unknown) {
+async function messageFailure(request: Request, error: unknown, admin?: ReturnType<typeof getSupabaseAdmin>) {
   if (error instanceof RateLimitError) return Response.json({ code: "MESSAGE_RATE_LIMIT" }, { status: 429, headers: { "Retry-After": String(error.retryAfter), "Cache-Control": "private, no-store" } });
   const message = error instanceof Error ? error.message : typeof error === "object" && error !== null && "message" in error ? String(error.message) : "";
   if (["MESSAGE_CONVERSATION_CLOSED", "MESSAGE_ACCESS_DENIED"].includes(message)) return Response.json({ code: message }, { status: message === "MESSAGE_ACCESS_DENIED" ? 403 : 409, headers: { "Cache-Control": "private, no-store" } });
   const translation = translationProviderFailure(error);
   if (translation) {
-    const reference = await capturePlatformError({ request, error, feature: "booking-messages", action: "translation", actorRole: "authenticated", safeMessage: translation.error });
+    const reference = await capturePlatformError({ request, admin, error, feature: "booking-messages", action: "translation", actorRole: "authenticated", safeMessage: translation.error });
     return safeFailure(translation.error, reference, translation.status, { code: translation.code });
   }
   const known: Record<string, [string, number]> = {
@@ -30,7 +30,7 @@ async function messageFailure(request: Request, error: unknown) {
   };
   if (known[message]) return Response.json({ code: known[message][0] }, { status: known[message][1], headers: { "Cache-Control": "private, no-store" } });
   if (error instanceof SyntaxError) return Response.json({ code: "MESSAGE_INVALID" }, { status: 400 });
-  const reference = await capturePlatformError({ request, error, feature: "booking-messages", action: request.method.toLowerCase(), actorRole: "authenticated", safeMessage: "Booking messages are temporarily unavailable." });
+  const reference = await capturePlatformError({ request, admin, error, feature: "booking-messages", action: request.method.toLowerCase(), actorRole: "authenticated", safeMessage: "Booking messages are temporarily unavailable." });
   return safeFailure("Booking messages are temporarily unavailable.", reference, 503, { code: "MESSAGE_UNAVAILABLE" });
 }
 
@@ -64,7 +64,7 @@ async function messageScope(admin: ReturnType<typeof getSupabaseAdmin>, userId: 
   throw new Error("Forbidden");
 }
 function bookingQuery(admin: ReturnType<typeof getSupabaseAdmin>, scope: Awaited<ReturnType<typeof messageScope>>) {
-  let query = admin.from("bookings").select("*,salon:salons(id,name,slug,cover_photo_url,time_zone),style:styles(name)");
+  let query = admin.from("bookings").select("*,salon:salons!bookings_salon_id_fkey(id,name,slug,cover_photo_url,time_zone),style:styles(name)");
   if (scope.salonId) query = query.eq("salon_id", scope.salonId);
   if (scope.stylistId) query = query.eq("stylist_id", scope.stylistId);
   if (scope.customerId) query = query.eq("customer_id", scope.customerId);
@@ -95,8 +95,10 @@ async function messagePages(query: () => ReturnType<ReturnType<ReturnType<typeof
 }
 
 async function GETHandler(request: Request) {
+  let incidentAdmin: ReturnType<typeof getSupabaseAdmin> | undefined;
   try {
     const { admin, user } = await identity(request);
+    incidentAdmin = admin;
     const url = new URL(request.url);
     const requestedBookingId = cleanText(url.searchParams.get("booking_id"), 60);
     if (requestedBookingId) {
@@ -127,13 +129,15 @@ async function GETHandler(request: Request) {
     return Response.json({ role: access.role, threads }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     noteOperationalFailure("Booking message load failed", error);
-    return messageFailure(request, error);
+    return messageFailure(request, error, incidentAdmin);
   }
 }
 
 async function POSTHandler(request: Request) {
+  let incidentAdmin: ReturnType<typeof getSupabaseAdmin> | undefined;
   try {
     const { admin, user } = await identity(request);
+    incidentAdmin = admin;
     const body = await request.json() as Row;
     if (!body || typeof body !== "object" || Array.isArray(body) || (body.action !== undefined && !["translate_display", "translate_preview"].includes(String(body.action)))) return Response.json({ code: "MESSAGE_INVALID" }, { status: 400 });
     enforceRateLimit(request, `${body.action === "translate_display" ? "booking-message-display" : "booking-message"}:${user.id}`, body.action === "translate_display" ? 60 : 20, 60_000);
@@ -252,7 +256,7 @@ async function POSTHandler(request: Request) {
     return Response.json({ message, warnings, replayed }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     noteOperationalFailure("Booking message send failed", error);
-    return messageFailure(request, error);
+    return messageFailure(request, error, incidentAdmin);
   }
 }
 export const GET = withOperationalMonitoring(routeMonitoringProfile("/api/messages", "GET"), GETHandler);

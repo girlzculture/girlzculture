@@ -8,16 +8,18 @@ const messageId = '33000000-0000-4000-8000-000000000001';
 const requestId = '44000000-0000-4000-8000-000000000001';
 class RateLimitError extends Error { retryAfter = 30; }
 function fixture(options = {}) {
-  const mutations = [], deliveries = [], incidents = [];
+  const mutations = [], deliveries = [], incidents = [], reads = [];
   const canonical = { status: 'Active', email_normalized: 'owner@example.test', primary_role: 'salon_owner', ...options.canonical };
   const booking = { appointment_datetime:'2099-01-01T10:00:00Z', duration_hours:1, status:'Confirmed', id: bookingId, salon_id: 'business-a', customer_id: 'customer-a', salon: { user_id: actor, name: 'Save' }, style: { name: 'Original service' }, ...options.booking };
   const prior = { id: messageId, booking_id: bookingId, original_body: '  Bonjour — $180, GC123  ', ...options.prior };
   const admin = {
     auth: { getUser: async () => ({ data: { user: { id: actor, email: 'owner@example.test' } } }) },
     from(table) {
-      let operation = 'read', payload, offset=0, end=999;
+      let operation = 'read', payload, offset=0, end=999, selection;
       const filters = [];
       const response = (single = false) => {
+        if (operation === 'read') reads.push({ table, selection, filters: [...filters] });
+        if (options.ambiguousSalon && table === 'bookings' && !selection?.includes('salon:salons!bookings_salon_id_fkey(')) return { data: null, error: { code: 'PGRST201', message: "Could not embed because more than one relationship was found for 'bookings' and 'salons'", hint: 'salons!bookings_salon_id_fkey or salons!business_client_formulas' } };
         if (options.failTable === table) return { data: null, error: new Error('private connection/provider details') };
         if (operation !== 'read') {
           mutations.push({ table, operation, payload });
@@ -30,7 +32,7 @@ function fixture(options = {}) {
         return { data: single ? row : row ? [row] : [], error: null };
       };
       const query = {
-        select() { return query; }, eq(key, value) { filters.push([key, value]); return query; }, neq() { return query; }, is() { return query; }, in() { return query; }, ilike() { return query; }, limit() { return query; }, order() { return query; }, range(from,to) { offset=from;end=to;return query; },
+        select(value) { selection=value; return query; }, eq(key, value) { filters.push([key, value]); return query; }, neq() { return query; }, is() { return query; }, in() { return query; }, ilike() { return query; }, limit() { return query; }, order() { return query; }, range(from,to) { offset=from;end=to;return query; },
         insert(value) { operation = 'insert'; payload = value; return query; }, update(value) { operation = 'update'; payload = value; return query; },
         single: async () => response(true), maybeSingle: async () => response(true), then(resolve, reject) { return Promise.resolve(response()).then(resolve, reject); },
       };
@@ -47,7 +49,7 @@ function fixture(options = {}) {
     '@/lib/bookingMessageTranslationServer': { bookingMessageTranslation: () => { throw new Error('Provider must not run in these tests'); } },
   }, { Error, SyntaxError });
   const route = load('src/app/api/messages/route.ts');
-  return { route, mutations, deliveries, incidents };
+  return { route, mutations, deliveries, incidents, reads, admin };
 }
 const send = (f, body = {}) => f.route.POST(new Request('http://localhost/api/messages', { method: 'POST', headers: { authorization: 'Bearer fixture-only', 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: bookingId, body: '  Bonjour — $180, GC123  ', client_request_id: requestId, ...body }) }));
 const read = f => f.route.GET(new Request(`http://localhost/api/messages?booking_id=${bookingId}`, { headers: { authorization: 'Bearer fixture-only' } }));
@@ -157,4 +159,35 @@ test('inbox loads authorized booking and conversation history beyond provider pa
  const response=await f.route.GET(new Request('http://localhost/api/messages',{headers:{authorization:'Bearer fixture-only'}}));
  assert.equal(response.status,200);const body=await response.json();assert.equal(body.threads.length,1002);assert.equal(body.threads.some(t=>t.booking.salon_id!=='business-a'),false);
  const g=fixture({tables:{booking_messages:messages}});const detail=await read(g);assert.equal(detail.status,200);assert.equal((await detail.json()).messages.length,1002);
+});
+
+for (const [role, options, expectedFilters] of [
+  ['owner', {}, [['salon_id','business-a']]],
+  ['assigned staff', { canonical:{primary_role:'salon_team'}, team:{status:'Active',stylist_id:'assigned',permissions:{bookings:true}}, booking:{stylist_id:'assigned'} }, [['salon_id','business-a'],['stylist_id','assigned']]],
+  ['customer', { canonical:{primary_role:'customer'}, booking:{customer_id:actor} }, [['customer_id',actor]]],
+  ['support', { canonical:{primary_role:'admin'}, admin:{status:'Active',permissions:{support:true}} }, []],
+]) test(`ambiguous salon relationship uses the booking FK and retains ${role} list/detail scope`, async () => {
+  const f=fixture({...options,ambiguousSalon:true});
+  const list=await f.route.GET(new Request('http://localhost/api/messages',{headers:{authorization:'Bearer fixture-only'}}));
+  assert.equal(list.status,200);const body=await list.json();assert.equal(body.threads.length,1);
+  assert.equal(body.threads[0].booking.salon.name,'Save');
+  assert.deepEqual(f.mutations,[],'listing conversations remains read-only');
+  const detail=await read(f);assert.equal(detail.status,200);
+  const queries=f.reads.filter(row=>row.table==='bookings');assert.equal(queries.length,2);
+  for(const query of queries) assert.equal(query.selection,'*,salon:salons!bookings_salon_id_fkey(id,name,slug,cover_photo_url,time_zone),style:styles(name)');
+  assert.deepEqual(queries[0].filters,expectedFilters);
+  assert.deepEqual(queries[1].filters,[...expectedFilters,['id',bookingId]]);
+  assert.deepEqual(f.incidents,[]);
+});
+
+test('unexpected message read and send failures pass the existing admin to protected incident persistence',async()=>{
+  for(const action of ['read','send']) {
+    const f=fixture({failTable:'bookings'});
+    const response=await(action==='read'?read(f):send(f));const body=await response.json();
+    assert.equal(response.status,503);assert.equal(body.request_id,'GC-LOCAL-INCIDENT-17');
+    assert.equal(f.incidents.length,1);assert.equal(f.incidents[0].admin,f.admin);
+    assert.equal(f.incidents[0].feature,'booking-messages');
+    assert.doesNotMatch(JSON.stringify(body),/private|provider details/);
+    assert.deepEqual(f.mutations,[]);assert.deepEqual(f.deliveries,[]);
+  }
 });
