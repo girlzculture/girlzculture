@@ -50,8 +50,8 @@ async function waitForFixture(fixtureURL) {
 }
 
 function shardEnvironment(shard) {
-  const basePort = 3104 + shard - 1;
-  const fixturePort = 3105 + shard - 1;
+  const basePort = 3104 + (shard - 1) * 2;
+  const fixturePort = basePort + 1;
   return {
     appURL: `http://127.0.0.1:${basePort}`,
     fixtureURL: `http://127.0.0.1:${fixturePort}`,
