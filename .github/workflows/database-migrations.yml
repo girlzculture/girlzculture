@@ -62,7 +62,6 @@ jobs:
     if: github.event_name != 'workflow_dispatch' && needs.assistant_focused.result == 'success'
     # Normal PR/main CI keeps every browser and application check. A manual
     # database dispatch proves this exact main commit already passed that CI.
-    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     services:
       postgres:
