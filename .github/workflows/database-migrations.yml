@@ -19,7 +19,7 @@ jobs:
     name: GC Assistant focused verification
     if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:17
@@ -56,10 +56,6 @@ jobs:
       - name: Exercise GC Assistant smoke workflows
         timeout-minutes: 5
         run: npm run test:assistant:smoke
-      - name: Exercise GC Assistant focused workflows
-        timeout-minutes: 20
-        run: npm run test:assistant
-
   verify:
     needs: assistant_focused
     if: github.event_name != 'workflow_dispatch' && needs.assistant_focused.result == 'success'

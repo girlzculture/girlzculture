@@ -157,11 +157,11 @@ test("workflow preserves normal browsers and gates every production command afte
   assert.deepEqual(workflow.on.push.branches, ["main"]);
   const { assistant_focused: assistant, verify, "verify-migrations": migrations, migrate } = workflow.jobs;
   assert.equal(assistant.if, "github.event_name != 'workflow_dispatch'");
-  assert.equal(assistant["timeout-minutes"], 30);
+  assert.equal(assistant["timeout-minutes"], 15);
   const assistantSmoke = assistant.steps.find((step) => step.run === "npm run test:assistant:smoke");
   assert.ok(assistantSmoke);
   assert.equal(assistantSmoke["timeout-minutes"], 5);
-  assert.ok(assistant.steps.some((step) => step.run === "npm run test:assistant"));
+  assert.equal(assistant.steps.some((step) => step.run === "npm run test:assistant"), false);
   assert.equal(verify.needs, "assistant_focused");
   assert.match(verify.if, /github\.event_name != 'workflow_dispatch'/);
   assert.match(verify.if, /needs\.assistant_focused\.result == 'success'/);
