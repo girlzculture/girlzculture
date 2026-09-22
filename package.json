@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:browser": "playwright test",
-    "test:assistant:smoke": "playwright test tests/browser/p0-locale-lifecycle.spec.ts --project=chromium --project=webkit --workers=1 --retries=0 --max-failures=1",
+    "test:assistant:smoke": "playwright test tests/browser/p0-assistant-interaction.spec.ts tests/browser/p0-assistant-skills.spec.ts --grep \"P0 Assistant submission is immediate and retry preserves one turn at 390x844|P0 Assistant all skills preserve conversational language switches at 390x844\" --project=chromium --project=webkit --workers=1 --retries=0 --max-failures=1",
     "test:assistant": "playwright test tests/browser/p0-assistant-balances.spec.ts tests/browser/p0-assistant-interaction.spec.ts tests/browser/p0-assistant-manual-sale.spec.ts tests/browser/p0-assistant-memory.spec.ts tests/browser/p0-assistant-reschedule.spec.ts tests/browser/p0-assistant-skills.spec.ts tests/browser/p0-assistant-speech.spec.ts --project=chromium --project=webkit --workers=1 --retries=0 --max-failures=1",
     "test:p0:core": "node --test tests/p0-*.test.mjs",
     "test:p0:prelaunch": "playwright test --config playwright.prelaunch.config.ts",

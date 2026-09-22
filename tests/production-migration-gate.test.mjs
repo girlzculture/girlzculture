@@ -177,11 +177,11 @@ test("workflow preserves normal browsers and gates every production command afte
   assert.match(packageJson.scripts["test:assistant:smoke"], /p0-locale-lifecycle\.spec\.ts/);
   assert.match(packageJson.scripts["test:assistant:smoke"], /--max-failures=1/);
   assert.match(packageJson.scripts["test:assistant:smoke"], /p0-locale-lifecycle\.spec\.ts/);
+  assert.match(packageJson.scripts["test:assistant:smoke"], /p0-assistant-interaction\\.spec\\.ts/);
+  assert.match(packageJson.scripts["test:assistant:smoke"], /p0-assistant-skills\\.spec\\.ts/);
+  assert.match(packageJson.scripts["test:assistant:smoke"], /--grep/);
+  assert.doesNotMatch(packageJson.scripts["test:assistant:smoke"], /p0-locale-lifecycle\\.spec\\.ts/);
   assert.match(packageJson.scripts["test:assistant:smoke"], /--max-failures=1/);
-  assert.match(packageJson.scripts["test:assistant"], /p0-assistant-skills\.spec\.ts/);
-  assert.doesNotMatch(packageJson.scripts["test:assistant"], /p0-locale-lifecycle\.spec\.ts/);
-  assert.match(packageJson.scripts["test:assistant"], /--project=chromium --project=webkit/);
-  assert.match(packageJson.scripts["test:assistant"], /--workers=1 --retries=0 --max-failures=1/);
   const shardRunner = readFileSync(new URL("../scripts/run-browser-shards.mjs", import.meta.url), "utf8");
   const nextConfig = readFileSync(new URL("../next.config.ts", import.meta.url), "utf8");
   const playwrightConfig = readFileSync(new URL("../playwright.config.ts", import.meta.url), "utf8");

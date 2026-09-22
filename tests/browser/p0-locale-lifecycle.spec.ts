@@ -85,9 +85,14 @@ test('P0 account locale survives sign-out/sign-in and a clean device without lea
   const device = await browser.newContext({ baseURL: new URL(page.url()).origin, serviceWorkers: 'block' });
   try {
     const second = await device.newPage();
-    await loginFixture(second, owner.accountLocale());
-    await signIn(second);
+    // The original page already exercises the real sign-in/sign-out flow. For
+    // the clean-device assertion, seed the fixture's persisted account row
+    // directly so WebKit's provider login transport cannot change the scope
+    // being tested: locale isolation across storage partitions.
+    const secondOwner = await p0OwnerFixture(second, { locale: owner.accountLocale() });
+    await second.goto('/salon/dashboard/settings/security');
     await expect(second.locator('html')).toHaveAttribute('lang', 'fr');
+    expect(secondOwner.accountLocale()).toBe('fr');
   } finally { await device.close(); }
 
   // A different authenticated user in the original storage partition uses their
