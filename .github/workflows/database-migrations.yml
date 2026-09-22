@@ -172,14 +172,16 @@ jobs:
           PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL: http://127.0.0.1:3105
           PLAYWRIGHT_USE_PRODUCTION_SERVER: "true"
       - name: Exercise responsive and affected browser workflows
-        # Run 35456360465 reached this overall step's 60-minute limit with 1236
-        # passes, 2 failures, 4 skips and 82 of 1324 cases without a result. Give
-        # the expanded full collection 90 minutes; individual test budgets,
-        # both workers, zero retries and all assertions remain unchanged.
-        timeout-minutes: 90
-        run: npm run test:browser
+        # The full collection is intentionally unchanged. Four deterministic
+        # shards keep each runner below the observed single-step wall-clock
+        # limit while retaining Chromium, Firefox, WebKit and mobile projects.
+        # Each shard owns its fixture/app ports and result directory so the
+        # negative-path provider fixtures cannot race or overwrite reports.
+        timeout-minutes: 60
+        run: node scripts/run-browser-shards.mjs
         env:
-          PLAYWRIGHT_CI_WORKERS: "2"
+          PLAYWRIGHT_BROWSER_SHARDS: "4"
+          PLAYWRIGHT_SHARD_WORKERS: "1"
           GIRLZ_CULTURE_ACCEPTANCE_MODE: "true"
           NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS: "true"
           NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3104
