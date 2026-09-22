@@ -155,8 +155,13 @@ test("workflow preserves normal browsers and gates every production command afte
   const workflow = yaml.load(readFileSync(new URL("../.github/workflows/database-migrations.yml", import.meta.url), "utf8"));
   assert.ok(Object.hasOwn(workflow.on, "pull_request"));
   assert.deepEqual(workflow.on.push.branches, ["main"]);
-  const { verify, "verify-migrations": migrations, migrate } = workflow.jobs;
-  assert.equal(verify.if, "github.event_name != 'workflow_dispatch'");
+  const { assistant_focused: assistant, verify, "verify-migrations": migrations, migrate } = workflow.jobs;
+  assert.equal(assistant.if, "github.event_name != 'workflow_dispatch'");
+  assert.equal(assistant["timeout-minutes"], 30);
+  assert.ok(assistant.steps.some((step) => step.run === "npm run test:assistant"));
+  assert.equal(verify.needs, "assistant_focused");
+  assert.match(verify.if, /github\.event_name != 'workflow_dispatch'/);
+  assert.match(verify.if, /needs\.assistant_focused\.result == 'success'/);
   for (const name of REQUIRED_CI_STEPS) assert.equal(verify.steps.filter((step) => step.name === name).length, 1);
   const browserStep = verify.steps.find((step) => step.name === "Exercise responsive and affected browser workflows");
   assert.ok(browserStep);
@@ -165,6 +170,11 @@ test("workflow preserves normal browsers and gates every production command afte
   assert.equal(browserStep.env.PLAYWRIGHT_BROWSER_SHARDS, "8");
   assert.equal(browserStep.env.PLAYWRIGHT_SHARD_WORKERS, "1");
   assert.equal(browserStep.env.PLAYWRIGHT_SHARD_CONCURRENCY, "4");
+  const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  assert.match(packageJson.scripts["test:assistant"], /p0-assistant-skills\.spec\.ts/);
+  assert.match(packageJson.scripts["test:assistant"], /p0-locale-lifecycle\.spec\.ts/);
+  assert.match(packageJson.scripts["test:assistant"], /--project=chromium --project=webkit/);
+  assert.match(packageJson.scripts["test:assistant"], /--workers=1 --retries=0/);
   const shardRunner = readFileSync(new URL("../scripts/run-browser-shards.mjs", import.meta.url), "utf8");
   const nextConfig = readFileSync(new URL("../next.config.ts", import.meta.url), "utf8");
   const playwrightConfig = readFileSync(new URL("../playwright.config.ts", import.meta.url), "utf8");
