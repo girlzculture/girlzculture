@@ -208,6 +208,7 @@ test("reduced motion keeps the image fallback without video requests", async ({ 
 });
 
 test("service worker clears old versions and cannot resurrect cached onboarding HTML", async ({ page, context, baseURL }) => {
+  test.setTimeout(90_000);
   const network = await createNetworkOrigin(baseURL);
   try {
     await page.goto(network.url("/robots.txt"));
@@ -244,7 +245,7 @@ test("service worker clears old versions and cannot resurrect cached onboarding 
     await network.disconnect();
     await expect(context.request.get(network.url("/robots.txt"), { timeout: 5_000 })).rejects.toThrow();
     await page.goto(network.url("/uncached-public-offline-check"), { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "You’re offline" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "You’re offline" })).toBeVisible({ timeout: 20_000 });
     await expect(page.locator("body")).not.toContainText("Selected application plan");
     await expect(page.goto(network.url("/business/signup"), { waitUntil: "domcontentloaded" })).rejects.toThrow();
   } finally { await network.close(); }

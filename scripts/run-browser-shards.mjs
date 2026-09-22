@@ -133,13 +133,14 @@ async function runShard(shard) {
 
 for (let shard = 1; shard <= shardCount; shard += 1) await buildShard(shard);
 const results = [];
-for (let start = 1; start <= shardCount; start += shardConcurrency) {
-  const batch = Array.from(
-    { length: Math.min(shardConcurrency, shardCount - start + 1) },
-    (_, index) => start + index,
-  );
-  const batchResults = await Promise.all(batch.map((shard) => runShard(shard)));
-  results.push(...batchResults);
+let nextShard = 1;
+async function runNextShard() {
+  while (nextShard <= shardCount) {
+    const shard = nextShard;
+    nextShard += 1;
+    results.push(await runShard(shard));
+  }
 }
+await Promise.all(Array.from({ length: shardConcurrency }, () => runNextShard()));
 for (const result of results) process.stdout.write(`Browser shard ${result.shard}/${shardCount} exited ${result.code}; log ${result.logPath}\n`);
 if (results.some(result => result.code !== 0)) process.exitCode = 1;

@@ -181,9 +181,10 @@ test("workflow preserves normal browsers and gates every production command afte
   assert.match(shardRunner, /npmCommand\(\), \["run", "build", "--", "--webpack"\]/);
   assert.match(shardRunner, /path\.join\(outputRoot, `shard-\$\{shard\}\.log`\)/);
   assert.match(shardRunner, /const shardConcurrency = Number\(process\.env\.PLAYWRIGHT_SHARD_CONCURRENCY/);
-  assert.match(shardRunner, /for \(let start = 1; start <= shardCount; start \+= shardConcurrency\)/);
-  assert.match(shardRunner, /batch\.map\(\(shard\) => runShard\(shard\)\)/);
-  assert.doesNotMatch(shardRunner, /Promise\.all\(Array\.from\(\{ length: shardCount \}/);
+  assert.match(shardRunner, /let nextShard = 1;/);
+  assert.match(shardRunner, /while \(nextShard <= shardCount\)/);
+  assert.match(shardRunner, /Promise\.all\(Array\.from\(\{ length: shardConcurrency \}, \(\) => runNextShard\(\)\)\)/);
+  assert.doesNotMatch(shardRunner, /for \(let start = 1; start <= shardCount; start \+= shardConcurrency\)/);
   assert.doesNotMatch(shardRunner, /--project|--grep|--test-match/);
   for (const project of ["chromium", "firefox", "webkit", "iphone", "android", "narrow-phone", "phone-landscape", "tablet", "tablet-landscape"]) {
     assert.match(playwrightConfig, new RegExp(`name: "${project}"`), project);

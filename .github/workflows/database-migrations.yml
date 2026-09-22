@@ -174,8 +174,8 @@ jobs:
       - name: Exercise responsive and affected browser workflows
         # The full collection is intentionally unchanged. Eight deterministic
         # shards retain Chromium, Firefox, WebKit and mobile projects, while
-        # four-at-a-time execution keeps one runner from being CPU and memory
-        # oversubscribed. Each shard owns its fixture/app ports and results.
+        # four continuously occupied shard slots keep one runner from being
+        # CPU and memory oversubscribed. Each shard owns its fixture/app ports.
         timeout-minutes: 90
         run: node scripts/run-browser-shards.mjs
         env:
