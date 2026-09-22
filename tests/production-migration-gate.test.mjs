@@ -161,9 +161,10 @@ test("workflow preserves normal browsers and gates every production command afte
   const browserStep = verify.steps.find((step) => step.name === "Exercise responsive and affected browser workflows");
   assert.ok(browserStep);
   assert.equal(browserStep.run, "node scripts/run-browser-shards.mjs");
-  assert.equal(browserStep["timeout-minutes"], 60);
+  assert.equal(browserStep["timeout-minutes"], 90);
   assert.equal(browserStep.env.PLAYWRIGHT_BROWSER_SHARDS, "8");
   assert.equal(browserStep.env.PLAYWRIGHT_SHARD_WORKERS, "1");
+  assert.equal(browserStep.env.PLAYWRIGHT_SHARD_CONCURRENCY, "4");
   const shardRunner = readFileSync(new URL("../scripts/run-browser-shards.mjs", import.meta.url), "utf8");
   const nextConfig = readFileSync(new URL("../next.config.ts", import.meta.url), "utf8");
   const playwrightConfig = readFileSync(new URL("../playwright.config.ts", import.meta.url), "utf8");
@@ -179,7 +180,10 @@ test("workflow preserves normal browsers and gates every production command afte
   assert.match(shardRunner, /await buildShard\(shard\)/);
   assert.match(shardRunner, /npmCommand\(\), \["run", "build", "--", "--webpack"\]/);
   assert.match(shardRunner, /path\.join\(outputRoot, `shard-\$\{shard\}\.log`\)/);
-  assert.match(shardRunner, /Array\.from\(\{ length: shardCount \}/);
+  assert.match(shardRunner, /const shardConcurrency = Number\(process\.env\.PLAYWRIGHT_SHARD_CONCURRENCY/);
+  assert.match(shardRunner, /for \(let start = 1; start <= shardCount; start \+= shardConcurrency\)/);
+  assert.match(shardRunner, /batch\.map\(\(shard\) => runShard\(shard\)\)/);
+  assert.doesNotMatch(shardRunner, /Promise\.all\(Array\.from\(\{ length: shardCount \}/);
   assert.doesNotMatch(shardRunner, /--project|--grep|--test-match/);
   for (const project of ["chromium", "firefox", "webkit", "iphone", "android", "narrow-phone", "phone-landscape", "tablet", "tablet-landscape"]) {
     assert.match(playwrightConfig, new RegExp(`name: "${project}"`), project);

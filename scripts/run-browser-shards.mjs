@@ -5,7 +5,8 @@ import path from "node:path";
 
 const shardCount = Number(process.env.PLAYWRIGHT_BROWSER_SHARDS || 8);
 const workers = Number(process.env.PLAYWRIGHT_SHARD_WORKERS || 1);
-if (!Number.isInteger(shardCount) || shardCount < 2 || shardCount > 8 || !Number.isInteger(workers) || workers < 1 || workers > 4) {
+const shardConcurrency = Number(process.env.PLAYWRIGHT_SHARD_CONCURRENCY || Math.min(4, shardCount));
+if (!Number.isInteger(shardCount) || shardCount < 2 || shardCount > 8 || !Number.isInteger(workers) || workers < 1 || workers > 4 || !Number.isInteger(shardConcurrency) || shardConcurrency < 1 || shardConcurrency > shardCount) {
   throw new Error("Invalid browser shard configuration");
 }
 
@@ -131,6 +132,14 @@ async function runShard(shard) {
 }
 
 for (let shard = 1; shard <= shardCount; shard += 1) await buildShard(shard);
-const results = await Promise.all(Array.from({ length: shardCount }, (_, index) => runShard(index + 1)));
+const results = [];
+for (let start = 1; start <= shardCount; start += shardConcurrency) {
+  const batch = Array.from(
+    { length: Math.min(shardConcurrency, shardCount - start + 1) },
+    (_, index) => start + index,
+  );
+  const batchResults = await Promise.all(batch.map((shard) => runShard(shard)));
+  results.push(...batchResults);
+}
 for (const result of results) process.stdout.write(`Browser shard ${result.shard}/${shardCount} exited ${result.code}; log ${result.logPath}\n`);
 if (results.some(result => result.code !== 0)) process.exitCode = 1;
