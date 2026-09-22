@@ -158,6 +158,9 @@ test("workflow preserves normal browsers and gates every production command afte
   const { assistant_focused: assistant, verify, "verify-migrations": migrations, migrate } = workflow.jobs;
   assert.equal(assistant.if, "github.event_name != 'workflow_dispatch'");
   assert.equal(assistant["timeout-minutes"], 30);
+  const assistantSmoke = assistant.steps.find((step) => step.run === "npm run test:assistant:smoke");
+  assert.ok(assistantSmoke);
+  assert.equal(assistantSmoke["timeout-minutes"], 5);
   assert.ok(assistant.steps.some((step) => step.run === "npm run test:assistant"));
   assert.equal(verify.needs, "assistant_focused");
   assert.match(verify.if, /github\.event_name != 'workflow_dispatch'/);
@@ -171,6 +174,8 @@ test("workflow preserves normal browsers and gates every production command afte
   assert.equal(browserStep.env.PLAYWRIGHT_SHARD_WORKERS, "1");
   assert.equal(browserStep.env.PLAYWRIGHT_SHARD_CONCURRENCY, "4");
   const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  assert.match(packageJson.scripts["test:assistant:smoke"], /p0-locale-lifecycle\.spec\.ts/);
+  assert.match(packageJson.scripts["test:assistant:smoke"], /--max-failures=1/);
   assert.match(packageJson.scripts["test:assistant"], /p0-assistant-skills\.spec\.ts/);
   assert.match(packageJson.scripts["test:assistant"], /p0-locale-lifecycle\.spec\.ts/);
   assert.match(packageJson.scripts["test:assistant"], /--project=chromium --project=webkit/);

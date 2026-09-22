@@ -53,6 +53,9 @@ jobs:
       - run: npm ci
       - name: Install Chromium and WebKit for the focused gate
         run: npx playwright install --with-deps chromium webkit
+      - name: Exercise GC Assistant smoke workflows
+        timeout-minutes: 5
+        run: npm run test:assistant:smoke
       - name: Exercise GC Assistant focused workflows
         timeout-minutes: 20
         run: npm run test:assistant
