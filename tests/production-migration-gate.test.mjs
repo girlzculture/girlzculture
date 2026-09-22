@@ -175,7 +175,7 @@ test("workflow preserves normal browsers and gates every production command afte
   assert.match(shardRunner, /NEXT_PUBLIC_SUPABASE_URL: config\.fixtureURL/);
   assert.match(shardRunner, /GIRLZ_CULTURE_BROWSER_DIST_DIR: config\.distDir/);
   assert.match(shardRunner, /await buildShard\(shard\)/);
-  assert.match(shardRunner, /npmCommand\(\), \["run", "build"\]/);
+  assert.match(shardRunner, /npmCommand\(\), \["run", "build", "--", "--webpack"\]/);
   assert.match(shardRunner, /path\.join\(outputRoot, `shard-\$\{shard\}\.log`\)/);
   assert.match(shardRunner, /Array\.from\(\{ length: shardCount \}/);
   assert.doesNotMatch(shardRunner, /--project|--grep|--test-match/);

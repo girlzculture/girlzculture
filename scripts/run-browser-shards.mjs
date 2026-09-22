@@ -86,7 +86,11 @@ async function buildShard(shard) {
   streamOutput(fixture.stderr, process.stderr, log, prefix);
   try {
     await waitForFixture(config.fixtureURL);
-    const build = spawn(npmCommand(), ["run", "build"], {
+    // Next 16 defaults `next build` to Turbopack. The acceptance build is a
+    // deterministic production-artifact step, so use the repository's
+    // Webpack path here instead of allowing Turbopack's CSS transform to vary
+    // across isolated shard builds.
+    const build = spawn(npmCommand(), ["run", "build", "--", "--webpack"], {
       env: environment,
       stdio: ["ignore", "pipe", "pipe"],
     });
