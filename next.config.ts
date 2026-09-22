@@ -17,6 +17,11 @@ const releaseId =
     : "local-development");
 
 const nextConfig: NextConfig = {
+  // Browser acceptance shards build isolated production artifacts so each
+  // app process can use the fixture port assigned to that shard.
+  ...(process.env.GIRLZ_CULTURE_BROWSER_DIST_DIR
+    ? { distDir: process.env.GIRLZ_CULTURE_BROWSER_DIST_DIR }
+    : {}),
   // Keep Sharp external to the JavaScript server bundle and explicitly trace
   // only the native files required by the image-finalization route. Netlify's
   // Next runtime packages these traced files with that function; a global

@@ -162,16 +162,27 @@ test("workflow preserves normal browsers and gates every production command afte
   assert.ok(browserStep);
   assert.equal(browserStep.run, "node scripts/run-browser-shards.mjs");
   assert.equal(browserStep["timeout-minutes"], 60);
-  assert.equal(browserStep.env.PLAYWRIGHT_BROWSER_SHARDS, "4");
+  assert.equal(browserStep.env.PLAYWRIGHT_BROWSER_SHARDS, "8");
   assert.equal(browserStep.env.PLAYWRIGHT_SHARD_WORKERS, "1");
   const shardRunner = readFileSync(new URL("../scripts/run-browser-shards.mjs", import.meta.url), "utf8");
+  const nextConfig = readFileSync(new URL("../next.config.ts", import.meta.url), "utf8");
+  const playwrightConfig = readFileSync(new URL("../playwright.config.ts", import.meta.url), "utf8");
   assert.match(shardRunner, /--shard=\$\{shard\}\/\$\{shardCount\}/);
   assert.match(shardRunner, /"--workers", String\(workers\)/);
   assert.match(shardRunner, /"--retries=0"/);
-  assert.match(shardRunner, /PLAYWRIGHT_BASE_URL: `http:\/\/127\.0\.0\.1:\$\{basePort\}`/);
-  assert.match(shardRunner, /PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL: `http:\/\/127\.0\.0\.1:\$\{fixturePort\}`/);
+  assert.match(shardRunner, /PLAYWRIGHT_BASE_URL: config\.appURL/);
+  assert.match(shardRunner, /PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL: config\.fixtureURL/);
+  assert.match(shardRunner, /NEXT_PUBLIC_SUPABASE_URL: config\.fixtureURL/);
+  assert.match(shardRunner, /GIRLZ_CULTURE_BROWSER_DIST_DIR: config\.distDir/);
+  assert.match(shardRunner, /await buildShard\(shard\)/);
+  assert.match(shardRunner, /npmCommand\(\), \["run", "build"\]/);
   assert.match(shardRunner, /path\.join\(outputRoot, `shard-\$\{shard\}\.log`\)/);
   assert.match(shardRunner, /Array\.from\(\{ length: shardCount \}/);
+  assert.doesNotMatch(shardRunner, /--project|--grep|--test-match/);
+  for (const project of ["chromium", "firefox", "webkit", "iphone", "android", "narrow-phone", "phone-landscape", "tablet", "tablet-landscape"]) {
+    assert.match(playwrightConfig, new RegExp(`name: "${project}"`), project);
+  }
+  assert.match(nextConfig, /GIRLZ_CULTURE_BROWSER_DIST_DIR/);
   assert.ok(verify.steps.some((step) => step.run === "npm run test:accessibility"));
   const repeat = verify.steps.find((step) => step.name === "Repeat the exact WebKit business-card interaction twenty times");
   const onboarding = verify.steps.find((step) => step.name === "Exercise the complete business-onboarding spec on WebKit");
