@@ -1,5 +1,14 @@
 // Interface copy only. Applicant answers and uploaded filenames stay unchanged.
 export const MASTER_BUILD_COPY = [
+  ["Unfinished task", "Tâche en cours", "Tarea pendiente", "未完成的任务"],
+  ["End this task", "Terminer cette tâche", "Finalizar esta tarea", "结束此任务"],
+  ["There is an unfinished task. End it before moving to this request?", "Une tâche est en cours. La terminer avant de passer à cette demande ?", "Hay una tarea pendiente. ¿Finalizarla antes de pasar a esta solicitud?", "您还有一项未完成的任务。要结束它并处理此请求吗？"],
+  ["End task and continue", "Terminer la tâche et continuer", "Finalizar tarea y continuar", "结束任务并继续"],
+  ["Keep current task", "Garder la tâche en cours", "Mantener tarea actual", "保留当前任务"],
+  ["The current task is still active.", "La tâche en cours est conservée.", "La tarea actual sigue activa.", "当前任务仍在进行。"],
+  ["The unfinished task could not be loaded. Try again.", "La tâche en cours n’a pas pu être chargée. Réessayez.", "No se pudo cargar la tarea pendiente. Inténtalo de nuevo.", "无法加载未完成的任务。请重试。"],
+  ["This task changed in another session. Send your request again to use its current state.", "Cette tâche a changé dans une autre session. Renvoyez votre demande pour utiliser son état actuel.", "Esta tarea cambió en otra sesión. Envía de nuevo tu solicitud para usar su estado actual.", "此任务已在其他会话中更改。请重新发送请求以使用最新状态。"],
+  ["This task has reached its context limit. Review and finish it, or end it before starting another task.", "Cette tâche a atteint sa limite de contexte. Vérifiez-la et terminez-la, ou clôturez-la avant d’en commencer une autre.", "Esta tarea alcanzó su límite de contexto. Revísala y complétala, o finalízala antes de iniciar otra.", "此任务已达到上下文上限。请检查并完成它，或先结束它再开始新任务。"],
   ["I want the professional to travel to me", "Je souhaite une prestation à domicile", "Quiero que el profesional venga a mi domicilio", "我希望专业人员上门服务"],
   ["This appointment takes place at your address.", "Ce rendez-vous a lieu à votre adresse.", "Esta cita tendrá lugar en tu domicilio.", "此次预约将在您的地址进行。"],
   ["Enter the address where the service will take place. It is shared only for this booking.", "Indiquez l’adresse de la prestation. Elle est partagée uniquement pour ce rendez-vous.", "Introduce la dirección del servicio. Solo se compartirá para esta reserva.", "请输入服务地点地址。该地址仅用于此次预约。"],

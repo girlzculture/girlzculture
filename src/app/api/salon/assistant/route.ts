@@ -8,6 +8,8 @@ import { planOwnerRequest } from "@/lib/gcAssistantPlanningServer";
 import { isAssistantPage } from "@/lib/assistantPageContext";
 import { assistantResponseLanguage, persistAssistantLanguage } from "@/lib/assistantLanguagePreference";
 import { isAssistantLanguage } from "@/lib/assistantLanguage";
+import {continuesActiveTask,taskSummary} from '@/lib/assistantActiveTask';
+import {readActiveTask,rememberTask,endActiveTask} from '@/lib/assistantActiveTaskServer';
 import { PolicyInputError } from "@/lib/businessPolicyCore";
 import { capturePlatformError, safeFailure } from "@/lib/platformErrors";
 import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
@@ -41,10 +43,13 @@ async function POSTHandler(request: Request) {
     audit.assistant_request_id = body.request_id; audit.locale = body.locale;
     if (["tool", "plan", "confirm"].includes(body.action)) audit.stage = body.action;
     const allowed = body.action === "confirm" ? ["action", "request_id", "locale", "digest", "confirm", "policy_reviewed"] : body.action === "plan" ? ["action", "request_id", "locale", "text", "previous_request_ids", "conversation", "page"] : ["action", "request_id", "locale", "tool", "args"];
+    allowed.push('task_tracking');
+    if(body.task_tracking!==undefined&&body.task_tracking!==true)throw new AssistantError('ASSISTANT_INVALID_INPUT');
     if (Object.keys(body).some(key => !allowed.includes(key))) throw new AssistantError("ASSISTANT_INVALID_INPUT");
     if (body.action === "confirm") {
       if (body.confirm !== true || typeof body.policy_reviewed !== "boolean" || !/^[0-9a-f]{64}$/.test(body.digest)) throw new AssistantError("ASSISTANT_CONFIRMATION_REQUIRED");
       const confirmed = await confirmAssistantTool(context, body.request_id, body.digest, body.policy_reviewed);
+      if(body.task_tracking){const active=await readActiveTask(context);if(active&&active.user_context.some(turn=>turn.request_id===body.request_id)&&active.tool===confirmed.tool)await endActiveTask(context,active,body.request_id);}
       let warnings: { code: string; request_id: string }[] = [];
       if (confirmed.tool === "prepare_booking_reschedule_proposal") {
         try { warnings = await deliverAssistantReschedule(context, confirmed.result, (process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin).replace(/\/$/, "")); }
@@ -63,10 +68,14 @@ async function POSTHandler(request: Request) {
       if (body.conversation !== undefined) assertSchema(body.conversation, { type: "array", maxItems: 6, items: { type: "object", additionalProperties: false, required: ["role", "text"], properties: { role: { type: "string", enum: ["user", "assistant"] }, text: { type: "string", maxLength: 2400 } } } });
       const preferredLocale = assistantResponseLanguage(context.user.user_metadata, body.locale);
       audit.locale = preferredLocale;
-      const planned = await planOwnerRequest({ context, admin, salonId: context.salon.id, userId: context.user.id, locale: preferredLocale, text: body.text, timeZone: String(context.salon.time_zone), previousRequestIds: body.previous_request_ids, conversation: body.conversation, page: body.page });
+      const active=body.task_tracking?await readActiveTask(context):null;
+      const previousRequestIds=[...new Set<string>([...body.previous_request_ids,...(active?.request_ids||[])])].slice(-6);
+      const planned = await planOwnerRequest({ context, admin, salonId: context.salon.id, userId: context.user.id, locale: preferredLocale, text: body.text, timeZone: String(context.salon.time_zone), previousRequestIds, conversation: body.conversation, page: body.page,trackTask:body.task_tracking,activeTask:active });
       const responseLocale = isAssistantLanguage(planned.response_locale) ? planned.response_locale : preferredLocale;
       await persistAssistantLanguage(context, preferredLocale, responseLocale, planned.language_switch != null);
-      if (!planned.plan) return Response.json(planned, { headers });
+      if(body.task_tracking&&!continuesActiveTask(active,planned))return Response.json({task_switch_required:true,active_task:taskSummary(active),response_locale:responseLocale},{headers});
+      const task=body.task_tracking?await rememberTask(context,active,planned.task_tool,body.request_id,body.text):null;
+      if (!planned.plan) return Response.json({...planned,...(body.task_tracking?{active_task:taskSummary(task)}:{})}, { headers });
       noteTool(planned.plan.tool, planned.plan.args);
       const executed = await executeAssistantTool(context, { requestId: body.request_id, locale: responseLocale, tool: planned.plan.tool, args: planned.plan.args });
       if (ASSISTANT_TOOLS[planned.plan.tool as AssistantTool].risk === 1) {
@@ -84,9 +93,10 @@ async function POSTHandler(request: Request) {
           await capturePlatformError({ request, admin, error, feature: "gc-assistant", action: "answer-fallback", actorRole: "salon", actorId, salonId, severity: "low", safeMessage: "The authorized business summary was returned without AI wording." });
         }
       }
-      return Response.json({ ...executed, response_locale: responseLocale }, { headers });
+      return Response.json({ ...executed, response_locale: responseLocale,...(body.task_tracking?{active_task:taskSummary(task)}:{}) }, { headers });
     }
     if (body.action !== "tool") throw new AssistantError("ASSISTANT_INVALID_INPUT");
+    if(body.task_tracking){const active=await readActiveTask(context);if(!continuesActiveTask(active,{task_tool:active?.tool,plan:{tool:body.tool}}))return Response.json({task_switch_required:true,active_task:taskSummary(active)},{headers});}
     noteTool(body.tool, body.args);
     return Response.json(await executeAssistantTool(context, { requestId: body.request_id, locale: assistantResponseLanguage(context.user.user_metadata, body.locale), tool: body.tool, args: body.args }), { headers });
   } catch (error) {

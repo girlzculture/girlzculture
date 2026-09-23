@@ -1,3 +1,4 @@
+import {checkedTaskTool} from '@/lib/assistantActiveTask';
 import { ASSISTANT_TOOLS, AssistantError, validateTool, type AssistantTool } from "@/lib/gcAssistantCore";
 import { ASSISTANT_LANGUAGES, isAssistantLanguage, type AssistantLanguage } from "@/lib/assistantLanguage";
 
@@ -87,12 +88,12 @@ function withSharedDefinitions<T extends Record<string, unknown>>(schema: T): T 
 
 /** A single discriminated decision prevents the provider from emitting a tool
  * and a clarification/navigation together. The answer phase has no tool shape. */
-export function ownerPlannerSchema(granted: ReadonlySet<string>, answerOnly: boolean) {
+export function ownerPlannerSchema(granted: ReadonlySet<string>, answerOnly: boolean, trackTask = false) {
   if (answerOnly) return object({ reply: { type: "string", minLength: 1, maxLength: 900, description: "A complete, concise answer based only on the current authorized read. Prefer two to four short sentences; do not start a list that cannot fit." } });
   const tools = Object.entries(ASSISTANT_TOOLS).filter(([name, definition]) => granted.has(definition.permission) && (name !== "get_outstanding_balances" || granted.has("bookings") && granted.has("client_history")) && (name !== "calculate_service_selection" || granted.has("my_page")) && (name !== "get_booking_price_details" || granted.has("earnings") && granted.has("client_history"))).map(([name, definition]) => object({
     tool: { type: "string", enum: [name] }, args: definition.schema,
   }, purposes[name as AssistantTool]));
-  return withSharedDefinitions(object({ language_switch: { type: ["string", "null"], enum: [null, ...ASSISTANT_LANGUAGES], description: "Only an explicit request in the current user message to change the response language sets this code. Otherwise null; preserve the existing response language." }, decision: { anyOf: [
+  return withSharedDefinitions(object({ ...(trackTask?{task_tool:{type:['string','null'],enum:[null,...Object.entries(ASSISTANT_TOOLS).filter(([,d])=>d.risk>=3&&granted.has(d.permission)).map(([tool])=>tool)],description:'The unfinished business action this request advances, including clarifications and reads needed before preparation. Preserve the active task while continuing it. Null for an unrelated new question or when no action is being worked on. Only explicit owner confirmation executes or completes an action.'}}:{}), language_switch: { type: ["string", "null"], enum: [null, ...ASSISTANT_LANGUAGES], description: "Only an explicit request in the current user message to change the response language sets this code. Otherwise null; preserve the existing response language." }, decision: { anyOf: [
     ...tools,
     object({ clarification: { type: "string", minLength: 1, maxLength: 240 } }, "Ask one necessary missing-detail question, or greet the owner. Never answer business-data questions here."),
     object({ navigate: { type: "string", enum: destinations } }, "Open a controlled dashboard workflow when requested, or for financial/security actions that cannot be prepared here."),
@@ -110,21 +111,23 @@ const isObject = (value: unknown): value is Record<string, unknown> => Boolean(v
 // responses. This checks readable content, not factual or semantic correctness.
 const hasProseContent = (value: string) => /[\p{L}\p{N}]/u.test(value);
 
-export function parseOwnerPlannerResponse(text: string, granted: ReadonlySet<string>, answerOnly: boolean) {
+export function parseOwnerPlannerResponse(text: string, granted: ReadonlySet<string>, answerOnly: boolean, trackTask = false) {
   let payload: unknown;
   try { payload = JSON.parse(text); } catch { throw new AssistantPlannerError("JSON"); }
   const key = answerOnly ? "reply" : "decision";
-  if (!isObject(payload) || Object.keys(payload).length !== (answerOnly ? 1 : 2) || !Object.hasOwn(payload, key) || (!answerOnly && payload.language_switch !== null && !isAssistantLanguage(payload.language_switch))) throw new AssistantPlannerError("ENVELOPE");
-  const result: { plan: { tool: string; args: Record<string, unknown> } | null; reply: string | null; clarification: string | null; navigate: string | null; language_switch: AssistantLanguage | null } = { plan: null, reply: null, clarification: null, navigate: null, language_switch: answerOnly ? null : payload.language_switch as AssistantLanguage | null };
+  if (!isObject(payload) || Object.keys(payload).length !== (answerOnly ? 1 : trackTask ? 3 : 2) || !Object.hasOwn(payload, key) || (!answerOnly && payload.language_switch !== null && !isAssistantLanguage(payload.language_switch))) throw new AssistantPlannerError("ENVELOPE");
+  const result: { plan: { tool: string; args: Record<string, unknown> } | null; reply: string | null; clarification: string | null; navigate: string | null; task_tool?: AssistantTool|null; language_switch: AssistantLanguage | null } = { plan: null, reply: null, clarification: null, navigate: null, language_switch: answerOnly ? null : payload.language_switch as AssistantLanguage | null };
   if (answerOnly) {
     if (typeof payload.reply !== "string" || !payload.reply.trim() || payload.reply.length > 900 || !hasProseContent(payload.reply)) throw new AssistantPlannerError("ANSWER");
     result.reply = payload.reply; return result;
   }
+  if(trackTask){result.task_tool=checkedTaskTool(payload.task_tool);if(result.task_tool&&!granted.has(ASSISTANT_TOOLS[result.task_tool].permission))throw new AssistantError('ASSISTANT_ACCESS_DENIED',403);}
   const decision = payload.decision;
   if (!isObject(decision)) throw new AssistantPlannerError("DECISION");
   const keys = Object.keys(decision);
   if (keys.length === 2 && Object.hasOwn(decision, "tool") && Object.hasOwn(decision, "args")) {
     const checked = validateTool(decision.tool, decision.args);
+    if(trackTask&&checked.risk>=3&&result.task_tool!==checked.tool)throw new AssistantPlannerError('DECISION');
     if (checked.tool === "get_availability" && checked.args.style_id && !granted.has("styles")) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
     if (!granted.has(checked.permission)) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
     if (checked.tool === "calculate_service_selection" && (!granted.has("my_page") || checked.args.promotion_id && !granted.has("promotions")) || checked.tool === "get_booking_price_details" && (!granted.has("earnings") || !granted.has("client_history"))) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);

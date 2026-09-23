@@ -196,7 +196,7 @@ function fixture(options = {}) {
     },
   });
   const { planOwnerRequest } = load('src/lib/gcAssistantPlanningServer.ts');
-  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ context:{admin,salon:{id:'business-A',time_zone:'America/New_York'},user:{id:'owner-A'},isOwner:!options.assigned,teamMember:options.assigned?{stylist_id:options.assigned}:null}, admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: options.previousRequestIds || history.map(row => row.id), conversationRequestIds: options.conversationRequestIds, conversation: options.conversation, answerOnly: options.answerOnly, page: options.page });
+  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ context:{admin,salon:{id:'business-A',time_zone:'America/New_York'},user:{id:'owner-A'},isOwner:!options.assigned,teamMember:options.assigned?{stylist_id:options.assigned}:null}, admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: options.previousRequestIds || history.map(row => row.id), conversationRequestIds: options.conversationRequestIds, conversation: options.conversation, answerOnly: options.answerOnly, page: options.page, trackTask: options.trackTask, activeTask: options.activeTask });
   return { run, calls, requests, updates, inputMeasurements };
 }
 
@@ -269,7 +269,12 @@ test('shared planner definitions preserve the complete pre-factoring owner schem
   // strict required fields, patterns, limits, enum order and all 41 tool choices.
   // The manual-appointment plan now carries explicit service/stylist preference
   // fields so terse follow-ups can preserve “any” versus named selections.
-  assert.equal(createHash('sha256').update(JSON.stringify(expanded)).digest('hex'), 'cc7c1c67ea8d9a275e6a369d686cdaf12ce26a05f5586948ffea171cce5e9d6a');
+  // Master Build adds one reviewed archive action. Preserve the frozen legacy
+  // contract exactly, then validate the complete expanded tool set below.
+  const archive=expanded.properties.decision.anyOf.filter(row=>row.properties.tool?.enum[0]==='prepare_professional_archive');
+  assert.equal(archive.length,1);assert.deepEqual(archive[0].properties.args,JSON.parse(JSON.stringify(ASSISTANT_TOOLS.prepare_professional_archive.schema)));
+  const legacy=structuredClone(expanded);legacy.properties.decision.anyOf=legacy.properties.decision.anyOf.filter(row=>row.properties.tool?.enum[0]!=='prepare_professional_archive');
+  assert.equal(createHash('sha256').update(JSON.stringify(legacy)).digest('hex'), 'cc7c1c67ea8d9a275e6a369d686cdaf12ce26a05f5586948ffea171cce5e9d6a');
   assert.ok(Buffer.byteLength(JSON.stringify(schema)) < Buffer.byteLength(JSON.stringify(expanded)) - 7000);
   for (const granted of [[], ...all.map(permission => [permission]), all, all.filter(permission => permission !== 'client_history'), all.filter(permission => permission !== 'my_page')]) {
     const current = ownerPlannerSchema(new Set(granted), false), unfolded = expandedPlannerSchema(current);
@@ -1083,3 +1088,16 @@ test('actual contribution projection retains measured dates values counts and ac
    assert.deepEqual(Array.from(config.filters.find(f=>f[0]==='in')[2]),['agents.business.instructions','agents.business.tool_guidance','agents.business.routing']);
   }
  });
+
+
+test('active task retains the exact original appointment across long follow-ups and refresh', async()=>{
+ const original='Create a walk-in for Alma Aba, Thursday September 24, 3:30 PM, any stylist, any service';
+ const activeTask={id:'task-a',tool:'prepare_manual_appointment',permission:'bookings',revision:18,request_ids:[],user_context:Array.from({length:18},(_,i)=>({request_id:`turn-${i}`,text:i?`Keep the same appointment detail ${i}`:original}))};
+ const f=fixture({trackTask:true,activeTask,wireOutput:{decision:{clarification:'I will retain 3:30 PM for Alma Aba.'},task_tool:'prepare_manual_appointment'}});
+ const result=await f.run('en','Keep the original time.');
+ assert.equal(result.task_tool,'prepare_manual_appointment');
+ const sent=JSON.parse(f.requests[0].messages[1].content);
+ assert.equal(sent.active_task.user_context.length,18);
+ assert.equal(sent.active_task.user_context[0].text,original);
+ assert.ok(f.requests[0].response_format.json_schema.schema.required.includes('task_tool'));
+});

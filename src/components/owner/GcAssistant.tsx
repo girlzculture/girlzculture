@@ -24,7 +24,8 @@ import { presentAssistantResult, presentPreparedAssistantAction } from "@/lib/gc
 
 type Row = Record<string, unknown>;
 type SavedRequest = { id: string; tool: string; arguments: Row; execution_payload: Row; before_summary: Row; result: unknown; risk_class: number; digest: string; confirmed_at: string | null };
-type Turn = { id: string; locale?: string; text?: string; request?: SavedRequest; assistant_message?: string; reply?: string; clarification?: string; navigate?: string; notice?: string; suggestions?: string[]; submission?: Row; pending?: boolean; error?: string; errorReference?: string };
+type ActiveTask={id:string;tool:string;revision:number;label:string};
+type Turn = { task_switch_required?:boolean; abandoned?:boolean; id: string; locale?: string; text?: string; request?: SavedRequest; assistant_message?: string; reply?: string; clarification?: string; navigate?: string; notice?: string; suggestions?: string[]; submission?: Row; pending?: boolean; error?: string; errorReference?: string };
 const AssistantOpenContext = createContext<{ open: (button: HTMLButtonElement) => void; openAppearance: (button: HTMLButtonElement) => void; expanded: boolean; docked: boolean; avatar: AssistantAvatar } | null>(null);
 const AssistantBusinessBinding = createContext<((business: AssistantBusinessContext) => void) | null>(null);
 export function useAssistantBusinessBinding() { return useContext(AssistantBusinessBinding); }
@@ -96,6 +97,8 @@ export function Facts({ value, name = "", group = "", depth = 0, timeZone = "Ame
   return <span className="whitespace-pre-wrap break-words" data-no-translate>{String(value)}</span>;
 }
 const errors: Record<string, string> = {
+  ASSISTANT_TASK_CHANGED: "This task changed in another session. Send your request again to use its current state.",
+  ASSISTANT_TASK_CONTEXT_FULL: "This task has reached its context limit. Review and finish it, or end it before starting another task.",
   ASSISTANT_CONVERSATION_CLOSED: "This conversation is closed. Its history is still available.",
   ASSISTANT_SERVICE_CLARIFICATION_REQUIRED: "Which service is this appointment for?", ASSISTANT_DURATION_CLARIFICATION_REQUIRED: "How many minutes will this appointment take?", ASSISTANT_PROFESSIONAL_CLARIFICATION_REQUIRED: "Which professional should take this appointment?", ASSISTANT_AVAILABILITY_CONFLICT: "That time is unavailable. Choose another time.", ASSISTANT_DRAFT_REQUIRED: "Choose a draft record. Published records remain in their existing editing workflow.", ASSISTANT_CUSTOMER_PARTICIPANT_REQUIRED: "This appointment has no customer participant in Girlz Culture. Use your existing contact channel.",
 
@@ -137,6 +140,8 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
   const [reviewed, setReviewed] = useState<Record<string, boolean>>({});
   const actor = useRef<string | null>(null);
   const actorGeneration = useRef(0);
+  const [activeTask,setActiveTask]=useState<ActiveTask|null>(null);
+  const taskMutation = useRef(0);
   const [rememberedIds, setRememberedIds] = useState<string[]>([]);
   const [memory, setMemory] = useState<{ request_ids: string[]; locale: string; expires_at: string } | null>(null);
   const [memoryNotice, setMemoryNotice] = useState("");
@@ -159,7 +164,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     const accessChanged = previous && (previous.isOwner !== next.isOwner || (!next.isOwner && JSON.stringify(previous.permissions) !== JSON.stringify(next.permissions)));
     if (previous && (previous.id !== next.id || previous.userId !== next.userId || accessChanged)) {
       actorGeneration.current++; responseLanguage.current = null;
-      setTurns([]); setText(""); setReviewed({}); setNotice(""); setReference(""); setBusy(false);
+      setActiveTask(null); setTurns([]); setText(""); setReviewed({}); setNotice(""); setReference(""); setBusy(false);
       setRememberedIds([]); setMemory(null); setMemoryNotice(""); setMemoryReference(""); setMemoryOpen(false);
       setDictationSession(value => value + 1); submissionInFlight.current = false;
       setAppearanceNotice(""); setAppearanceReference(""); setAppearanceBusy(false);
@@ -176,7 +181,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
         responseLanguage.current = null;
         setRememberedIds([]); setMemory(null); setMemoryNotice(""); setMemoryReference(""); setMemoryOpen(false);
         submissionInFlight.current = false; followConversation.current = true;
-        setDictationSession(value => value + 1); setTurns([]); setText(""); setReviewed({}); setNotice(""); setReference(""); setBusy(false);
+        setDictationSession(value => value + 1); setActiveTask(null); setTurns([]); setText(""); setReviewed({}); setNotice(""); setReference(""); setBusy(false);
       }
       setHasSession(Boolean(session));
       if (!session) { dialog.current?.close(); setOpen(false); }
@@ -222,7 +227,25 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     const viewport = conversationViewport.current;
     if (viewport && followConversation.current) viewport.scrollTop = viewport.scrollHeight;
   }, [turns, busy, notice]);
+  useEffect(() => {
+    if (!open || !hasSession || !business?.id) return;
+    const controller = new AbortController();
+    const generation = actorGeneration.current, revision = taskMutation.current;
+    void (async () => {
+      try {
+        const session = await getSessionForScope("salon");
+        if (!session || generation !== actorGeneration.current) return;
+        const response = await fetch("/api/salon/assistant/task", {headers:{Authorization:`Bearer ${session.access_token}`},signal:controller.signal});
+        const result = await readOwnerResponse(response,"ASSISTANT_UNAVAILABLE");
+        if (!controller.signal.aborted && generation === actorGeneration.current && revision === taskMutation.current) setActiveTask(result.active_task as ActiveTask|null);
+      } catch {
+        if (!controller.signal.aborted && generation === actorGeneration.current && revision === taskMutation.current) setNotice("The unfinished task could not be loaded. Try again.");
+      }
+    })();
+    return () => controller.abort();
+  }, [open, hasSession, business?.id]);
   async function call(body: Row, generation: number) {
+    taskMutation.current++;
     const session = await getSessionForScope("salon");
     if (!session || generation !== actorGeneration.current) throw new Error("AUTH_REQUIRED");
     // onAuthStateChange can arrive after a fast first click. The bearer session
@@ -231,7 +254,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     if (actor.current === null) actor.current = session.user.id;
     if (session.user.id !== actor.current) throw new Error("AUTH_REQUIRED");
     const requestLocale = responseLanguage.current?.display === locale ? responseLanguage.current.response : locale;
-    const response = await fetch("/api/salon/assistant", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ ...body, locale: body.locale || requestLocale, ...(body.action === "plan" ? { page: body.page || assistantPageFromPath(pathname) } : {}) }), signal: AbortSignal.timeout(55000) });
+    const response = await fetch("/api/salon/assistant", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ ...body, task_tracking:true, locale: body.locale || requestLocale, ...(body.action === "plan" ? { page: body.page || assistantPageFromPath(pathname) } : {}) }), signal: AbortSignal.timeout(55000) });
     return readOwnerResponse(response, "ASSISTANT_UNAVAILABLE");
   }
   async function submit(tool?: string, setup = false, retry?: Turn, prompt?: string) {
@@ -251,12 +274,13 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     if (retry) setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, pending: true, error: undefined, errorReference: undefined } : turn));
     else {
       const quickAction = quickActions.find(action => action.tool === tool);
-      setTurns(previous => [...previous, { id, text: tool ? t(quickAction?.label || "Business information") : message, submission, pending: true }].slice(-12));
+      setTurns(previous => [...previous, { id, text: tool ? t(quickAction?.label || "Business information") : message, submission, pending: true }]);
       if (!tool && !setup && !prompt) setText("");
     }
     try {
       const result = await call(submission, generation);
       if (generation !== actorGeneration.current) return;
+      if(Object.hasOwn(result,"active_task"))setActiveTask(result.active_task as ActiveTask|null);
       const resultLocale = isAssistantLanguage(result.response_locale) ? result.response_locale : (responseLanguage.current?.display === locale ? responseLanguage.current.response : locale);
       responseLanguage.current = { display: locale, response: resultLocale };
       setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, ...result, id, locale: resultLocale, pending: false, error: undefined, errorReference: undefined } : turn));
@@ -266,6 +290,30 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
       setNotice(message);
       setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, pending: false, error: message, errorReference: error instanceof OwnerActionError ? error.reference : "" } : turn));
     } finally { if (generation === actorGeneration.current) { submissionInFlight.current = false; setBusy(false); } }
+  }
+  async function endTask(next?:Turn){
+    if(busy||!activeTask)return;
+    taskMutation.current++;
+    const generation=actorGeneration.current;setBusy(true);setNotice("");
+    try{
+      const session=await getSessionForScope("salon");if(!session)throw Error("AUTH_REQUIRED");
+      const response=await fetch("/api/salon/assistant/task",{method:"DELETE",headers:{Authorization:`Bearer ${session.access_token}`,"Content-Type":"application/json"},body:JSON.stringify({id:activeTask.id,revision:activeTask.revision,confirm:true})});
+      const result=await readOwnerResponse(response,"ASSISTANT_UNAVAILABLE");if(!result.verified)throw Error("ASSISTANT_TASK_CHANGED");
+      if(generation!==actorGeneration.current)return;
+      setActiveTask(null);setRememberedIds([]);
+      setTurns(previous=>previous.map(turn=>({...turn,...(turn.request?.tool===activeTask.tool&&!turn.request.confirmed_at?{abandoned:true}:{}),task_switch_required:false})));
+      if(next){
+        const submission={...next.submission,...(next.submission?.action==='plan'?{previous_request_ids:[],conversation:[]}:{})};
+        // Reuse the already visible user turn. This continuation was explicitly
+        // requested by the owner and must not duplicate the original message.
+        setTurns(previous=>previous.map(turn=>turn.id===next.id?{...turn,pending:true}:turn));
+        const answer=await call(submission,generation);if(generation!==actorGeneration.current)return;
+        if(isAssistantLanguage(answer.response_locale))responseLanguage.current={display:locale,response:answer.response_locale};
+        if(Object.hasOwn(answer,"active_task"))setActiveTask(answer.active_task as ActiveTask|null);
+        setTurns(previous=>previous.map(turn=>turn.id===next.id?{...turn,...answer,submission,pending:false}:turn));
+      }
+    }catch(error){if(generation===actorGeneration.current){setNotice(errors[error instanceof Error?error.message:""]||"The unfinished task could not be loaded. Try again.");if(next)setTurns(previous=>previous.map(turn=>turn.id===next.id?{...turn,pending:false,error:"GC Assistant is temporarily unavailable. You can still use the dashboard and the quick actions below.",submission:{...next.submission,...(next.submission?.action==='plan'?{previous_request_ids:[],conversation:[]}:{})}}:turn));}}
+    finally{if(generation===actorGeneration.current)setBusy(false);}
   }
   async function manageMemory(action: "load" | "save" | "delete" | "resume") {
     if (busy) return;
@@ -311,6 +359,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     try {
       const result = await call({ action: "confirm", request_id: turn.request.id, digest: turn.request.digest, confirm: true, policy_reviewed: Boolean(reviewed[turn.id]) }, generation);
       if (generation !== actorGeneration.current) return;
+      if(activeTask?.tool===turn.request?.tool)setActiveTask(null);
       setTurns(previous => previous.map(item => item.id === turn.id ? { ...item, request: { ...turn.request!, result: result.result, confirmed_at: new Date().toISOString() }, notice: turn.request?.tool === "prepare_manual_service_sale" ? "The received payment was recorded and verified in Finances. No customer charge was made." : "Your change was saved and verified." } : item));
       window.dispatchEvent(new Event("gc-assistant-saved"));
       if (result.warnings?.length) { setNotice(turn.request.tool === "prepare_booking_reschedule_proposal" ? "The proposal was saved, but a notification could not be delivered." : "The message was saved, but a notification could not be delivered."); setReference(result.warnings[0].request_id || ""); }
@@ -354,6 +403,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
           <button onClick={() => dialog.current?.close()} className="grid h-10 w-10 place-items-center rounded-full text-text-primary transition hover:bg-subtle" aria-label={t("Close GC Assistant")}><X aria-hidden size={20}/></button>
         </header>
 
+        {activeTask?<section aria-label={t("Unfinished task")} className="border-b border-border px-4 py-2 text-xs"><p className="font-semibold">{t("Unfinished task")}</p><p className="line-clamp-2" data-no-translate>{activeTask.label}</p><button type="button" disabled={busy} onClick={()=>void endTask()} className="min-h-11 underline">{t("End this task")}</button></section>:null}
         <div ref={conversationViewport} data-assistant-conversation onScroll={event => { const viewport = event.currentTarget; followConversation.current = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80; }} className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-subtle px-3 py-3">
           <section className="flex items-start gap-3" aria-label={t("GC Assistant introduction")}>
             <Avatar value={avatar} small/>
@@ -409,7 +459,8 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
                 </div></div> : null}
 
                 {turn.request?.tool === "get_outstanding_balances" ? <AssistantBalances value={turn.request.result} onNavigate={() => { if (!desktop) dialog.current?.close(); }}/> : null}
-                {turn.request?.risk_class && turn.request.risk_class >= 3 && !turn.request.confirmed_at ? <section className="ml-0 rounded-2xl border border-border bg-white p-4 shadow-[0_6px_20px_rgba(13,17,20,.05)] sm:ml-11">
+                {turn.task_switch_required?<section className="rounded-xl border border-border bg-white p-3 text-sm"><p>{t("There is an unfinished task. End it before moving to this request?")}</p><button type="button" disabled={busy} onClick={()=>void endTask(turn)} className="min-h-11 rounded-lg bg-primary px-3 text-white">{t("End task and continue")}</button><button type="button" disabled={busy} onClick={()=>setTurns(previous=>previous.map(item=>item.id===turn.id?{...item,task_switch_required:false,notice:"The current task is still active."}:item))} className="min-h-11 px-3 underline">{t("Keep current task")}</button></section>:null}
+                {turn.request?.risk_class && turn.request.risk_class >= 3 && !turn.request.confirmed_at && !turn.abandoned ? <section className="ml-0 rounded-2xl border border-border bg-white p-4 shadow-[0_6px_20px_rgba(13,17,20,.05)] sm:ml-11">
                   <h3 className="text-base font-bold text-text-primary">{t("Review this draft")}</h3>
                   {turn.request.tool === "prepare_professional_archive" ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This removes the professional from booking and disables their staff access. Booking and finance history are preserved.")}</p> : null}
                   {turn.request.tool === "prepare_manual_service_sale" ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This records payment you already received in Finances. Girlz Culture will not charge the client, send a receipt or create an appointment.")}</p> : null}

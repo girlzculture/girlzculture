@@ -1301,3 +1301,5 @@ await verifyWaitlistConcurrency(databaseUrl,psql);
 
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-google-business-profile.sql")],"Google connection state, retry, disconnect and two-business isolation"));
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-mobile-booking.sql")],"Private mobile destination, immutable travel terms and retention"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-assistant-active-task.sql")],"Assistant active task continuity, confirmed completion and cancellation boundary"));

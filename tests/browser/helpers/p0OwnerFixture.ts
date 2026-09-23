@@ -165,6 +165,7 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
         return respond({ revision: row, verified: true });
       }
     }
+    if (path === "/api/salon/assistant/task" && req.method() === "GET") return respond({active_task:null});
     if (path === "/api/salon/assistant") {
       const input = req.postDataJSON(); actions.push(input);
       if (input.action === "plan") {

@@ -9,9 +9,9 @@ test('plan answers use the canonical entitlement catalog and do not infer an unk
   const known = fixture(); const result = (await known.run('get_plan_status', {})).request.result;
   assert.equal(result.current_plan.name, 'Premium');
   assert.equal(result.current_plan.entitlements.productListings.limit, null);
-  assert.equal(result.available_plans.length, 3);
+  assert.equal(result.available_plans.length, 5);
   assert.equal(result.current_plan.monthly_amount_cents, null, 'missing agreement must not invent a catalog charge');
-  assert.deepEqual(Array.from(result.available_plans, plan => plan.monthly_amount_cents), [8900,10900,12900]);
+  assert.deepEqual(Array.from(result.available_plans, plan => plan.monthly_amount_cents), [6900,9900,9900,14900,19900]);
   assert.equal(result.revenue_uplift_projection, null);
   const unknown = fixture({ tables: { subscriptions: [{ salon_id: business, status: 'active', tier: 'Unknown' }] } });
   assert.equal((await unknown.run('get_plan_status', {})).request.result.current_plan, null);
@@ -127,7 +127,7 @@ function fixture(overrides = {}) {
     // These period/read fixtures have no seven-day hours or occupancy source.
     // Dedicated schedule tests exercise its real authorization/projection.
     '@/lib/businessScheduleOpportunitiesServer': { readBusinessScheduleOpportunities: async context => { assert.equal(context.salon.id,business);throw Error('SCHEDULE_HOURS_UNAVAILABLE'); } },
-    '@/lib/bookingAvailabilityServer': { calendarAvailability: async input => { calls.push({ calendar:input }); return { time_zone:'America/New_York', gaps: overrides.conflict ? [] : [{ start:'2030-09-24T13:00:00Z',end:'2030-09-24T23:00:00Z',stylist_id: overrides.professional || null }] }; } } });
+    '@/lib/bookingAvailabilityServer': { calendarAvailability: async input => { calls.push({ calendar:input }); return { time_zone:'America/New_York', gaps: overrides.gaps ?? (overrides.conflict ? [] : [{ start:'2030-09-24T13:00:00Z',end:'2030-09-24T23:00:00Z',stylist_id: overrides.professional || null }]) }; } } }, { ...(overrides.now === undefined ? {} : { Date: class extends Date { static now(){ return overrides.now; } } }) });
   const server = load('src/lib/gcAssistantServer.ts');
   const context = { admin, salon: { id: business, subscription_status:'active',time_zone:'America/New_York',profile_views:29 }, user:{id:actor},isOwner:!teamMember, teamMember };
   return { calls, load, run:(tool,args)=>server.executeAssistantTool(context,{tool,args,locale:'en',requestId:professional}) };
@@ -247,7 +247,7 @@ test('assistant separates an existing provider agreement from new-sale prices wi
   ]}});
   const result=(await f.run('get_plan_status',{})).request.result;
   assert.equal(result.current_plan.monthly_amount_cents,5900);
-  assert.equal(result.available_plans[0].monthly_amount_cents,8900);
+  assert.equal(result.available_plans.find(plan=>plan.name==='Starter').monthly_amount_cents,9900);
   assert.doesNotMatch(JSON.stringify(result),/price_retired|price_other|99999/);
 });
 
@@ -255,4 +255,18 @@ test('assistant stock uses own-business quantities and thresholds, excludes fore
  const tables={salon_products:[{id:service,salon_id:business,name:'Own oil',inventory_quantity:2,track_inventory:true,low_stock_threshold:3},{id:professional,salon_id:actor,name:'Foreign oil',inventory_quantity:0,track_inventory:true,low_stock_threshold:5}],business_supplies:[{id:service,salon_id:business,name:'Own gloves',inventory_quantity:0,track_inventory:true,low_stock_threshold:2},{id:actor,salon_id:actor,name:'Foreign formula supply',inventory_quantity:0,track_inventory:true,low_stock_threshold:10}]};
  const f=fixture({tables});for(const query of ['', 'Own oil', 'Foreign formula supply']){const result=(await f.run('get_products',{query})).request.result;assert.equal(JSON.stringify(result).includes('Foreign'),false);assert.equal(result.stock_alerts_total,2);assert.equal(result.stock_alerts[0].quantity,2);}
  const denied=fixture({tables,denied:['products']});await assert.rejects(denied.run('get_products',{query:''}),error=>error.code==='ASSISTANT_ACCESS_DENIED');assert.equal(denied.calls.some(call=>call.name==='read_business_stock'||call.table==='salon_products'),false);
+});
+
+
+test('Master exact Alma walk-in preserves Thursday September 24 at 3:30 PM and never substitutes an earlier opening',async()=>{
+ const now=Date.parse('2026-09-23T12:00:00Z');
+ const options={now,professional,tables:{stylists:[{id:professional,salon_id:business,name:'Aisha',is_active:true,archived_at:null}]},gaps:[{start:'2026-09-24T19:00:00Z',end:'2026-09-24T21:00:00Z',stylist_id:professional}]};
+ const args={...manual,guest_name:'Alma Aba',date:'2026-09-24',time:'15:30',source:'walk_in',style_id:null,service_name:'',service_preference:'any',duration_minutes:null,stylist_id:null,stylist_preference:'any'};
+ const f=fixture(options),result=await f.run('prepare_manual_appointment',args);
+ assert.equal(result.request.execution_payload.appointment_datetime,'2026-09-24T19:30:00.000Z');
+ assert.equal(result.request.execution_payload.stylist_id,professional);assert.equal(result.request.execution_payload.service_name,'Medium knotless');
+ assert.equal(result.request.arguments.guest_name,'Alma Aba');assert.equal(result.request.arguments.time,'15:30');
+ const blocked=fixture({...options,gaps:[{start:'2026-09-24T19:00:00Z',end:'2026-09-24T20:15:00Z',stylist_id:professional}]});
+ await assert.rejects(blocked.run('prepare_manual_appointment',args),/ASSISTANT_AVAILABILITY_CONFLICT/);
+ assert.equal(blocked.calls.filter(c=>c.name==='save_gc_assistant_request').length,0);
 });
