@@ -1312,3 +1312,5 @@ console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assi
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-booking-reports.sql")],"Current-plan monthly appointment reports and tenant/staff projections"));
 
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-rebooking-reminders.sql")],"Reviewed rebooking automation, current consent, no duplicate sends and demo exclusion"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-google-help.sql")],"Google setup assistance, reviewed support handoff and private-address isolation"));

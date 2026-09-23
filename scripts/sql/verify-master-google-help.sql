@@ -1,0 +1,67 @@
+begin;
+create temporary table help_assertions(label text);
+grant insert,select on help_assertions to service_role;
+create function pg_temp.h_assert(ok boolean,label text) returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'Google help assertion: %',label;end if;insert into help_assertions values(label);end $$;
+create function pg_temp.h_reject(command text,expected text) returns void language plpgsql as $$declare rejected boolean:=false;begin begin execute command;exception when others then if sqlerrm=expected then rejected:=true;else raise;end if;end;perform pg_temp.h_assert(rejected,expected);end $$;
+do $$
+declare a uuid:=gen_random_uuid();b uuid:=gen_random_uuid();oa uuid:=gen_random_uuid();ob uuid:=gen_random_uuid();staff uuid:=gen_random_uuid();sa uuid:=gen_random_uuid();sb uuid:=gen_random_uuid();pa uuid:=gen_random_uuid();pb uuid:=gen_random_uuid();j jsonb;request uuid:=gen_random_uuid();request2 uuid:=gen_random_uuid();ticket uuid;first jsonb;plan text;fingerprint text;demo uuid:=gen_random_uuid();demo_owner uuid:=gen_random_uuid();
+begin
+ insert into auth.users(id,email,encrypted_password,email_confirmed_at,raw_user_meta_data) values(oa,'report-a@example.test','',now(),'{"role":"salon_owner"}'),(ob,'report-b@example.test','',now(),'{"role":"salon_owner"}'),(staff,'report-staff@example.test','',now(),'{"role":"salon_team"}');
+ update public.platform_identities set primary_role='salon_team' where user_id=staff;
+ insert into public.salons(id,user_id,name,slug,email,status,subscription_status,subscription_tier,time_zone) values
+ (a,oa,'Report A','report-fixture-a','report-a@example.test','Active','active','Premium','America/New_York'),(b,ob,'Secret business','report-fixture-b','report-b@example.test','Active','active','Premium','America/New_York');
+ insert into public.styles(id,salon_id,service_group_id,name,duration_min_hours,duration_max_hours,base_price,is_draft) select x.id,x.salon_id,g.id,x.name,1,1,100,false from(values(sa,a,'Boho / Knotless Braids'),(sb,b,'Secret service'))x(id,salon_id,name) cross join lateral(select id from public.service_groups where is_active and archived_at is null limit 1)g;
+ insert into public.stylists(id,salon_id,name,is_active,is_draft)values(pa,a,'Professional A',true,false),(pb,a,'Professional B',true,false);
+ insert into public.business_verification_locations(salon_id,address_street,address_city,address_state,address_zip,visit_status,visited_at,verified_by,visit_evidence) values(a,'1 Fixture Road','Fixture','NY','10001','verified',now()-interval '1 day',oa,'Disposable report fixture visit; no genuine approval.');
+
+ update public.salons set name='Own business',description='Stored owner description',phone='+12125550100',hours='{"Monday":"09:00-17:00"}' where id=a;
+ perform set_config('request.jwt.claim.role','service_role',true);
+ foreach plan in array array['Solo','Solo Pro','Starter','Growth','Premium'] loop
+  update public.salons set subscription_tier=plan where id=a;
+  set local role service_role;
+  j:=public.read_business_google_help(a,oa);
+  perform pg_temp.h_assert(j->>'level'=case when plan='Premium' then 'review' when plan in('Solo Pro','Growth') then 'assisted' else 'guide' end,plan||' help entitlement');
+  perform pg_temp.h_assert((j->'fields'<>'null'::jsonb)=(plan in('Solo Pro','Growth','Premium')),plan||' assisted field projection');
+  perform pg_temp.h_assert((j->'review'<>'null'::jsonb)=(plan='Premium'),plan||' review projection');
+  if plan in('Solo','Starter') then perform pg_temp.h_reject(format('select public.request_business_google_help(%L,%L,%L,''assisted_setup'',%L)',a,oa,gen_random_uuid(),j->>'fingerprint'),'GOOGLE_HELP_PLAN_REQUIRED');end if;
+  if plan in('Solo Pro','Growth') then perform pg_temp.h_reject(format('select public.request_business_google_help(%L,%L,%L,''profile_review'',%L)',a,oa,gen_random_uuid(),j->>'fingerprint'),'GOOGLE_HELP_PLAN_REQUIRED');end if;
+  reset role;
+ end loop;
+ set local role service_role;
+ perform pg_temp.h_reject(format('select public.read_business_google_help(%L,%L)',a,ob),'GOOGLE_HELP_ACCESS_DENIED');
+ perform pg_temp.h_reject(format('select public.read_business_google_help(%L,%L)',b,oa),'GOOGLE_HELP_ACCESS_DENIED');
+ perform pg_temp.h_reject(format('select public.read_business_google_help(%L,%L)',a,staff),'GOOGLE_HELP_ACCESS_DENIED');
+ perform pg_temp.h_assert(j::text not like '%Secret%' and j::text not like '%1 Fixture Road%' and j->'fields'->>'name'='Own business','private verification address and foreign records never included');
+ fingerprint:=j->>'fingerprint';
+ reset role;update public.salons set description='Changed owner description' where id=a;set local role service_role;
+ perform pg_temp.h_reject(format('select public.request_business_google_help(%L,%L,%L,''profile_review'',%L)',a,oa,request,fingerprint),'GOOGLE_HELP_STALE');
+ j:=public.read_business_google_help(a,oa);fingerprint:=j->>'fingerprint';
+ first:=public.request_business_google_help(a,oa,request,'profile_review',fingerprint);ticket:=(first->>'ticket_id')::uuid;
+ perform pg_temp.h_assert(first->>'verified'='true','created ticket independently read back');
+ perform pg_temp.h_assert(public.request_business_google_help(a,oa,request,'profile_review',fingerprint)=first,'response loss reuses exact request');
+ perform pg_temp.h_reject(format('select public.request_business_google_help(%L,%L,%L,''assisted_setup'',%L)',a,oa,request,fingerprint),'GOOGLE_HELP_REQUEST_REUSED');
+ perform pg_temp.h_reject(format('select public.request_business_google_help(%L,%L,%L,''profile_review'',%L)',b,ob,request,fingerprint),'GOOGLE_HELP_REQUEST_REUSED');
+ j:=public.request_business_google_help(a,oa,request2,'profile_review',fingerprint);
+ perform pg_temp.h_assert(j->>'ticket_id'=ticket::text and j->>'already_open'='true','one open help request per kind');
+ j:=public.read_business_google_help(a,oa);
+ perform pg_temp.h_assert(jsonb_array_length(j->'requests')=1 and j->'requests'->0->>'status'='Open','one visible canonical ticket');
+ reset role;
+ perform pg_temp.h_assert((select count(*)=1 from public.support_tickets where salon_id=a),'request uses existing support queue once');
+ perform pg_temp.h_assert((select message like '%Changed owner description%' and message not like '%1 Fixture Road%' from public.support_tickets where id=ticket),'reviewed own information only sent');
+ update public.support_tickets set status='Resolved' where id=ticket;
+ set local role service_role;
+ perform pg_temp.h_assert(public.request_business_google_help(a,oa,request2,'profile_review',fingerprint)->>'ticket_id'=ticket::text,'resolved response-loss alias never creates another ticket');
+ reset role;
+ update public.salons set service_location_type='home',home_address_public=false,public_neighborhood='Fixture neighborhood' where id=a;
+ j:=public.read_business_google_help(a,oa);
+ perform pg_temp.h_assert(j->'fields'->>'address' is null and j->'fields'->>'area'='Fixture neighborhood','home verification address never becomes setup suggestion');
+ insert into auth.users(id,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data)values(demo_owner,'help@sample.invalid','',now(),'{"gc_demo":true}','{"role":"salon_owner"}');
+ insert into public.salons(id,user_id,name,slug,email,is_demo,status,subscription_status,subscription_tier)values(demo,demo_owner,'Sample','sample-google-help','help@sample.invalid',true,'Active','active','Premium');
+ set local role service_role;j:=public.read_business_google_help(demo,demo_owner);
+ perform pg_temp.h_reject(format('select public.request_business_google_help(%L,%L,%L,''assisted_setup'',%L)',demo,demo_owner,gen_random_uuid(),j->>'fingerprint'),'GOOGLE_HELP_DEMO_DISABLED');
+ reset role;
+ perform pg_temp.h_assert(not has_function_privilege('authenticated','public.request_business_google_help(uuid,uuid,uuid,text,text)','execute'),'browser cannot forge business or actor');
+ perform pg_temp.h_assert(not has_table_privilege('service_role','gc_private.google_setup_requests','select'),'raw support mappings private');
+end $$;
+select count(*)||' Google help assertions passed' from help_assertions;
+rollback;
