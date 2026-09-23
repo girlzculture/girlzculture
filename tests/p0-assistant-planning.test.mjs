@@ -9,6 +9,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const booking = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', public_reference: 'GC123', guest_name: 'Sarah Save', appointment_datetime: '2026-09-24T19:00:00Z', status: 'Confirmed', style: { name: 'Save' }, stylist: { name: 'Aminata' } };
 
 for (const [tool, permission, args, result, key, field, expected] of [
+  ['get_marketing_records','promotions',{record_id:booking.id},{posts:[{id:booking.id,status:'draft',copies:{fr:{title:'Nos tresses',body:'Texte original',tags:['#Tresses']}}}],total:1,list_limit:25,external_posting:false},'posts','status','draft'],
   ['get_business_stock','products',{query:'oil'},{products:[{id:booking.id,name:'Owned oil',inventory_quantity:8,kind:'product'}],supplies:[],inventory_total:12,matching_total:1,capped_per_kind:30},'products','inventory_quantity',8],
   ['get_finance_records','finance_manage',{start:'2026-09-01T00:00:00Z',end:'2026-10-01T00:00:00Z'},{records:[{id:booking.id,kind:'receipt',amount_cents:2500}],totals:{receipt:1},recorded_only:true},'records','amount_cents',2500],
   ['get_booking_messages', 'bookings', { booking_id: booking.id }, { messages: [{ id: 'own-message', original_body: 'Please keep my original braid length.', body: 'Older fallback text', source_locale: 'en', sender_role: 'customer', created_at: '2026-09-19T12:00:00Z' }], total: 1, capped_at: 100, customer_participant: true }, 'messages', 'original_body', 'Please keep my original braid length.'],
@@ -1124,4 +1125,10 @@ test('client edit history is removed before the model when a field grant or assi
     if(state==='allowed')assert.match(sent,/PRIVATE_CARD_PROSE/);
     else assert.doesNotMatch(sent,/PRIVATE_CARD_PROSE|PRIVATE_FORMULA/);
   }
+});
+
+for(const answerOnly of [false,true])test(`marketing data and conversation are removed after access loss in ${answerOnly?'answer':'planner'}`,async()=>{
+ const f=fixture({answerOnly,historyReadDenied:true,history:[{tool:'get_marketing_records',permission:'promotions',arguments:{record_id:booking.id},result:{posts:[{title:'REVOKED_MARKETING_COPY'}],total:1}}],conversation:[{role:'assistant',text:'REVOKED_MARKETING_COPY'}],...(answerOnly?{output:{reply:'The record is unavailable.'}}:{})});
+ if(answerOnly){await assert.rejects(f.run('fr','Et cette publication ?'),error=>error.code==='ASSISTANT_INVALID_PLAN');assert.equal(f.requests.length,0);return;}
+ await f.run('fr','Et cette publication ?');assert.doesNotMatch(JSON.stringify(f.requests),/REVOKED_MARKETING_COPY/);assert.equal(JSON.parse(f.requests[0].messages[1].content).previous.length,0);
 });

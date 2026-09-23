@@ -85,6 +85,11 @@ function planningResult(tool: string, result: unknown, granted: ReadonlySet<stri
         text_is_excerpt: [row.written_review, row.salon_reply].some(text => typeof text === "string" && text.length > 1000),
       } : selected(row, ["name", "booking_id", "booking_origin"])) };
   }
+  if(tool === "get_marketing_records" && result && typeof result === "object") {
+    const r=result as Record<string,unknown>,posts=Array.isArray(r.posts)?r.posts as Record<string,unknown>[]:[];
+    return {total:r.total,shown_count:Math.min(12,posts.length),is_excerpt:Number(r.total)>Math.min(12,posts.length),external_posting:false,
+      posts:posts.slice(0,12).map(post=>Object.fromEntries(['id','revision','status','title','copies','snapshot','scheduled_at','expires_at'].filter(key=>key in post).map(key=>[key,post[key]])))};
+  }
   if(tool === "get_team_controls" && result && typeof result === "object") {
     const r=result as Record<string,unknown>,totals=(r.totals||{}) as Record<string,number>;
     return {...boundedFacts(r) as Record<string,unknown>,lists:Object.fromEntries(['members','professionals','arrangements'].map(key=>{const rows=Array.isArray(r[key])?r[key] as unknown[]:[];return [key,{total:totals[key],shown:Math.min(12,rows.length),is_excerpt:Number(totals[key])>Math.min(12,rows.length)}];}))};
@@ -366,7 +371,7 @@ export async function planOwnerRequest(input: {
       }
     }
     const transcriptRead = conversationIds.includes(row.id) && Object.hasOwn(ASSISTANT_TOOLS, row.tool) && ASSISTANT_TOOLS[row.tool as AssistantTool].risk === 1;
-    if (granted.has(row.permission) && (transcriptRead || ["calculate_service_selection", "get_booking_price_details", "get_business_profile", "get_business_settings", "get_team_controls", "get_business_controls", "get_services_and_prices", "get_products", "get_promotions", "get_outstanding_balances", "get_bookings", "get_upcoming_appointments", "get_customers", "get_business_summary", "get_earnings_summary", "get_booking_messages", "get_reviews", "get_availability", "get_calendar_gaps", "get_manual_sale_options", "get_finance_records", "get_business_stock"].includes(row.tool))) {
+    if (granted.has(row.permission) && (transcriptRead || ["calculate_service_selection", "get_booking_price_details", "get_business_profile", "get_business_settings", "get_team_controls", "get_business_controls", "get_services_and_prices", "get_products", "get_promotions", "get_outstanding_balances", "get_bookings", "get_upcoming_appointments", "get_customers", "get_business_summary", "get_earnings_summary", "get_booking_messages", "get_reviews", "get_availability", "get_calendar_gaps", "get_manual_sale_options", "get_finance_records", "get_business_stock", "get_marketing_records"].includes(row.tool))) {
       try {
         const fresh = await readAssistantData(input.context, row.tool, row.arguments);
         if (!sameReadFacts(row.tool, row.result, fresh)) clientHistoryChanged = true;
