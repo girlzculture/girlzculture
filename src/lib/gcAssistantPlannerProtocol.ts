@@ -4,6 +4,8 @@ import { ASSISTANT_LANGUAGES, isAssistantLanguage, type AssistantLanguage } from
 
 const destinations = ["overview", "profile", "photos", "services", "imports", "professionals", "products", "availability", "policies", "bookings", "messages", "reviews", "earnings", "promotions", "subscription", "settings", "support", "security"] as const;
 const purposes: Record<AssistantTool, string> = {
+  get_business_controls:"Owner-only current deposits/growth/rebooking settings and own target IDs; values are saved choices, state describes plan/defaults. No contact permission or delivery is established.",
+  prepare_business_controls:"Read get_business_controls first. Owner-only changes_json patch. deposits: rate,threshold_amount/rate,repeat_incident_count/rate,incident_window_days; pairs nullable, percentages 0–100, own incidents only. growth: reminder_hours (null=default), waitlist_service_ids/professional_ids (own UUID arrays). rebooking: enabled,absence_days,minimum_visits,service_ids. Preserve all unrequested fields. Review must explain future automatic contact when enabling reminders; never infer consent. Existing booking terms stay fixed; no immediate sends/provider operations.",
   get_outstanding_balances: "Read current authorized unpaid records with minimal client display names. Requires finance, bookings and client-history permissions together. Use for who owes money. Completed unpaid balances are separate from pending/future agreed amounts, never presumed overdue. Names may be absent; do not invent identity or group unrelated clients by similar names. Lists are capped but counts/totals include the authorized records. Use the returned exact Finances links; do not send reminders or collect money.",
   prepare_service_change: "Read own services first. Review changes_json with only requested name,description,master_style_id,base_price,price_display_min/max,duration_min/max_hours,buffer_minutes,is_draft,is_featured. record_id=null creates; creation requires exact platform catalog name/ID, price and both durations. Set is_draft=false only for requested publication. Preserve unrequested prices/options.",
   prepare_professional_change: "Read professionals/services first. Review changes_json: name,bio,specialties,years_experience,is_draft,assigned_service_ids. record_id=null creates. Assign only own saved service IDs; null means all, [] means none. Explicit is_draft=false publishes. No staff login/permission change; archive uses its dedicated tool.",
@@ -82,7 +84,7 @@ function withSharedDefinitions<T extends Record<string, unknown>>(schema: T): T 
     Object.values(node).forEach(collect);
   }
   collect(schema);
-  const shared = new Map([...repeated].filter(([key, node]) => key.length * (node.count - 1) > 40 * node.count + 16)
+  const shared = new Map([...repeated].filter(([key, node]) => key.length * (node.count - 1) > 26 * node.count + 12)
     .map(([key, node], index) => [key, { ...node, name: `s${index}` }]));
   if (!shared.size) return schema;
   function rewrite(value: unknown, definitionRoot = false): unknown {

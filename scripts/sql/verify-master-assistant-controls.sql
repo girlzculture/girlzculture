@@ -1,0 +1,70 @@
+begin;
+create temporary table control_assertions(label text);grant select,insert on control_assertions to service_role;
+create function pg_temp.cassert(ok boolean,label text) returns void language plpgsql as $$begin if ok is distinct from true then raise exception 'Assistant controls: %',label;end if;insert into control_assertions values(label);end $$;
+create function pg_temp.creject(command text,expected text) returns void language plpgsql as $$declare denied boolean:=false;begin begin execute command;exception when others then if position(expected in sqlerrm)>0 then denied:=true;else raise;end if;end;perform pg_temp.cassert(denied,expected);end $$;
+create function pg_temp.control_draft(b uuid,a uuid,section text,changes jsonb) returns jsonb language plpgsql as $$declare preview jsonb;args jsonb;begin
+ args:=jsonb_build_object('section',section,'changes_json',changes::text);preview:=public.preview_gc_business_controls(b,a,args);
+ return public.save_gc_assistant_request(jsonb_build_object('id',gen_random_uuid(),'salon_id',b,'requested_by',a,'locale','en','tool','prepare_business_controls','arguments',args,'execution_payload',preview->'payload','before_summary',preview->'before','risk_class',4,'permission','settings','digest',repeat('c',64)),'[]');
+end $$;
+do $$
+declare a uuid:=gen_random_uuid();b uuid:=gen_random_uuid();oa uuid:=gen_random_uuid();ob uuid:=gen_random_uuid();staff uuid:=gen_random_uuid();service uuid:=gen_random_uuid();foreign_service uuid:=gen_random_uuid();d jsonb;r jsonb;before_state jsonb;v jsonb;section text;count_before bigint;booking_before jsonb;book uuid:=gen_random_uuid();
+begin
+ insert into auth.users(id,email,encrypted_password,email_confirmed_at,raw_user_meta_data)values(oa,'controls-a@example.test','',now(),'{"role":"salon_owner"}'),(ob,'controls-b@example.test','',now(),'{"role":"salon_owner"}'),(staff,'controls-staff@example.test','',now(),'{"role":"salon_team"}');
+ update public.platform_identities set primary_role='salon_team' where user_id=staff;
+ insert into public.salons(id,user_id,name,slug,email,status,subscription_status,subscription_tier)values(a,oa,'Controls A','controls-a','controls-a@example.test','Active','active','Premium'),(b,ob,'Controls B','controls-b','controls-b@example.test','Active','active','Premium');
+ insert into public.salon_team_members(salon_id,user_id,email,name,role,status,permissions)values(a,staff,'controls-staff@example.test','Staff','Staff','Active','{"settings":true,"finance_manage":true}');
+ insert into public.styles(id,salon_id,service_group_id,name,base_price,duration_min_hours,duration_max_hours,is_draft)select service,a,id,'Own service',100,1,1,false from public.service_groups limit 1;
+ insert into public.styles(id,salon_id,service_group_id,name,base_price,duration_min_hours,duration_max_hours,is_draft)select foreign_service,b,id,'Foreign service',999,1,1,false from public.service_groups limit 1;
+ insert into public.bookings(id,salon_id,style_id,guest_name,appointment_datetime,duration_hours,estimated_total,deposit_amount,balance_due,status,deposit_status)values(book,a,service,'Invented sample',now()+interval '5 days',1,100,10,90,'Confirmed','Not paid');
+ select to_jsonb(x) into booking_before from public.bookings x where id=book;
+ select count(*) into count_before from public.notification_delivery_log;
+ perform set_config('request.jwt.claim.role','service_role',true);
+ set local role service_role;
+ foreach section in array array['deposits','growth','rebooking'] loop
+  perform pg_temp.creject(format('select public.read_gc_business_controls(%L,%L,%L)',b,oa,section),'ASSISTANT_ACCESS_DENIED');
+  perform pg_temp.creject(format('select public.read_gc_business_controls(%L,%L,%L)',a,staff,section),'ASSISTANT_ACCESS_DENIED');
+ end loop;
+ r:=public.read_gc_business_controls(a,oa,'deposits');perform pg_temp.cassert(r->'state'->'version'='null' and r->'values'->'rate' is not null,'unconfigured deposit uses current Engine default');
+ foreach v in array array['{"rate":"20"}'::jsonb,'{"rate":101}','{"rate":20.123}','{"threshold_rate":30}','{"salon_id":"other"}','{}'] loop
+  perform pg_temp.creject(format('select public.preview_gc_business_controls(%L,%L,%L)',a,oa,jsonb_build_object('section','deposits','changes_json',v::text)),'ASSISTANT_INVALID_INPUT');
+ end loop;
+ before_state:=public.read_gc_business_controls(a,oa,'deposits');d:=pg_temp.control_draft(a,oa,'deposits','{"rate":20,"threshold_amount":200,"threshold_rate":30}');
+ perform pg_temp.cassert(public.read_gc_business_controls(a,oa,'deposits')=before_state,'preparation does not write deposit policy');
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->'verified'='true',r::text);
+ before_state:=public.read_gc_business_controls(a,oa,'deposits');perform pg_temp.cassert(before_state->'values'->'rate'='20' and before_state->'values'->'threshold_rate'='30','deposit authoritative readback');
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->'replayed'='true' and public.read_gc_business_controls(a,oa,'deposits')=before_state,'deposit replay creates no new version');
+ d:=pg_temp.control_draft(a,oa,'deposits','{"rate":25}');
+ r:=public.save_business_deposit_rule(a,oa,gen_random_uuid(),(before_state->'state'->>'version')::uuid,(before_state->'values')||'{"rate":21}');
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->>'code'='ASSISTANT_PREVIEW_STALE','concurrent deposit change rejected');
+ d:=pg_temp.control_draft(a,oa,'growth',jsonb_build_object('reminder_hours',jsonb_build_array(2,48),'waitlist_service_ids',jsonb_build_array(service)));
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->'verified'='true',r::text);
+ before_state:=public.read_gc_business_controls(a,oa,'growth');perform pg_temp.cassert(before_state->'values'->'reminder_hours'='[48,2]' and before_state->'values'->'waitlist_service_ids'=jsonb_build_array(service),'canonical reminder ordering and targets readback');
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->'replayed'='true' and public.read_gc_business_controls(a,oa,'growth')=before_state,'growth replay does not increment revision');
+ perform pg_temp.creject(format('select public.preview_gc_business_controls(%L,%L,%L)',a,oa,jsonb_build_object('section','growth','changes_json',jsonb_build_object('waitlist_service_ids',jsonb_build_array(foreign_service))::text)),'ASSISTANT_RECORD_NOT_FOUND');
+ perform pg_temp.creject(format('select public.preview_gc_business_controls(%L,%L,%L)',a,oa,jsonb_build_object('section','growth','changes_json','{"reminder_hours":[24,24]}')),'ASSISTANT_INVALID_INPUT');
+ d:=pg_temp.control_draft(a,oa,'rebooking',jsonb_build_object('enabled',true,'absence_days',60,'minimum_visits',2,'service_ids',jsonb_build_array(service)));
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->'verified'='true',r::text);
+ before_state:=public.read_gc_business_controls(a,oa,'rebooking');perform pg_temp.cassert(before_state->'values'->'enabled'='true' and before_state->'values'->'absence_days'='60' and before_state->'state'->'effective_enabled'='true','reviewed rebooking configuration readback');
+ d:=pg_temp.control_draft(a,oa,'rebooking','{"enabled":false}');r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->'verified'='true','disable reviewed automatic reminders');
+ before_state:=public.read_gc_business_controls(a,oa,'rebooking');perform pg_temp.cassert(before_state->'values'->'absence_days'='60' and before_state->'values'->'service_ids'=jsonb_build_array(service),'disable preserves unrequested settings');
+ d:=pg_temp.control_draft(a,oa,'deposits','{"rate":22}');
+ reset role;
+ update public.platform_identities set status='Disabled' where user_id=oa;
+ set local role service_role;
+ perform pg_temp.creject(format('select public.confirm_gc_assistant_request(%L,%L,%L,%L)',d->>'id',a,oa,repeat('c',64)),'ASSISTANT_ACCESS_DENIED');
+ reset role;
+ update public.platform_identities set status='Active' where user_id=oa;
+ update public.salons set subscription_tier='Starter' where id=a;
+ set local role service_role;
+ perform pg_temp.creject(format('select public.preview_gc_business_controls(%L,%L,%L)',a,oa,jsonb_build_object('section','growth','changes_json','{"reminder_hours":[24]}')),'ASSISTANT_PLAN_REQUIRED');
+ perform pg_temp.creject(format('select public.preview_gc_business_controls(%L,%L,%L)',a,oa,jsonb_build_object('section','rebooking','changes_json','{"enabled":true}')),'ASSISTANT_PLAN_REQUIRED');
+ d:=pg_temp.control_draft(a,oa,'growth','{"reminder_hours":null,"waitlist_service_ids":[],"waitlist_professional_ids":[]}');r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->'verified'='true','downgraded owner can restore plan defaults');
+ reset role;
+ perform pg_temp.cassert((select to_jsonb(x)=booking_before from public.bookings x where id=book),'existing appointment and deposit terms unchanged');
+ perform pg_temp.cassert((select count(*)=count_before from public.notification_delivery_log),'reviewed configuration sends no notifications');
+ perform pg_temp.cassert(not exists(select 1 from public.business_deposit_rules where salon_id=b) and not exists(select 1 from public.business_growth_settings where salon_id=b),'other business configuration untouched');
+ perform pg_temp.cassert(not has_function_privilege('authenticated','public.preview_gc_business_controls(uuid,uuid,jsonb)','EXECUTE') and not has_function_privilege('anon','public.read_gc_business_controls(uuid,uuid,text)','EXECUTE'),'no direct browser scope bypass');
+end $$;
+select count(*) as passed_control_assertions from control_assertions;
+rollback;
+

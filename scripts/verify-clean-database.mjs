@@ -1325,3 +1325,5 @@ await verifyAdvertisingConcurrency(databaseUrl,psql);
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-solo-upgrade.sql")],"Verified Solo-to-team entitlement projection and private address preservation"));
 
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-catalog.sql")],"Reviewed catalog publication, replay, revocation and same-business readback"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-controls.sql")],"Assistant reviewed settings, plan enforcement, authoritative readback and isolation"));
