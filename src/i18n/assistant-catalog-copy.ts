@@ -1,4 +1,17 @@
 const rows=[
+ ["time_zone","Time zone","Fuseau horaire","Zona horaria","时区"],
+ ["Mon","Monday","Lundi","Lunes","星期一"],
+ ["Tue","Tuesday","Mardi","Martes","星期二"],
+ ["Wed","Wednesday","Mercredi","Miércoles","星期三"],
+ ["Thu","Thursday","Jeudi","Jueves","星期四"],
+ ["Fri","Friday","Vendredi","Viernes","星期五"],
+ ["Sat","Saturday","Samedi","Sábado","星期六"],
+ ["Sun","Sunday","Dimanche","Domingo","星期日"],
+ ["availability","Weekly availability","Disponibilité hebdomadaire","Disponibilidad semanal","每周可预约时间"],
+ ["business_hours","Use business hours","Utiliser les horaires de l’entreprise","Usar horario del negocio","使用营业时间"],
+ ["open","Opens","Ouvre","Abre","开始"],
+ ["close","Closes","Ferme","Cierra","结束"],
+ ["closed","Closed","Fermé","Cerrado","休息"],
  [
   "review",
   "Review catalog changes",

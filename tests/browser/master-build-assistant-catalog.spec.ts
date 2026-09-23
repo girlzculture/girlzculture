@@ -11,7 +11,7 @@ for(const [locale,width,height]of [['en',390,844],['fr',768,900],['es',1440,900]
   const copy=assistantCatalogCopy(locale),t=(s:string)=>DASHBOARD_SOURCE_MESSAGES[locale]?.[s]||s;
   const cases=[
    {tool:'prepare_service_change',changes:{name:'Original service GC41',base_price:125,duration_min_hours:1.5,duration_max_hours:2,is_draft:false,size_options:[{label:'Small',price_add:20}],length_options:[{label:'Waist',price_add:30}],addons:[{label:'Scalp treatment',price_add:15}],included_items:['Original inclusion GC45'],style_materials:[{name:'Kanekalon (standard)',price:25,longevity_weeks:6,quality_grade:'Best'}]},shown:'Original service GC41'},
-   {tool:'prepare_professional_change',changes:{name:'Original professional GC42',bio:'Reviewed biography',is_draft:false,assigned_service_ids:[f.ids.service]},shown:'Original professional GC42'},
+   {tool:'prepare_professional_change',changes:{name:'Original professional GC42',bio:'Reviewed biography',is_draft:false,availability:Object.fromEntries(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(day=>[day,{open:'09:30',close:'17:15',closed:day==='Sun'}])),assigned_service_ids:[f.ids.service]},shown:'Original professional GC42'},
    {tool:'prepare_product_change',changes:{name:'Original product GC43',price:35,is_visible:true,product_status:'Active',pickup_enabled:true},shown:'Original product GC43'},
    {tool:'prepare_promotion_change',changes:{title:'Original offer GC44',promotion_type:'percentage',discount_value:20,status:'Active',target_scope:'services',target_ids:[f.ids.service]},shown:'Original offer GC44'},
   ];
@@ -28,7 +28,7 @@ for(const [locale,width,height]of [['en',390,844],['fr',768,900],['es',1440,900]
    }
    expect(body.action).toBe('plan');activeId=body.request_id;
    if(index===cases.length)return route.fulfill({json:{response_locale:locale,request:{id:activeId,tool:'get_services_and_prices',risk_class:1,arguments:{query:'GC41'},execution_payload:{},before_summary:{},result:{services:[{name:'Original service GC41',base_price:125,duration_min_hours:1.5,duration_max_hours:2}],inventory_total:1},confirmed_at:null},assistant_message:'Original service GC41: $125, 1.5–2 h.'}});
-   const c=cases[index];return route.fulfill({json:{response_locale:locale,request:{id:activeId,tool:c.tool,risk_class:4,digest:'b'.repeat(64),before_summary:{},confirmed_at:null,arguments:{record_id:null,changes_json:JSON.stringify(c.changes)},execution_payload:{tool:c.tool,record_id:null,changes:c.changes,values:c.changes,assignment_names:['Original service GC41'],target_names:['Original service GC41']}},preview_required:true}});
+   const c=cases[index];return route.fulfill({json:{response_locale:locale,request:{id:activeId,tool:c.tool,risk_class:4,digest:'b'.repeat(64),before_summary:{},confirmed_at:null,arguments:{record_id:null,changes_json:JSON.stringify(c.changes)},execution_payload:{tool:c.tool,record_id:null,changes:c.changes,values:c.changes,assignment_names:['Original service GC41'],target_names:['Original service GC41'],time_zone:c.tool==='prepare_professional_change'?'America/New_York':undefined}},preview_required:true}});
   });
   await page.goto('/salon/dashboard');
   const dialog=page.getByRole('dialog',{name:'GC Assistant',exact:true});
@@ -40,6 +40,7 @@ for(const [locale,width,height]of [['en',390,844],['fr',768,900],['es',1440,900]
    await expect(review.getByText(cases[index].shown,{exact:true})).toHaveCount(2);
    await expect(review).not.toContainText('changes_json');await expect(review).not.toContainText(f.ids.service);
    if(index===1||index===3)await expect(review.getByText('Original service GC41',{exact:true})).toBeVisible();
+   if(index===1){for(const value of [copy.availability,copy.Mon,copy.Sun,copy.open,copy.close,'09:30','17:15','America/New_York'])await expect(review).toContainText(value);await expect(review).not.toContainText('[object Object]');}
    if(index===0){await expect(review).toContainText('Original inclusion GC45');await expect(review).toContainText('Kanekalon (standard)');await expect(review).toContainText(copy.price_add);await expect(review).toContainText(new Intl.NumberFormat(locale,{style:'currency',currency:'USD'}).format(25));await expect(review).not.toContainText('[object Object]');}
    expect(writes).toBe(index);await expect(page).toHaveURL(/\/salon\/dashboard$/);
    const confirm=dialog.getByRole('button',{name:t('Confirm this change'),exact:true});await confirm.click();

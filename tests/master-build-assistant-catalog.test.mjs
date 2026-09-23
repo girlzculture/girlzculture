@@ -57,3 +57,10 @@ test('service options and materials accept the manual editor shape and reject ne
 test('public material and option prose is moderated without translating original strings',async()=>{
  const f=fixture({tool:'prepare_service_change',values:{name:'Original service',base_price:40,duration_min_hours:1,duration_max_hours:1,size_options:[{label:'Original taille',price_add:20}],length_options:[{label:'Original length',price_add:10}],addons:[{label:'Original addon',price_add:5}],included_items:['Original inclusion'],style_materials:[{name:'Original fiber',price:25,longevity_weeks:6,quality_grade:'Original grade'}]}});await f.run();assert.equal(f.calls.moderated.body,'Original taille\nOriginal length\nOriginal addon\nOriginal inclusion\nOriginal fiber\nOriginal grade');
 });
+
+test('professional weekly availability has seven exact days with valid clocks and supports business-hours inheritance',()=>{
+ const availability=Object.fromEntries(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(day=>[day,{open:'09:30',close:'17:15',closed:false}]));
+ validateTool('prepare_professional_change',args({availability}));validateTool('prepare_professional_change',args({availability:null}));
+ const {Sun,...incomplete}=availability;
+ for(const bad of [incomplete,{...availability,Mon:{open:'25:00',close:'17:00',closed:false}},{...availability,Mon:{open:'09:00',close:'17:00',closed:'false'}},{...availability,Unknown:availability.Mon}])assert.throws(()=>validateTool('prepare_professional_change',args({availability:bad})),/ASSISTANT_INVALID_INPUT/);
+});

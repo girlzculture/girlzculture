@@ -8,7 +8,7 @@ create function pg_temp.cdraft(b uuid,a uuid,tool text,target uuid,changes jsonb
  return public.save_gc_assistant_request(jsonb_build_object('id',gen_random_uuid(),'salon_id',b,'requested_by',a,'locale','en','tool',tool,'arguments',args,'execution_payload',preview->'payload','before_summary',preview->'before','risk_class',4,'permission',case tool when 'prepare_service_change' then 'styles' when 'prepare_professional_change' then 'stylists' when 'prepare_product_change' then 'products' else 'promotions' end,'digest',repeat('a',64)),'[]'::jsonb);
 end $$;
 do $$
-declare a uuid:=gen_random_uuid();b uuid:=gen_random_uuid();oa uuid:=gen_random_uuid();ob uuid:=gen_random_uuid();staff uuid:=gen_random_uuid();customer uuid:=gen_random_uuid();pa uuid:=gen_random_uuid();pb uuid:=gen_random_uuid();service uuid:=gen_random_uuid();serviceb uuid:=gen_random_uuid();booka uuid:=gen_random_uuid();bookb uuid:=gen_random_uuid();reviewa uuid:=gen_random_uuid();reviewb uuid:=gen_random_uuid();supply uuid;d jsonb;r jsonb;again jsonb;v jsonb;op text;n bigint;notifications bigint;master_id uuid;new_id uuid;
+declare a uuid:=gen_random_uuid();b uuid:=gen_random_uuid();oa uuid:=gen_random_uuid();ob uuid:=gen_random_uuid();staff uuid:=gen_random_uuid();customer uuid:=gen_random_uuid();pa uuid:=gen_random_uuid();pb uuid:=gen_random_uuid();service uuid:=gen_random_uuid();serviceb uuid:=gen_random_uuid();booka uuid:=gen_random_uuid();bookb uuid:=gen_random_uuid();reviewa uuid:=gen_random_uuid();reviewb uuid:=gen_random_uuid();supply uuid;d jsonb;r jsonb;again jsonb;v jsonb;op text;n bigint;notifications bigint;master_id uuid;new_id uuid;hours jsonb;
 begin
  insert into auth.users(id,email,encrypted_password,email_confirmed_at,raw_user_meta_data) values(oa,'operations-a@example.test','',now(),'{"role":"salon_owner"}'),(ob,'operations-b@example.test','',now(),'{"role":"salon_owner"}'),(staff,'operations-staff@example.test','',now(),'{"role":"salon_team"}'),(customer,'operations-customer@example.test','',now(),'{"role":"customer"}');
  update public.platform_identities set primary_role='salon_team' where user_id=staff;
@@ -87,8 +87,29 @@ begin
  r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('a',64));perform pg_temp.oassert(r->'verified'='true',r::text);new_id:=(r->'result'->>'record_id')::uuid;
  perform pg_temp.oassert((select salon_id=a and not is_draft and is_active and assigned_service_ids=array[service] from public.stylists where id=new_id),'published professional and own assignments');
  perform pg_temp.oreject(format('select public.preview_gc_catalog_change(%L,%L,%L,%L)',a,oa,'prepare_professional_change',jsonb_build_object('record_id',new_id,'changes_json',jsonb_build_object('assigned_service_ids',jsonb_build_array(serviceb))::text)),'ASSISTANT_RECORD_NOT_FOUND');
+
+ select jsonb_object_agg(day,jsonb_build_object('open','09:30','close','17:15','closed',day='Sun')) into hours from unnest(array['Mon','Tue','Wed','Thu','Fri','Sat','Sun'])day;
+ d:=pg_temp.cdraft(a,oa,'prepare_professional_change',new_id,jsonb_build_object('availability',hours));
+ perform pg_temp.oassert((select availability is null or availability<>hours from public.stylists where id=new_id),'schedule preparation read only');
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('a',64));perform pg_temp.oassert(r->'verified'='true','weekly schedule confirmation '||r::text);
+ perform pg_temp.oassert((select availability=hours from public.stylists where id=new_id),'seven exact days readback');
+ perform pg_temp.oreject(format('select public.preview_gc_catalog_change(%L,%L,%L,%L)',a,oa,'prepare_professional_change',jsonb_build_object('record_id',new_id,'changes_json',jsonb_build_object('availability',hours-'Sun')::text)),'ASSISTANT_INVALID_INPUT');
+ perform pg_temp.oreject(format('select public.preview_gc_catalog_change(%L,%L,%L,%L)',a,oa,'prepare_professional_change',jsonb_build_object('record_id',new_id,'changes_json',jsonb_build_object('availability',jsonb_set(hours,'{Mon,close}','"08:00"'))::text)),'ASSISTANT_INVALID_INPUT');
+ d:=pg_temp.cdraft(a,oa,'prepare_professional_change',new_id,'{"availability":null}');
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('a',64));perform pg_temp.oassert(r->'verified'='true','restore inherited business hours '||r::text);
+ perform pg_temp.oassert((select availability='{}'::jsonb from public.stylists where id=new_id),'inheritance readback');
  update public.salon_team_members set stylist_id=new_id,permissions='{"stylists":true,"styles":true}' where salon_id=a and user_id=staff;
  set local role service_role;
+
+ perform pg_temp.oreject(format('select public.preview_gc_catalog_change(%L,%L,%L,%L)',a,staff,'prepare_professional_change',jsonb_build_object('record_id',new_id,'changes_json',jsonb_build_object('availability',hours)::text)),'ASSISTANT_ACCESS_DENIED');
+ reset role;
+ update public.salon_team_members set permissions=permissions||'{"availability":true}' where salon_id=a and user_id=staff;
+ set local role service_role;
+ d:=pg_temp.cdraft(a,staff,'prepare_professional_change',new_id,jsonb_build_object('availability',hours));
+ reset role;
+ update public.salon_team_members set permissions=permissions-'availability' where salon_id=a and user_id=staff;
+ set local role service_role;
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,staff,repeat('a',64));perform pg_temp.oassert(r->'verified'='false' and r->>'code'='ASSISTANT_ACCESS_DENIED','revoked scheduling grant denies confirmation');
  r:=public.preview_gc_catalog_change(a,staff,'prepare_professional_change',jsonb_build_object('record_id',new_id,'changes_json','{"bio":"Own updated biography"}'));
  perform pg_temp.oassert(r->>'salon_id'=a::text,'linked staff may review own professional');
  perform pg_temp.oreject(format('select public.preview_gc_catalog_change(%L,%L,%L,%L)',a,staff,'prepare_professional_change',jsonb_build_object('record_id',null,'changes_json','{"name":"Extra professional"}')),'ASSISTANT_ACCESS_DENIED');
