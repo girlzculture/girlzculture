@@ -1306,3 +1306,5 @@ console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-assistant-a
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-catalog-binding.sql")],"Assistant selected catalog service, exact time and reviewed confirmation"));
 
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-growth-controls.sql")],"Plan reminder and manual/targeted waitlist authority"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-finance.sql")],"Assistant finance preview, readback, replay and two-business isolation"));

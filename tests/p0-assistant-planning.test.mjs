@@ -9,6 +9,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const booking = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', public_reference: 'GC123', guest_name: 'Sarah Save', appointment_datetime: '2026-09-24T19:00:00Z', status: 'Confirmed', style: { name: 'Save' }, stylist: { name: 'Aminata' } };
 
 for (const [tool, permission, args, result, key, field, expected] of [
+  ['get_finance_records','finance_manage',{start:'2026-09-01T00:00:00Z',end:'2026-10-01T00:00:00Z'},{records:[{id:booking.id,kind:'receipt',amount_cents:2500}],totals:{receipt:1},recorded_only:true},'records','amount_cents',2500],
   ['get_booking_messages', 'bookings', { booking_id: booking.id }, { messages: [{ id: 'own-message', original_body: 'Please keep my original braid length.', body: 'Older fallback text', source_locale: 'en', sender_role: 'customer', created_at: '2026-09-19T12:00:00Z' }], total: 1, capped_at: 100, customer_participant: true }, 'messages', 'original_body', 'Please keep my original braid length.'],
   ['get_reviews', 'reviews', { start: '2026-09-01T00:00:00Z', end: '2026-10-01T00:00:00Z' }, { reviews: [{ id: 'own-review', rating_overall: 4, written_review: 'Careful service and a longer wait.', salon_reply: 'Thank you for the feedback.', display_name: 'Original reviewer', moderation_status: 'Published', created_at: '2026-09-19T12:00:00Z' }], total: 1, capped_at: 100 }, 'reviews', 'written_review', 'Careful service and a longer wait.'],
   ['get_customers', 'bookings', { start: '2026-09-01T00:00:00Z', end: '2026-10-01T00:00:00Z' }, { customers: [{ name: 'Sarah Save', booking_id: booking.id, customer_id: 'own-account', booking_origin: 'marketplace' }], scope: 'customers_of_these_bookings' }, 'customers', 'name', 'Sarah Save'],
@@ -269,11 +270,14 @@ test('shared planner definitions preserve the complete pre-factoring owner schem
   // strict required fields, patterns, limits, enum order and all 41 tool choices.
   // The manual-appointment plan now carries explicit service/stylist preference
   // fields so terse follow-ups can preserve “any” versus named selections.
-  // Master Build adds one reviewed archive action. Preserve the frozen legacy
+  // Master Build adds reviewed archive and ledger actions. Preserve the frozen legacy
   // contract exactly, then validate the complete expanded tool set below.
   const archive=expanded.properties.decision.anyOf.filter(row=>row.properties.tool?.enum[0]==='prepare_professional_archive');
   assert.equal(archive.length,1);assert.deepEqual(archive[0].properties.args,JSON.parse(JSON.stringify(ASSISTANT_TOOLS.prepare_professional_archive.schema)));
-  const legacy=structuredClone(expanded);legacy.properties.decision.anyOf=legacy.properties.decision.anyOf.filter(row=>row.properties.tool?.enum[0]!=='prepare_professional_archive');
+  const legacy=structuredClone(expanded);legacy.properties.decision.anyOf=legacy.properties.decision.anyOf.filter(row=>!['prepare_professional_archive','get_finance_records','prepare_finance_record'].includes(row.properties.tool?.enum[0]));
+  const financialDescription=legacy.properties.decision.anyOf.find(row=>row.properties.tool?.enum[0]==='get_earnings_summary');
+  assert.match(financialDescription.description,/use get_finance_records and prepare_finance_record/);
+  financialDescription.description=financialDescription.description.replace('use get_finance_records and prepare_finance_record for reviewed expenses, received balances and money already returned. Other provider operations remain in the controlled Finances workflow.','navigate to Finances for all other individual records or financial actions.');
   assert.equal(createHash('sha256').update(JSON.stringify(legacy)).digest('hex'), 'cc7c1c67ea8d9a275e6a369d686cdaf12ce26a05f5586948ffea171cce5e9d6a');
   assert.ok(Buffer.byteLength(JSON.stringify(schema)) < Buffer.byteLength(JSON.stringify(expanded)) - 7000);
   for (const granted of [[], ...all.map(permission => [permission]), all, all.filter(permission => permission !== 'client_history'), all.filter(permission => permission !== 'my_page')]) {

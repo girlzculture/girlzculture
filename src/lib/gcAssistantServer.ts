@@ -1,3 +1,4 @@
+import {readAssistantFinanceRecords,prepareAssistantFinanceRecord} from "@/lib/assistantFinanceRecordsServer";
 import { searchPublishedKnowledge } from "@/lib/publishedKnowledgeServer";
 export { searchPublishedKnowledge } from "@/lib/publishedKnowledgeServer";
 import { prepareProfessionalArchive } from "@/lib/assistantProfessionalArchive";
@@ -57,6 +58,7 @@ export async function readAssistantData(context: Context, tool: AssistantTool, a
   if (tool === "calculate_service_selection") return readAssistantServiceCalculation(context, args);
   if (tool === "get_booking_price_details") return readAssistantBookingPrice(context, args);
   if (tool === "get_outstanding_balances") return readAssistantOutstandingBalances(context, args);
+  if (tool === "get_finance_records") return readAssistantFinanceRecords(context,args);
   if (tool === "get_manual_sale_options") return readManualSaleOptions(context);
   if (tool === "search_platform_knowledge") return searchPublishedKnowledge(context, args.query);
   if (tool === "get_client_record") return readBusinessClientCard(context, String(args.booking_id));
@@ -101,6 +103,7 @@ export async function readAssistantData(context: Context, tool: AssistantTool, a
 }
 
 async function prepare(context: Context, tool: AssistantTool, args: Row) {
+  if (tool === "prepare_finance_record") return prepareAssistantFinanceRecord(context,args);
   if (tool === "prepare_professional_archive") return prepareProfessionalArchive(context, args);
   if (tool === "prepare_booking_reschedule_proposal") return prepareAssistantBookingReschedule(context, args);
   if (tool === "prepare_manual_service_sale") return prepareManualSale(context, args);

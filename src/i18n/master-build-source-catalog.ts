@@ -1,5 +1,7 @@
 // Interface copy only. Applicant answers and uploaded filenames stay unchanged.
 export const MASTER_BUILD_COPY = [
+ ["The amount exceeds the remaining recorded balance. Review the current record and prepare a new draft.","Le montant dépasse le solde enregistré restant. Vérifiez l’écriture actuelle et préparez un nouveau brouillon.","El importe supera el saldo registrado restante. Revisa el registro actual y prepara un nuevo borrador.","金额超过剩余的已记录余额。请查看当前记录并重新准备草稿。"],
+ ["The original payment is unverified or in test mode. Review it in Finances before recording a balance.","Le paiement initial n’est pas vérifié ou est en mode test. Vérifiez-le dans Finances avant d’enregistrer un solde.","El pago original no está verificado o está en modo de prueba. Revísalo en Finanzas antes de registrar un saldo.","原付款尚未核实或处于测试模式。请先在财务页面核查，再记录尾款。"],
   ["Customer reminders & waitlist", "Rappels clients et liste d’attente", "Recordatorios y lista de espera", "客户提醒和候补名单"],
   ["Current reminder hours before the appointment", "Heures de rappel avant le rendez-vous", "Horas de recordatorio antes de la cita", "预约前提醒小时数"],
   ["Use standard reminder timing", "Utiliser les rappels standards", "Usar los horarios de recordatorio estándar", "使用标准提醒时间"],

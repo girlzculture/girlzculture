@@ -9,6 +9,7 @@ const reads:Partial<Record<AssistantTool,readonly AssistantTool[]>>={
  prepare_manual_reschedule:['get_bookings','get_availability','get_calendar_gaps','get_services_and_prices','get_professionals'],
  prepare_booking_reschedule_proposal:['get_bookings','get_availability','get_calendar_gaps','get_services_and_prices','get_professionals'],
  prepare_manual_cancellation:['get_bookings'],prepare_booking_note:['get_bookings'],
+ prepare_finance_record:['get_finance_records','get_earnings_summary','get_bookings'],
  prepare_manual_service_sale:['get_manual_sale_options','get_services_and_prices','get_professionals'],
  prepare_business_hours:['get_business_profile','get_business_settings'],
  prepare_availability_block:['get_business_profile','get_bookings','get_professionals','get_availability','get_calendar_gaps'],

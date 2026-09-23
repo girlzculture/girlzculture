@@ -1,3 +1,4 @@
+import {assistantFinanceCopy} from "@/i18n/assistant-finance-record-copy";
 import { assistantMoneyReadText } from "@/i18n/assistant-money-read-copy";
 import { manualSaleText } from "@/i18n/assistant-manual-sale-source-catalog";
 import { assistantBalancesCopy } from "@/i18n/assistant-balances-copy";
@@ -176,6 +177,7 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
     return { message: words.summary(number(result.bookings), number(result.upcoming), currency(result.completed_booking_value, locale) || t("not available")), suggestions: suggest(["Show upcoming bookings", "Find calendar gaps", "Open overview"]) };
   }
 
+  if(tool==="get_finance_records") return {message:`${assistantFinanceCopy(locale).found}: ${Object.values(row(result.totals)).reduce<number>((sum,value)=>sum+number(value),0)}.`};
   const lists: Record<string, [string, string]> = {
     get_professionals: ["professionals", "professional"], get_products: ["products", "product"], get_customers: ["customers", "customer"],
     get_reviews: ["reviews", "review"], get_promotions: ["promotions", "promotion"], get_booking_messages: ["messages", "message"],

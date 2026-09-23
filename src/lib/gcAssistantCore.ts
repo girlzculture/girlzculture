@@ -42,6 +42,8 @@ export const ASSISTANT_TOOLS = {
   get_promotions: { risk: 1, permission: "promotions", schema: object({}) },
   get_plan_status: { risk: 1, permission: "overview", schema: object({}) },
   get_profile_completion: { risk: 1, permission: "overview", schema: object({}) },
+  get_finance_records: {risk:1,permission:"finance_manage",schema:object(range)},
+  prepare_finance_record: {risk:4,permission:"finance_manage",schema:object({action:enumeration("expense","receipt","refund"),record_id:nullableId,record_kind:{type:["string","null"],enum:["sale","booking","order","receipt",null]},amount_cents:{type:"integer",minimum:1,maximum:100000000},date,time:clockTime,method:{type:["string","null"],enum:["cash","card","transfer","other",null]},category:{type:["string","null"],minLength:1,maxLength:80},treatment:{type:["string","null"],enum:["operating","inventory_asset",null]},note:{...string(1200),minLength:1},money_already_moved:{type:"boolean",enum:[true]}})},
   get_manual_sale_options: { risk: 1, permission: "finance_log", schema: object({}) },
   prepare_manual_service_sale: { risk: 4, permission: "finance_log", schema: object({ service_id: uuid, stylist_id: uuid, amount_cents: { type: "integer", minimum: 1, maximum: 100000000 }, method: enumeration("cash", "card", "transfer", "other"), source: enumeration("walk_in", "phone", "social", "other"), date, time: clockTime, client_name: { type: ["string", "null"], maxLength: 120 }, payment_received: { type: "boolean", enum: [true] } }) },
   get_outstanding_balances: { risk: 1, permission: "earnings", schema: object(range) },
@@ -112,6 +114,11 @@ export function validateTool(name: unknown, input: unknown) {
     } } : tool === "get_availability" && input && typeof input === "object" && !Array.isArray(input) ? { days: 1, selected_options: [], ...input } : input;
   assertSchema(candidate, schema);
   const args = candidate as Record<string, unknown>;
+  if (tool === "prepare_finance_record") {
+    const expense=args.action==="expense", refund=args.action==="refund";
+    if(expense ? args.record_id!==null||args.record_kind!==null||args.method!==null||!args.category||!args.treatment
+      : args.category!==null||args.treatment!==null||!args.record_id||(refund?args.record_kind!=="receipt"||args.method!==null:!["sale","booking","order"].includes(String(args.record_kind))||!args.method)) throw new AssistantError("ASSISTANT_INVALID_INPUT");
+  }
   if (tool === "get_availability") {
     const groups = (candidate as { selected_options: { group_id: string; values: string[] }[] }).selected_options;
     if (new Set(groups.map(group => group.group_id)).size !== groups.length || groups.some(group => new Set(group.values).size !== group.values.length) || !args.style_id && (Number(args.days ?? 1) !== 1 || groups.length)) throw new AssistantError("ASSISTANT_INVALID_INPUT");
