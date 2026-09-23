@@ -86,6 +86,17 @@ for (const required of [
 ]) {
   assert.match(customer, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 }
+// Generic delivery copy must work outside hair businesses without rewriting
+// the supplied business, service or professional names.
+const nonHair = renderCustomerBookingConfirmation({
+  ...input, salon: { ...input.salon, name: "Salon <Nail Artist>" },
+  style: { name: "Gel manicure", base_price: 250 }, stylist: { name: "Artist Jane" },
+});
+for (const label of ["Business phone", "Business timezone", "Professional", "Balance due to the business", "Gel manicure", "Artist Jane", "Salon &lt;Nail Artist&gt;"]) {
+  assert.ok(nonHair.includes(label), label);
+}
+assert.doesNotMatch(nonHair, /Braiding service|Salon assigned|>Stylist<|Hair \/ material/);
+assert.match(renderCustomerBookingConfirmation({ ...input, style: null, stylist: null }), /Booked service/);
 assert.doesNotMatch(customer, /bkg_123/);
 assert.doesNotMatch(salon, /Janel <Smith>/);
 assert.match(salon, /Janel &lt;Smith&gt;/);
@@ -94,7 +105,7 @@ for (const required of [
   "janel@example.com",
   "Sensitive scalp",
   "Deposit collected",
-  "Collect at salon",
+  "Remaining balance to collect",
 ]) {
   assert.match(salon, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 }
@@ -105,14 +116,14 @@ for (const required of [
   "Stylist unavailable",
   "$27.00 refunded in full",
   "We are sorry for the schedule change.",
-  "Find another salon",
+  "Find another business",
   "Support",
 ]) {
   assert.match(cancellation, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 }
 assert.ok(
   cancellation.indexOf("Refund status") <
-    cancellation.indexOf("Find another salon"),
+    cancellation.indexOf("Find another business"),
   "The complete cancellation breakdown must precede the browse action.",
 );
 

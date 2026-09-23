@@ -1327,3 +1327,5 @@ console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-solo
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-catalog.sql")],"Reviewed catalog publication, replay, revocation and same-business readback"));
 
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-controls.sql")],"Assistant reviewed settings, plan enforcement, authoritative readback and isolation"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-team.sql")],"Reviewed team permissions and payout arrangements, immutable history and tenant isolation"));

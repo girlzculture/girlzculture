@@ -34,6 +34,12 @@ export async function assertAssistantProposalScope(context: Context, tool: strin
     if (!permissions?.client_history || !permissions.client_edit ||
       Object.keys(patch).some(field => !permissions[fields[field]])) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
   }
+  if(tool==="prepare_team_controls"){
+    validateTool(tool,args);
+    if(!context.isOwner)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
+    const scope=await context.admin.rpc("assert_gc_team_target",{p_salon:context.salon.id,p_actor:context.user.id,p_operation:args.operation,p_record:args.record_id});
+    if(scope.error||scope.data?.salon_id!==context.salon.id)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
+  }
   if(tool==="prepare_business_controls"){
     if(!context.isOwner)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
     const scope=await context.admin.rpc("read_gc_business_controls",{p_salon:context.salon.id,p_actor:context.user.id,p_section:args.section});

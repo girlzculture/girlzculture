@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function LegalPoliciesPage() {
   const [page, links] = await Promise.all([getPublishedContentPage("legal"), getVisibleLegalLinks()]);
   const title = page?.hero_title || page?.title || "Legal & Policies";
-  const subtitle = page?.hero_subtitle || "Review the policies that apply to Girlz Culture customers, salon partners, and website visitors.";
+  const subtitle = page?.hero_subtitle || "Review the policies that apply to Girlz Culture customers, business partners, and website visitors.";
   return <main className="min-h-screen bg-cream text-ink">
     <PublicHeader/>
     <header className="bg-[linear-gradient(130deg,#006b88,#0083a6)] px-4 py-10 text-white sm:px-8 sm:py-16">

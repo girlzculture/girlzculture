@@ -1,3 +1,4 @@
+import {readAssistantTeam,prepareAssistantTeam} from '@/lib/assistantTeamServer';
 import {readAssistantControls,prepareAssistantControls} from "@/lib/assistantControlsServer";
 import {isCatalogTool} from "@/lib/assistantCatalog";
 import {prepareAssistantCatalog} from "@/lib/assistantCatalogServer";
@@ -62,6 +63,7 @@ export async function readAssistantData(context: Context, tool: AssistantTool, a
   if (tool === "calculate_service_selection") return readAssistantServiceCalculation(context, args);
   if (tool === "get_booking_price_details") return readAssistantBookingPrice(context, args);
   if (tool === "get_outstanding_balances") return readAssistantOutstandingBalances(context, args);
+  if (tool === "get_team_controls") return readAssistantTeam(context);
   if (tool === "get_business_controls") return readAssistantControls(context,args);
   if (tool === "get_business_stock") return readAssistantStock(context,args);
   if (tool === "get_finance_records") return readAssistantFinanceRecords(context,args);
@@ -109,6 +111,7 @@ export async function readAssistantData(context: Context, tool: AssistantTool, a
 }
 
 async function prepare(context: Context, tool: AssistantTool, args: Row) {
+  if(tool==="prepare_team_controls")return prepareAssistantTeam(context,args);
   if(tool==="prepare_business_controls")return prepareAssistantControls(context,args);
   if(isCatalogTool(tool))return prepareAssistantCatalog(context,tool,args);
   if(["prepare_stock_change","prepare_photo_change","prepare_client_card_change","prepare_review_reply"].includes(tool)) return prepareAssistantOperation(context,args);

@@ -1,3 +1,4 @@
+import {ASSISTANT_TEAM_CHANGES} from '@/lib/assistantTeam';
 import {ASSISTANT_CONTROLS,type AssistantControl} from "@/lib/assistantControls";
 import {ASSISTANT_CATALOG,isCatalogTool} from "@/lib/assistantCatalog";
 import {ASSISTANT_OPERATIONS,operationTool,type AssistantOperation} from "@/lib/assistantOperations";
@@ -25,6 +26,8 @@ const manualAppointment = {
   stylist_id: nullableId, stylist_preference: enumeration("named", "any", "unspecified"), date, time: clockTime, source: enumeration("phone", "walk_in", "instagram", "whatsapp", "other"), notes: string(1200),
 };
 export const ASSISTANT_TOOLS = {
+  get_team_controls:{risk:1,permission:"settings",schema:object({})},
+  prepare_team_controls:{risk:4,permission:"settings",schema:object({operation:enumeration("permissions","arrangement"),record_id:uuid,changes_json:{...string(6000),minLength:2}})},
   get_business_controls:{risk:1,permission:"settings",schema:object({section:enumeration("deposits","growth","rebooking")})},
   prepare_business_controls:{risk:4,permission:"settings",schema:object({section:enumeration("deposits","growth","rebooking"),changes_json:{...string(6000),minLength:2}})},
   prepare_service_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_service_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
@@ -139,6 +142,11 @@ export function validateTool(name: unknown, input: unknown) {
     const noId=String(args.operation).startsWith("photo_")||args.operation==="supply_create";
     if(noId ? args.record_id!==null : !args.record_id)throw new AssistantError("ASSISTANT_INVALID_INPUT");
     if(args.operation==="client_card"&&!Object.keys((changes as {patch:object}).patch).length)throw new AssistantError("ASSISTANT_INVALID_INPUT");
+  }
+  if(tool === "prepare_team_controls") {
+    let changes:unknown;try{changes=JSON.parse(String(args.changes_json));}catch{throw new AssistantError("ASSISTANT_INVALID_INPUT");}
+    assertSchema(changes,ASSISTANT_TEAM_CHANGES[args.operation as keyof typeof ASSISTANT_TEAM_CHANGES]);
+    if(!changes||!Object.keys(changes).length||args.operation==="permissions"&&Object.keys(changes).length===1&&Object.hasOwn(changes,"permissions")&&!Object.keys((changes as {permissions:object}).permissions).length)throw new AssistantError("ASSISTANT_INVALID_INPUT");
   }
   if(tool === "prepare_business_controls") {
     let changes:unknown;try{changes=JSON.parse(String(args.changes_json));}catch{throw new AssistantError("ASSISTANT_INVALID_INPUT");}
