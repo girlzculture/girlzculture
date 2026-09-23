@@ -1,5 +1,6 @@
 // Interface copy only. Applicant answers and uploaded filenames stay unchanged.
 export const MASTER_BUILD_COPY = [
+["Your gallery is full. Remove a photo before adding another.", "Votre galerie est pleine. Supprimez une photo avant d’en ajouter une autre.", "Tu galería está llena. Elimina una foto antes de añadir otra.", "图库已满。请先移除一张照片再添加。"],
 ["This appointment is not ready for that action. Refresh its status and review again.", "Ce rendez-vous n’est pas prêt pour cette action. Actualisez son statut et vérifiez à nouveau.", "Esta cita no está lista para esa acción. Actualiza su estado y vuelve a revisar.", "此预约尚不能执行该操作。请刷新状态并重新核实。"],
 ["Early or late check-in needs your actual reason and confirmation that it is accurate.", "Une arrivée anticipée ou tardive nécessite votre motif réel et votre confirmation de son exactitude.", "La llegada temprana o tardía requiere el motivo real y confirmar su exactitud.", "提前或迟到签到需要提供真实原因并确认其准确性。"],
 

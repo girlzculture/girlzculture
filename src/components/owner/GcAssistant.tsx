@@ -1,5 +1,6 @@
 "use client";
 import AssistantFinanceReport from './AssistantFinanceReport';
+import AssistantPhotoUpload from './AssistantPhotoUpload';
 import AssistantTeamPreview from './AssistantTeamPreview';
 import AssistantControlsPreview from "@/components/owner/AssistantControlsPreview";
 import {isCatalogTool} from "@/lib/assistantCatalog";
@@ -106,6 +107,7 @@ export function Facts({ value, name = "", group = "", depth = 0, timeZone = "Ame
   return <span className="whitespace-pre-wrap break-words" data-no-translate>{String(value)}</span>;
 }
 const errors: Record<string, string> = {
+  ASSISTANT_GALLERY_FULL: "Your gallery is full. Remove a photo before adding another.",
     ASSISTANT_BOOKING_NOT_READY: "This appointment is not ready for that action. Refresh its status and review again.",
     ASSISTANT_CHECK_IN_REASON_REQUIRED: "Early or late check-in needs your actual reason and confirmation that it is accurate.",
   ASSISTANT_LOCATION_REVIEW_REQUIRED: "A verified business location is required before changing privacy or travel settings. Contact support to complete the location review.",
@@ -271,12 +273,12 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     const response = await fetch("/api/salon/assistant", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ ...body, task_tracking:true, locale: body.locale || requestLocale, ...(body.action === "plan" ? { page: body.page || assistantPageFromPath(pathname) } : {}) }), signal: AbortSignal.timeout(55000) });
     return readOwnerResponse(response, "ASSISTANT_UNAVAILABLE");
   }
-  async function submit(tool?: string, setup = false, retry?: Turn, prompt?: string) {
+  async function submit(tool?: string, setup = false, retry?: Turn, prompt?: string, toolArgs?: Row) {
     const message = prompt || (setup ? t("Help me set up my business, one step at a time.") : text);
     if (busy || submissionInFlight.current || (!retry && !tool && !message.trim())) return;
     const generation = actorGeneration.current;
     const id = retry?.id || crypto.randomUUID();
-    const submission: Row = retry?.submission || { ...(tool ? { action: "tool", request_id: id, tool, args: quickActions.find(action => action.tool === tool)?.args || {} } : { action: "plan", request_id: id, text: message, page: assistantPageFromPath(pathname), conversation: turns.filter(turn => !turn.error && !turn.pending).flatMap(turn => {
+    const submission: Row = retry?.submission || { ...(tool ? { action: "tool", request_id: id, tool, args: toolArgs || quickActions.find(action => action.tool === tool)?.args || {} } : { action: "plan", request_id: id, text: message, page: assistantPageFromPath(pathname), conversation: turns.filter(turn => !turn.error && !turn.pending).flatMap(turn => {
         // Tool facts are replayed only from server records after fresh permission
         // checks. Do not smuggle revoked data back through client chat history.
         const assistant = turn.clarification || "";
@@ -288,7 +290,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     if (retry) setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, pending: true, error: undefined, errorReference: undefined, alternatives:undefined } : turn));
     else {
       const quickAction = quickActions.find(action => action.tool === tool);
-      setTurns(previous => [...previous, { id, text: tool ? t(quickAction?.label || "Business information") : message, submission, pending: true }]);
+      setTurns(previous => [...previous, { id, text: tool ? prompt || t(quickAction?.label || "Business information") : message, submission, pending: true }]);
       if (!tool && !setup && !prompt) setText("");
     }
     try {
@@ -472,6 +474,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
                   {turn.navigate && destinations[turn.navigate] ? <Link className="mt-3 inline-flex min-h-10 items-center rounded-full bg-primary-hover px-4 text-xs font-bold text-white" href={destinations[turn.navigate][1]} onClick={() => { if (!desktop) dialog.current?.close(); }}>{t("Open {value0}", { value0: t(destinations[turn.navigate][0]) })}</Link> : null}
                 </div></div> : null}
 
+                {turn.request?.tool==="get_business_media" && business && (business.isOwner || business.permissions?.photos) && turn.id===turns.filter(item=>item.request?.tool==="get_business_media").at(-1)?.id ? <AssistantPhotoUpload key={business.id} businessId={business.id} locale={turnLocale} disabled={busy} onReady={(url,prompt)=>void submit("prepare_photo_change",false,undefined,prompt,{operation:"photo_add",record_id:null,changes_json:JSON.stringify({url})})}/> : null}
                 {turn.request?.tool === "get_earnings_summary" ? <AssistantFinanceReport value={turn.request.result} locale={turnLocale}/> : null}
                 {turn.request?.tool === "get_outstanding_balances" ? <AssistantBalances value={turn.request.result} onNavigate={() => { if (!desktop) dialog.current?.close(); }}/> : null}
                 {turn.task_switch_required?<section className="rounded-xl border border-border bg-white p-3 text-sm"><p>{t("There is an unfinished task. End it before moving to this request?")}</p><button type="button" disabled={busy} onClick={()=>void endTask(turn)} className="min-h-11 rounded-lg bg-primary px-3 text-white">{t("End task and continue")}</button><button type="button" disabled={busy} onClick={()=>setTurns(previous=>previous.map(item=>item.id===turn.id?{...item,task_switch_required:false,notice:"The current task is still active."}:item))} className="min-h-11 px-3 underline">{t("Keep current task")}</button></section>:null}

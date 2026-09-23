@@ -47,3 +47,15 @@ test('cross-business results and unavailable moderation fail closed without a pu
 test('all four stock summaries reflect recorded counts without calling a provider',()=>{
  const {presentAssistantResult}=load('src/lib/gcAssistantPresentation.ts');for(const locale of ['en','fr','es','zh-CN'])assert.match(presentAssistantResult('get_business_stock',{products:[{id}],supplies:[]},locale).message,/1/);
 });
+
+test('photo upload review uses photos permission, no caller business or implicit attachment',async()=>{
+ const input=args('photo_add',{url:'https://example.test/own-staged.png'},null);
+ const checked=validate(input);assert.equal(checked.permission,'photos');assert.equal(checked.risk,4);
+ for(const patch of [{salon_id:foreign},{owner_user_id:foreign},{attach:true},{asset_id:id}])assert.throws(()=>validate(args('photo_add',{url:'https://example.test/own-staged.png',...patch},null)),/ASSISTANT_INVALID_INPUT/);
+ assert.throws(()=>validate({...input,record_id:id}),/ASSISTANT_INVALID_INPUT/);
+ const helper=typescriptLoader(process.cwd(),{'@/lib/supabaseAdmin':{},'@/lib/contentModerationServer':{async moderatePublicContent(){throw Error('No text moderation for file-only review');}}})('src/lib/assistantOperationsServer.ts');
+ for(const foreignResult of [false,true]){
+  let calls=0;const ctx={salon:{id},user:{id:'actor'},admin:{async rpc(name,params){calls++;assert.equal(name,'preview_gc_business_operation');assert.equal(params.p_salon,id);assert.equal(params.p_actor,'actor');return {data:{salon_id:foreignResult?foreign:id,before:{gallery_photos:[]},payload:{operation:'photo_add',changes:{url:'https://example.test/own-staged.png'}}}};}}};
+  if(foreignResult)await assert.rejects(helper.prepareAssistantOperation(ctx,input),/ASSISTANT_ACCESS_DENIED/);else assert.equal((await helper.prepareAssistantOperation(ctx,input)).payload.operation,'photo_add');assert.equal(calls,1);
+ }
+});

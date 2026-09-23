@@ -1332,3 +1332,5 @@ console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assi
 
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-fulfillment.sql")],"Reviewed product fulfillment isolation, stale review, replay and immutable payment terms"));
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-booking-progress.sql")],"Reviewed booking progress, attendance, assignment and immutable payment terms"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-photo-upload.sql")],"Staged photo ownership, reviewed attachment, stale gallery and replay"));
