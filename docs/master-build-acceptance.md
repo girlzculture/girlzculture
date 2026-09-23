@@ -6,7 +6,7 @@ Source: Girlz_Culture_Master_Build.pdf (all five pages), founder pasted correcti
 
 - Branch: `codex/master-build-current-scope`, based on `692b89be11c0599c579f90254032b56431590fe2` (PR #86 CI correction).
 - Baseline required CI: [35815751467](https://github.com/girlzculture/girlzculture/actions/runs/35815751467), successful: **1,402 passed, 5 skipped, 0 failed; 1,407 accounted for exactly once**, eight isolated runners, one worker each, zero retries. TypeScript, lint, build, clean migration chain and focused gates passed on that commit. This does not verify the subsequent Master Build changes.
-- Master Build changes: local implementation checkpoints from `c461a6c` through `3d3d83b`, plus reviewed marketing; not yet pushed or released. No Master Build migration, application change or demo record has been applied to production.
+- Master Build changes: local implementation checkpoints from `c461a6c` through `e62280b`, plus reviewed waitlist offers; not yet pushed or released. No Master Build migration, application change or demo record has been applied to production.
 - Last observed published deployment: `6ab1801846433e00086f1d08`. Recheck exact source and rollback compatibility before release.
 - Required acceptance statuses: PASS (verified actual workflow), AUTOMATED ONLY (local/CI evidence), FAIL (demonstrated failure), BLOCKED (not implemented/verified or external dependency). No unchecked requirement counts as complete.
 
@@ -266,3 +266,17 @@ Source: Girlz_Culture_Master_Build.pdf (all five pages), founder pasted correcti
 - Full lint exposed generated `.next-*` build output being scanned as source, plus two actual source lint errors. Generated output is now excluded; the demo retry sets loading explicitly in its event handler and an immutable time-parser local is declared const. Demo recovery tests pass.
 
 - A subsequent model-boundary audit reproduced the missing marketing fact projection and refresh registration. Four actual planner/answer serialization tests now pass: current post status/copies reach both phases; access loss discards prior facts and transcript before any answer-provider call. These checks supplement the earlier 119-case result.
+
+
+## 23 September — combined release candidate checkpoint
+
+- All 216 migrations applied from an empty disposable local database with the full clean-database assertions passing. Representative upgrade: 188 baseline + 28 reviewed migrations; 10 preservation checks and 20 SQL suites passed. No production migrations applied.
+- Master Build units/API and production migration contracts: **190 passed, zero failed/skipped**. Separate waitlist/planner/existing waitlist focused regression: **111 passed, zero failed/skipped**.
+- Assistant waitlist offers reuse canonical availability, consent and offer delivery; explicit review shows the exact customer-language notification, no booking or charge. **17 SQL checks** and **8 Chromium/WebKit cases** passed across four languages and phone/tablet/desktop/landscape. SQL and JavaScript recheck the current business/professional scope on confirmation and replay.
+- Final-schema demo isolation/idempotence/reset/reconciliation: **75 passed**. Plan entitlements and concurrent calendar occupancy: **44 passed**. Private application/location, geocoding race and human visit approval controls: **51 passed**. These are local database checks, not production/demo-login acceptance.
+- TypeScript passed after regenerating Next route types and removing one corrupt generated development validator (original saved in local evidence). Full lint: **0 errors, 17 warnings**. No source assertion was suppressed.
+- Planner request size retains all 77 catalog records and six history/current turns by lossless column/row encoding; budget remains 64,000 bytes, measured 63,542. No intent/history pruning was added.
+- Current production deployment `6ab1801846433e00086f1d08`, source `bfcf3a1c5fed62204cfc357c8ba381d38349dca1`, was read as ready, published and locked. It does not contain Master Build changes.
+- Demo provision/reset instructions are in `supabase/demo/README.md`. Dedicated hosted account and private founder credential handoff remain outstanding. Full remote CI, guarded merge, protected production migration, held-candidate acceptance and publication still remain; no live completion is claimed.
+
+- Combined acceptance build passed; final production migration contract **32/32 passed** after adding plan and location checks to required CI.

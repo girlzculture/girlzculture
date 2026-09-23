@@ -129,6 +129,8 @@ jobs:
         run: |
           node scripts/verify-master-build-upgrade.mjs
           node scripts/verify-master-build-demo.mjs
+          node scripts/verify-master-build-plans.mjs
+          node scripts/verify-master-build-location.mjs
       - name: Verify business signup migration results in the isolated database
         run: psql "$CLEAN_DATABASE_URL" -X --set ON_ERROR_STOP=1 --file scripts/sql/verify-business-signup-migration.sql
       - name: Verify authoritative salon-submission lifecycle

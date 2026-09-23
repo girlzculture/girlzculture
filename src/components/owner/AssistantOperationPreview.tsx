@@ -1,9 +1,11 @@
 "use client";
+import AssistantWaitlistPreview from './AssistantWaitlistPreview';
 import Image from "next/image";
 import {bookingCheckInReason} from "@/i18n/booking-check-in-reasons";
 import {assistantOperationsCopy} from "@/i18n/assistant-operations-copy";
 type Row=Record<string,unknown>;
 export default function AssistantOperationPreview({value,locale}:{value:Row;locale:string}){
+ if(value.operation==='waitlist_offer')return <AssistantWaitlistPreview value={value} locale={locale}/>;
  const copy=assistantOperationsCopy(locale),changes=(value.changes||{}) as Row;
  const label=(key:string)=>copy[key as keyof typeof copy]||key;
  const booking=String(value.operation).startsWith("booking_");

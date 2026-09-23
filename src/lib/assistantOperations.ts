@@ -8,6 +8,7 @@ const nullableId:ToolSchema={type:["string","null"],pattern:"^[0-9a-fA-F]{8}-[0-
 const marketingCopy=object({title:text(160,1),body:text(2400,1),tags:{type:"array",maxItems:8,items:text(61,2)}});
 const stock={kind:choice("product","supply"),quantity:integer(),note:text(1200,1)};
 export const ASSISTANT_OPERATIONS={
+ waitlist_offer:{permission:"bookings",schema:object({source_booking_id:{...nullableId,type:"string"},stylist_id:nullableId})},
  marketing_draft:{permission:"promotions",schema:object({source:object({photo_urls:{type:"array",items:text(2048,1),maxItems:4},service_id:nullableId,promotion_id:nullableId,booking_id:nullableId}),copies:object({en:marketingCopy,fr:marketingCopy,es:marketingCopy,"zh-CN":marketingCopy})})},
  marketing_publish:{permission:"promotions",schema:object({scheduled_at:text(40,1),expires_at:text(40,1)})},
  marketing_cancel:{permission:"promotions",schema:object({})},

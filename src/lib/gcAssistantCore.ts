@@ -26,6 +26,7 @@ const manualAppointment = {
   stylist_id: nullableId, stylist_preference: enumeration("named", "any", "unspecified"), date, time: clockTime, source: enumeration("phone", "walk_in", "instagram", "whatsapp", "other"), notes: string(1200),
 };
 export const ASSISTANT_TOOLS = {
+  get_appointment_waitlist:{risk:1,permission:"bookings",schema:object({record_id:nullableId})},
   get_marketing_records:{risk:1,permission:"promotions",schema:object({record_id:nullableId})},
   prepare_marketing_change:{risk:4,permission:"promotions",schema:object({operation:enumeration("marketing_draft","marketing_publish","marketing_cancel"),record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
   get_team_controls:{risk:1,permission:"settings",schema:object({})},
@@ -37,7 +38,7 @@ export const ASSISTANT_TOOLS = {
   prepare_product_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_product_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
   prepare_promotion_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_promotion_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
   get_business_stock: {risk:1,permission:"products",schema:object({query:string(120)})},
-  prepare_booking_progress: {risk:4,permission:"bookings",schema:object({operation:enumeration("booking_service","booking_attendance"),record_id:uuid,changes_json:{...string(6000),minLength:2}})},
+  prepare_booking_progress: {risk:4,permission:"bookings",schema:object({operation:enumeration("booking_service","booking_attendance","waitlist_offer"),record_id:uuid,changes_json:{...string(6000),minLength:2}})},
   prepare_stock_change: {risk:4,permission:"products",schema:object({operation:enumeration(...Object.keys(ASSISTANT_OPERATIONS).filter(name=>operationTool(name)==="prepare_stock_change")),record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
   prepare_photo_change: {risk:4,permission:"photos",schema:object({operation:enumeration(...Object.keys(ASSISTANT_OPERATIONS).filter(name=>operationTool(name)==="prepare_photo_change")),record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
   prepare_client_card_change: {risk:4,permission:"client_history",schema:object({operation:enumeration(...Object.keys(ASSISTANT_OPERATIONS).filter(name=>operationTool(name)==="prepare_client_card_change")),record_id:nullableId,changes_json:{...string(6000),minLength:2}})},

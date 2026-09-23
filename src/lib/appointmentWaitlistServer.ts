@@ -45,7 +45,9 @@ export async function waitlistFailure(request:Request,error:unknown,admin?:Retur
 }
 
 /** Read-only opening review: private customer identity stays on the server. */
-export async function businessWaitlistOpenings(context:Awaited<ReturnType<typeof import("@/lib/supabaseAdmin").requireSalonPermission>>,requestId:string,sourceId?:string){
+export function waitlistOfferCopy(locale:string){return copy[locale]||copy.en;}
+
+export async function businessWaitlistOpenings(context:Awaited<ReturnType<typeof import("@/lib/supabaseAdmin").requireSalonPermission>>,requestId:string,sourceId?:string,includeProfessional=false){
  const result=await context.admin.rpc("business_waitlist_openings",{p_salon:context.salon.id,p_actor:context.user.id,p_request:requestId});
  if(result.error)throw result.error;
  const openings=[];
@@ -63,7 +65,7 @@ export async function businessWaitlistOpenings(context:Awaited<ReturnType<typeof
    if(offered.error)throw offered.error;if(!offered.data)throw Error("WAITLIST_OPENING_CHANGED");
    return {offered:true,offer_id:offered.data,openings:[]};
   }
-  openings.push({source_booking_id:item.source_booking_id,appointment_at:item.appointment_at,time_zone:item.time_zone});
+  openings.push({source_booking_id:item.source_booking_id,appointment_at:item.appointment_at,time_zone:item.time_zone,...(includeProfessional?{stylist_id:slot.stylistId||null}:{})});
   if(openings.length===5)break;
  }
  if(sourceId)throw Error("WAITLIST_OPENING_CHANGED");

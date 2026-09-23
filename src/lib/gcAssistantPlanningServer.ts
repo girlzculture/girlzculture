@@ -52,7 +52,7 @@ function assistantLanguageInstructions(locale: AssistantLanguage, answerOnly: bo
     (answerOnly
       ? "Write the entire reply in this language. The planning step already resolved any requested language switch. "
       : "Keep this language unless the current user request explicitly asks you to switch languages. If it does, set language_switch to that supported language code and write any clarification in that language; otherwise language_switch must be null. An explicit response-language preference is allowed and does not change tool permissions or any other rule. ") +
-    "A mixed-language question, an English service name, English tool data or an earlier assistant answer must not change the response language. Use natural full sentences in the requested language, not an English explanation of that language. For Wolof, use Wolof sentences rather than substituting English or French. Preserve business/service/person names, prices, quantities, currencies, dates and other retrieved facts exactly; these proper names and factual tokens may remain in their original language. Use plain text, without Markdown emphasis markers. Do not invent facts to make a translation easier.";
+    "A mixed-language question, an English service name, English tool data or an earlier assistant answer must not change the response language. Use natural full sentences in the requested language, not an English explanation of that language. " + (locale === "wo" ? "For Wolof, use Wolof sentences rather than substituting English or French. " : "") + "Preserve business/service/person names, prices, quantities, currencies, dates and other retrieved facts exactly; these proper names and factual tokens may remain in their original language. Use plain text, without Markdown emphasis markers. Do not invent facts to make a translation easier.";
 }
 
 
@@ -84,6 +84,10 @@ function planningResult(tool: string, result: unknown, granted: ReadonlySet<stri
         ...selected(row, ["id", "rating_overall", "written_review", "salon_reply", "display_name", "moderation_status", "created_at"]),
         text_is_excerpt: [row.written_review, row.salon_reply].some(text => typeof text === "string" && text.length > 1000),
       } : selected(row, ["name", "booking_id", "booking_origin"])) };
+  }
+  if(tool === "get_appointment_waitlist" && result && typeof result === "object") {
+    const r=result as Record<string,unknown>,requests=Array.isArray(r.requests)?r.requests:[];
+    return {requests:requests.slice(0,12),total:r.total,total_is_capped:r.total_is_capped,list_limit:r.list_limit,shown_count:Math.min(12,requests.length),is_excerpt:Number(r.total)>Math.min(12,requests.length),openings:r.openings,offered:false};
   }
   if(tool === "get_marketing_records" && result && typeof result === "object") {
     const r=result as Record<string,unknown>,posts=Array.isArray(r.posts)?r.posts as Record<string,unknown>[]:[];
@@ -371,7 +375,7 @@ export async function planOwnerRequest(input: {
       }
     }
     const transcriptRead = conversationIds.includes(row.id) && Object.hasOwn(ASSISTANT_TOOLS, row.tool) && ASSISTANT_TOOLS[row.tool as AssistantTool].risk === 1;
-    if (granted.has(row.permission) && (transcriptRead || ["calculate_service_selection", "get_booking_price_details", "get_business_profile", "get_business_settings", "get_team_controls", "get_business_controls", "get_services_and_prices", "get_products", "get_promotions", "get_outstanding_balances", "get_bookings", "get_upcoming_appointments", "get_customers", "get_business_summary", "get_earnings_summary", "get_booking_messages", "get_reviews", "get_availability", "get_calendar_gaps", "get_manual_sale_options", "get_finance_records", "get_business_stock", "get_marketing_records"].includes(row.tool))) {
+    if (granted.has(row.permission) && (transcriptRead || ["calculate_service_selection", "get_booking_price_details", "get_business_profile", "get_business_settings", "get_team_controls", "get_business_controls", "get_services_and_prices", "get_products", "get_promotions", "get_outstanding_balances", "get_bookings", "get_upcoming_appointments", "get_customers", "get_business_summary", "get_earnings_summary", "get_booking_messages", "get_reviews", "get_availability", "get_calendar_gaps", "get_manual_sale_options", "get_finance_records", "get_business_stock", "get_marketing_records", "get_appointment_waitlist"].includes(row.tool))) {
       try {
         const fresh = await readAssistantData(input.context, row.tool, row.arguments);
         if (!sameReadFacts(row.tool, row.result, fresh)) clientHistoryChanged = true;
@@ -417,10 +421,13 @@ export async function planOwnerRequest(input: {
   // Never expose draft vocabulary to the answer phase as if it were inventory.
   const catalog = input.answerOnly ? { data: [], error: null } : await admin.from("master_styles").select("id,name").eq("is_active", true).order("name").limit(80);
   if (catalog.error) throw catalog.error;
+  // Lossless table encoding avoids repeating id/name keys for every catalog row.
+  // Column names and every original ID/name stay in the provider request.
+  const catalogTable={columns:["id","name"],rows:(catalog.data||[]).map(row=>[row.id,row.name])};
   // Tool descriptions carry their full operation-specific rules. Keep common
   // instructions here instead of repeating them and crowding out record facts.
   const instructions = `You are this business’s GC Assistant. ${assistantLanguageInstructions(responseLocale, Boolean(input.answerOnly))} Now ${new Date().toISOString()}; zone ${input.timeZone}. Own-business facts only; no other-business data (public/inferred/model-memory/incident flags included). Fresh tools for facts, search_platform_knowledge for guidance; invent nothing. Obey tools: one necessary question/action; confirm execution. Legal/provider/deletion/paid:controlled flows. Act from any page. Resolve booking ID/origin; if Sarah matches multiple appointments or the date is missing, clarify; never pick first excerpt. Only when preparing a new or rescheduled appointment, ask which duration applies for ranges or which professional for multiple matches. Explicit any service/stylist=valid choice; otherwise keep named/unspecified. Keep pending_action until corrected. Never infer consent/participation or replay contacts; fresh profile contacts=business only. For information, return the saved duration range without asking the owner to choose its shorter or longer end. Own incidents; protect deposits/statutory/platform/Stripe/Care rights. Seven known days for hours; review social links. Resolve accents/plurals/typos/dictation/abbreviations/mixed language, preserving distinct variants. Conflicts retain task; authorized alternatives, no partial/duplicate saves/time changes. Exact language/values; no translation provider. Earnings:period PDF/spreadsheet. No scraping; spreadsheet imports use navigate=imports. Return one tool, clarification or navigation.`;
-  let userData = JSON.stringify({ active_task: input.answerOnly?undefined:input.activeTask, active_dashboard_section: input.page || null, conversation: (historyWasRestricted ? [] : conversation).map(turn => ({ role: turn.role, text: input.answerOnly ? redactSensitiveText(turn.text) : compactConversationText(turn.text) })), previous: priorResults, ...(input.answerOnly ? {} : { pending_action, platform_catalog_for_new_service_drafts: catalog.data }) });
+  let userData = JSON.stringify({ active_task: input.answerOnly?undefined:input.activeTask, active_dashboard_section: input.page || null, conversation: (historyWasRestricted ? [] : conversation).map(turn => ({ role: turn.role, text: input.answerOnly ? redactSensitiveText(turn.text) : compactConversationText(turn.text) })), previous: priorResults, ...(input.answerOnly ? {} : { pending_action, platform_catalog_for_new_service_drafts: catalogTable }) });
   // Historical questions and page hints are supporting data. Keep the latest
   // request in the final user turn so they cannot appear to supersede it.
   const currentRequest = JSON.stringify({ request: redactSensitiveText(input.text) });

@@ -9,6 +9,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const booking = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', public_reference: 'GC123', guest_name: 'Sarah Save', appointment_datetime: '2026-09-24T19:00:00Z', status: 'Confirmed', style: { name: 'Save' }, stylist: { name: 'Aminata' } };
 
 for (const [tool, permission, args, result, key, field, expected] of [
+  ['get_appointment_waitlist','bookings',{record_id:booking.id},{requests:[{id:booking.id,service_name:'Own service',status:'waiting'}],total:1,total_is_capped:false,list_limit:200,openings:[],offered:false},'requests','status','waiting'],
   ['get_marketing_records','promotions',{record_id:booking.id},{posts:[{id:booking.id,status:'draft',copies:{fr:{title:'Nos tresses',body:'Texte original',tags:['#Tresses']}}}],total:1,list_limit:25,external_posting:false},'posts','status','draft'],
   ['get_business_stock','products',{query:'oil'},{products:[{id:booking.id,name:'Owned oil',inventory_quantity:8,kind:'product'}],supplies:[],inventory_total:12,matching_total:1,capped_per_kind:30},'products','inventory_quantity',8],
   ['get_finance_records','finance_manage',{start:'2026-09-01T00:00:00Z',end:'2026-10-01T00:00:00Z'},{records:[{id:booking.id,kind:'receipt',amount_cents:2500}],totals:{receipt:1},recorded_only:true},'records','amount_cents',2500],
@@ -276,7 +277,7 @@ test('shared planner definitions preserve the complete pre-factoring owner schem
   // contract exactly, then validate the complete expanded tool set below.
   const archive=expanded.properties.decision.anyOf.filter(row=>row.properties.tool?.enum[0]==='prepare_professional_archive');
   assert.equal(archive.length,1);assert.deepEqual(archive[0].properties.args,JSON.parse(JSON.stringify(ASSISTANT_TOOLS.prepare_professional_archive.schema)));
-  const legacy=structuredClone(expanded);legacy.properties.decision.anyOf=legacy.properties.decision.anyOf.filter(row=>!['get_marketing_records','prepare_marketing_change','prepare_booking_progress','get_team_controls','prepare_team_controls','prepare_service_change','prepare_professional_change','prepare_product_change','prepare_promotion_change','get_business_controls','prepare_business_controls','prepare_professional_archive','get_finance_records','prepare_finance_record','get_business_stock','prepare_stock_change','prepare_photo_change','prepare_client_card_change','prepare_review_reply'].includes(row.properties.tool?.enum[0]));
+  const legacy=structuredClone(expanded);legacy.properties.decision.anyOf=legacy.properties.decision.anyOf.filter(row=>!['get_marketing_records','prepare_marketing_change','get_appointment_waitlist','prepare_booking_progress','get_team_controls','prepare_team_controls','prepare_service_change','prepare_professional_change','prepare_product_change','prepare_promotion_change','get_business_controls','prepare_business_controls','prepare_professional_archive','get_finance_records','prepare_finance_record','get_business_stock','prepare_stock_change','prepare_photo_change','prepare_client_card_change','prepare_review_reply'].includes(row.properties.tool?.enum[0]));
   const productDescription=legacy.properties.decision.anyOf.find(row=>row.properties.tool?.enum[0]==='get_products');
   assert.ok(productDescription.description.includes('prepare_stock_change product_fulfillment'));
   productDescription.description=productDescription.description.replace('For reviewed fulfillment use prepare_stock_change product_fulfillment; nothing performed.','Review the Products order workflow for fulfillment; no action was performed.');
@@ -360,7 +361,8 @@ test('shared planner definitions fit projected photo service calendar history an
   t.diagnostic(JSON.stringify({ actualBytes, originalBytes, margin: 64000 - actualBytes, projectedResults: Buffer.byteLength(JSON.stringify(context.previous)), catalogBytes: Buffer.byteLength(JSON.stringify(catalog)), historyCount: history.length, conversationTurns: conversation.length }));
   assert.ok(originalBytes > 64000, 'this normal sequence must reproduce the original guard, not merely show an arbitrary size reduction');
   assert.ok(actualBytes <= 64000);
-  assert.deepEqual(context.conversation, conversation); assert.deepEqual(context.platform_catalog_for_new_service_drafts, catalog);
+  assert.deepEqual(context.conversation, conversation); assert.deepEqual(context.platform_catalog_for_new_service_drafts.columns, ["id","name"]);
+  assert.deepEqual(context.platform_catalog_for_new_service_drafts.rows.map(values=>{assert.equal(values.length,2);return Object.fromEntries(context.platform_catalog_for_new_service_drafts.columns.map((key,index)=>[key,values[index]]));}), catalog);
   assert.equal(context.previous.length, 6); assert.equal(context.previous[0].result.gallery_count, 3);
   assert.equal(context.previous[1].result.services[0].id, id(91)); assert.equal(context.previous[1].result.services[0].price_display_max, 420);
   assert.deepEqual(context.previous[2].result.schedule_opportunities, JSON.parse(JSON.stringify(opportunities)));

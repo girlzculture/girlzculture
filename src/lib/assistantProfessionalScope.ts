@@ -62,6 +62,14 @@ export async function assertAssistantProposalScope(context: Context, tool: strin
     if(!current.data)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
   }
   const assigned = assistantAssignedProfessional(context);
+  if(tool==="prepare_booking_progress"&&args.operation==="waitlist_offer"){
+    validateTool(tool,args);
+    const choice=JSON.parse(String(args.changes_json));
+    if(assigned&&choice.stylist_id!==assigned)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
+    const scope=await context.admin.rpc("read_business_waitlist",{p_salon:context.salon.id,p_user:context.user.id});
+    if(scope.error||!Array.isArray(scope.data)||!scope.data.some(row=>row.id===args.record_id))throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
+    return;
+  }
   if(tool==="prepare_booking_progress"){
     validateTool(tool,args);
     let query=context.admin.from("bookings").select("id").eq("salon_id",context.salon.id).eq("id",args.record_id);
