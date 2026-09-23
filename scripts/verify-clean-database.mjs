@@ -1321,3 +1321,5 @@ console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-adve
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-operations.sql")],"Assistant reviewed stock, media, client cards and review replies"));
 
 await verifyAdvertisingConcurrency(databaseUrl,psql);
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-solo-upgrade.sql")],"Verified Solo-to-team entitlement projection and private address preservation"));

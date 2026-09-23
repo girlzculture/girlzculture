@@ -22,8 +22,10 @@ try {
  insert into auth.users(id,email,encrypted_password,email_confirmed_at,raw_user_meta_data) values
  ('${owner}','${owner}@example.test','',now(),'{"role":"salon_owner"}'),('${other}','${other}@example.test','',now(),'{"role":"salon_owner"}'),('${member}','${member}@example.test','',now(),'{"role":"salon_staff"}');
  insert into public.salons(id,user_id,name,slug,email,status,subscription_tier,subscription_status) values
- ('${a}','${owner}','Master fixture A','master-${a}','${owner}@example.test','Active','Solo','active'),
+ ('${a}','${owner}','Master fixture A','master-${a}','${owner}@example.test','Pending','Solo','active'),
  ('${b}','${other}','Master fixture B','master-${b}','${other}@example.test','Active','Starter','active');
+ insert into public.business_verification_locations(salon_id,address_street,address_city,address_state,address_zip,visit_status,visited_at,verified_by,visit_evidence) values('${a}','123 Fictional Avenue','Brooklyn','NY','11201','verified',now(),'${owner}','DISPOSABLE TEST: simulated completed verification');
+ update public.salons set status='Active' where id='${a}';
  insert into public.styles(id,salon_id,service_group_id,name,duration_min_hours,duration_max_hours,base_price,price_display_min,price_display_max)
  select '${service}','${a}',id,'Master service',1,1,100,100,100 from public.service_groups where is_active and archived_at is null order by sort_order,name limit 1;
  insert into public.stylists(id,salon_id,name,slug,is_active,is_draft) values ('${p1}','${a}','Master professional one','master-${p1}',true,false),('${p2}','${a}','Master professional two','master-${p2}',true,false);
