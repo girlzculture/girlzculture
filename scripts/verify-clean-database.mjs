@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
+import {verifyAdvertisingConcurrency} from './verify-master-advertising-concurrency.mjs';
 import {verifyWaitlistConcurrency} from './verify-waitlist-concurrency.mjs';
 
 const databaseUrl = process.env.CLEAN_DATABASE_URL;
@@ -1314,3 +1315,7 @@ console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-book
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-rebooking-reminders.sql")],"Reviewed rebooking automation, current consent, no duplicate sends and demo exclusion"));
 
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-google-help.sql")],"Google setup assistance, reviewed support handoff and private-address isolation"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-advertising.sql")],"Advertising benefits, reviewed invoices, private-location discovery and tenant boundaries"));
+
+await verifyAdvertisingConcurrency(databaseUrl,psql);

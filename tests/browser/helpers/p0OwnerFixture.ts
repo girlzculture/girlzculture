@@ -74,6 +74,7 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
     // This generic workspace has no complete monthly aggregate. Dedicated report tests provide it.
     if (req.method() === "GET" && path === "/api/salon/booking-report") return respond({code:"REPORT_UNAVAILABLE"},503);
     if (req.method() === "GET" && path === "/api/salon/rebooking-settings") return respond({code:"REBOOKING_UNAVAILABLE"},503);
+    if (req.method() === "GET" && path === "/api/salon/advertising") return respond({ads:{salon_id:business.id,is_demo:false,eligible:false,benefits:{plan:'starter',discount_percent:0,credit_available_cents:0,period_start:'2026-07-01T00:00:00Z',period_end:'2026-10-01T00:00:00Z',early_hours:0},offers:[],reservations:[]}});
     if (req.method() === "GET" && path === "/api/salon/google-help") return respond({help:{salon_id:business.id,level:'guide',is_demo:false,fingerprint:'00000000000000000000000000000000',fields:null,review:null,requests:[]}});
     if (req.method() === "GET" && path === "/api/salon/rebooking-advice") return respond({code:"REBOOKING_UNAVAILABLE"},503);
     if (req.method() === "GET" && path === "/api/salon/service-contribution") {

@@ -24,6 +24,7 @@ import BusinessPhotoLibrary from "@/components/owner/BusinessPhotoLibrary";
 import BusinessOverview from "@/components/owner/BusinessOverview";
 import ProductsWorkspace from "@/components/owner/ProductsWorkspace";
 import BusinessFinances from "@/components/owner/BusinessFinances";
+import BusinessAdvertising from "@/components/owner/BusinessAdvertising";
 import SubscriptionPaymentMethod from "@/components/owner/SubscriptionPaymentMethod";
 import BusinessReferrals, { SubscriptionReferralNavigation } from "@/components/owner/BusinessReferrals";
 import type { BusinessPhotoMetadata } from "@/lib/businessPhotoMetadata";
@@ -1480,6 +1481,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
           );
         })}
       </div>
+      {c.access === null ? <BusinessAdvertising key={`advertising:${c.salon.id}`} businessId={String(c.salon.id)} /> : null}
       {c.subscription?.stripe_customer_id && c.access === null ? <SubscriptionPaymentMethod key={String(c.salon.id)} disabled={Boolean(busy)} /> : null}
       {c.subscription?.stripe_customer_id ? (
         <div className="mt-5 flex flex-wrap gap-3">
