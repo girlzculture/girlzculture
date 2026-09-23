@@ -6,6 +6,7 @@ const locale:ToolSchema={type:"string",enum:["en","fr","es","zh-CN"]};
 const choice=(...values:string[]):ToolSchema=>({type:"string",enum:values});
 const stock={kind:choice("product","supply"),quantity:integer(),note:text(1200,1)};
 export const ASSISTANT_OPERATIONS={
+ product_fulfillment:{permission:"products",schema:object({fulfillment_status:choice("Preparing","Ready for Pickup","Shipped","Delivered","Ready for pickup","Collected","Not collected"),carrier:{...text(80),type:["string","null"]},tracking_number:{...text(120),type:["string","null"]},note:{...text(500),type:["string","null"]}})},
  stock_restock:{permission:"products",schema:object({...stock,cost_cents:integer(0,100000000)})},
  stock_correction:{permission:"products",schema:object(stock)},
  stock_consumption:{permission:"products",schema:object(stock)},

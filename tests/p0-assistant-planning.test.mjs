@@ -276,6 +276,9 @@ test('shared planner definitions preserve the complete pre-factoring owner schem
   const archive=expanded.properties.decision.anyOf.filter(row=>row.properties.tool?.enum[0]==='prepare_professional_archive');
   assert.equal(archive.length,1);assert.deepEqual(archive[0].properties.args,JSON.parse(JSON.stringify(ASSISTANT_TOOLS.prepare_professional_archive.schema)));
   const legacy=structuredClone(expanded);legacy.properties.decision.anyOf=legacy.properties.decision.anyOf.filter(row=>!['get_team_controls','prepare_team_controls','prepare_service_change','prepare_professional_change','prepare_product_change','prepare_promotion_change','get_business_controls','prepare_business_controls','prepare_professional_archive','get_finance_records','prepare_finance_record','get_business_stock','prepare_stock_change','prepare_photo_change','prepare_client_card_change','prepare_review_reply'].includes(row.properties.tool?.enum[0]));
+  const productDescription=legacy.properties.decision.anyOf.find(row=>row.properties.tool?.enum[0]==='get_products');
+  assert.ok(productDescription.description.includes('prepare_stock_change product_fulfillment'));
+  productDescription.description=productDescription.description.replace('For reviewed fulfillment use prepare_stock_change product_fulfillment; nothing performed.','Review the Products order workflow for fulfillment; no action was performed.');
   const financialDescription=legacy.properties.decision.anyOf.find(row=>row.properties.tool?.enum[0]==='get_earnings_summary');
   assert.match(financialDescription.description,/use get_finance_records and prepare_finance_record/);
   financialDescription.description=financialDescription.description.replace('use get_finance_records and prepare_finance_record for reviewed expenses, received balances and money already returned. Other provider operations remain in the controlled Finances workflow.','navigate to Finances for all other individual records or financial actions.');

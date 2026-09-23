@@ -6,6 +6,16 @@ const load=typescriptLoader(process.cwd(),{'@/lib/supabaseAdmin':{}}),core=load(
 const {operationTool}=load('src/lib/assistantOperations.ts');
 const validate=input=>core.validateTool(operationTool(input.operation)||'prepare_stock_change',input);
 const args=(operation,changes,record_id=id)=>({operation,record_id,changes_json:JSON.stringify(changes)});
+test('fulfillment accepts reviewed status transitions only and cannot request payment or notification effects',async()=>{
+ const changes={fulfillment_status:'Shipped',carrier:'Local carrier',tracking_number:'TEST-123',note:null};
+ assert.equal(validate(args('product_fulfillment',changes)).permission,'products');
+ for(const key of ['refund','charge','send_email','salon_id','payment_status'])assert.throws(()=>validate(args('product_fulfillment',{...changes,[key]:true})),/ASSISTANT_INVALID/);
+ for(const fulfillment_status of ['Cancelled','Canceled','Refunded','Paid'])assert.throws(()=>validate(args('product_fulfillment',{...changes,fulfillment_status})),/ASSISTANT_INVALID/);
+ assert.throws(()=>validate(args('product_fulfillment',changes,null)),/ASSISTANT_INVALID/);
+ const calls=[],ctx={salon:{id},user:{id:'actor'},admin:{async rpc(name,input){calls.push(name);assert.equal(input.p_salon,id);return {data:{salon_id:id,before:{revision:1},payload:{operation:'product_fulfillment',changes,provider_action:false,notification_sent:false}}};}}};
+ const helper=typescriptLoader(process.cwd(),{'@/lib/supabaseAdmin':{},'@/lib/contentModerationServer':{async moderatePublicContent(){throw Error('No public prose or provider call');}}})('src/lib/assistantOperationsServer.ts');
+ const result=await helper.prepareAssistantOperation(ctx,args('product_fulfillment',changes));assert.equal(result.payload.provider_action,false);assert.deepEqual(calls,['preview_gc_business_operation']);
+});
 test('operations use their real permission and strict payload schema, with no caller-selected business',()=>{
  const cases=[['stock_restock',{kind:'product',quantity:2,cost_cents:0,note:'Counted'},'products',id],['photo_cover',{url:'https://example.test/own.jpg'},'photos',null],['client_card',{locale:'fr',patch:{formula:{technique:'Boho'}}},'client_history',id],['review_reply',{reply:'Thank you'},'reviews',id]];
  for(const [operation,changes,permission,record]of cases){const input=args(operation,changes,record);assert.equal(validate(input).permission,permission);for(const extra of ['salon_id','user_id','function_name','confirmed'])assert.throws(()=>validate(args(operation,{...changes,[extra]:foreign},record)),/ASSISTANT_INVALID/);}

@@ -51,6 +51,11 @@ export async function assertAssistantProposalScope(context: Context, tool: strin
     if(scoped.error){if(/ASSISTANT_(ACCESS_DENIED|RECORD_NOT_FOUND)/.test(scoped.error.message))throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);throw scoped.error;}
     if(scoped.data?.salon_id!==context.salon.id)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
   }
+  if(tool==="prepare_stock_change"&&args.operation==="product_fulfillment"){
+    const current=await context.admin.from("product_orders").select("id").eq("salon_id",context.salon.id).eq("id",args.record_id).maybeSingle();
+    if(current.error)throw current.error;
+    if(!current.data)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
+  }
   const assigned = assistantAssignedProfessional(context);
   if (!assigned) return;
   if (args.booking_id) {
