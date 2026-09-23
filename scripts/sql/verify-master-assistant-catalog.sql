@@ -38,6 +38,23 @@ begin
  -- current rows into the review. Every fixture rolls back.
  insert into public.service_addons(category_id,name,is_active) select category_id,'Scalp treatment',true from public.styles where id=service on conflict do nothing;
  insert into public.style_materials(style_id,name,price,longevity_weeks,quality_grade)values(service,'Kanekalon (standard)',5,4,'Good');
+
+ -- Published editor choices and SQL/assistant validation share one source.
+ update public.engine_settings set published_value='["Good","Better","Premium","Luxury"]',draft_value='["Draft only"]' where setting_key='catalog.material_quality_grades';
+ update public.style_materials set quality_grade='Premium' where style_id=service;
+ perform pg_temp.oassert((select bool_and(quality_grade='Premium' and quality_note='Premium') from public.style_materials where style_id=service),'manual material save accepts published Premium unchanged');
+ perform pg_temp.oreject(format('update public.style_materials set quality_grade=%L where style_id=%L','Draft only',service),'valid braiding quality');
+ perform pg_temp.oreject(format('update public.style_materials set quality_grade=%L where style_id=%L','Unpublished',service),'valid braiding quality');
+ d:=pg_temp.cdraft(a,oa,'prepare_service_change',service,'{"style_materials":[{"name":"Kanekalon (standard)","price":6,"longevity_weeks":4,"quality_grade":"Premium"}]}');
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('a',64));
+ perform pg_temp.oassert(r->'verified'='true' and (select bool_and(quality_grade='Premium' and price=6) from public.style_materials where style_id=service),'assistant Premium confirmation uses canonical unchanged grade');
+ d:=pg_temp.cdraft(a,oa,'prepare_service_change',service,'{"style_materials":[{"name":"Kanekalon (standard)","price":7,"longevity_weeks":4,"quality_grade":"Premium"}]}');
+ update public.engine_settings set published_value='["Good","Better","Luxury"]' where setting_key='catalog.material_quality_grades';
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('a',64));
+ perform pg_temp.oassert(r->>'code'='ASSISTANT_CATALOG_CLARIFICATION_REQUIRED' and (select bool_and(price=6) from public.style_materials where style_id=service),'withdrawn managed grade invalidates pending review before a write');
+ update public.engine_settings set published_value='["Good","Better","Premium","Luxury"]' where setting_key='catalog.material_quality_grades';
+ perform pg_temp.oassert(public.valid_braiding_material_quality('Best') and not public.valid_braiding_material_quality(null),'saved legacy Best retained, missing grade rejected');
+ update public.style_materials set price=5,quality_grade='Good' where style_id=service;
  for v in select * from (values ('{"size_options":[{"label":"","price_add":5}]}'::jsonb),('{"size_options":[{"label":"A","price_add":-1}]}'::jsonb),('{"addons":[{"label":"A","price_add":5,"salon_id":"00000000-0000-4000-8000-000000000000"}]}'::jsonb),('{"style_materials":[{"name":"A","price":5,"longevity_weeks":13,"quality_grade":"Good"}]}'::jsonb),('{"style_materials":[{"name":"A","price":5,"quality_grade":"Good"}]}'::jsonb),('{"style_materials":null}'::jsonb),('{"style_materials":[{"name":42,"price":5,"longevity_weeks":4,"quality_grade":"Good"}]}'::jsonb)) input(value) loop
   perform pg_temp.oreject(format('select public.preview_gc_catalog_change(%L,%L,%L,%L)',a,oa,'prepare_service_change',jsonb_build_object('record_id',service,'changes_json',v::text)),'ASSISTANT_INVALID_INPUT');
  end loop;

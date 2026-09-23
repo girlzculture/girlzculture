@@ -2,6 +2,52 @@
 -- materials. No provider operation, historical booking rewrite or notification.
 begin;
 set local lock_timeout='5s';
+-- The editor reads published Engine grades; validation must accept the same
+-- values. Keep legacy saved grades valid without rewriting authored records.
+create or replace function public.valid_braiding_material_quality(p_grade text) returns boolean
+language sql stable security definer set search_path=pg_catalog,public as $$
+ select p_grade is not null and length(p_grade) between 1 and 50 and (
+  p_grade in ('Good','Better','Best','Luxury') or exists (
+   select 1 from public.engine_settings e,
+   lateral jsonb_array_elements(case when jsonb_typeof(e.published_value)='array' then e.published_value else '[]'::jsonb end) item
+   where e.setting_key='catalog.material_quality_grades' and jsonb_typeof(item)='string' and item=to_jsonb(p_grade)
+  ));
+$$;
+revoke all on function public.valid_braiding_material_quality(text) from public,anon;
+grant execute on function public.valid_braiding_material_quality(text) to authenticated,service_role;
+create or replace function public.validate_structured_material()
+returns trigger language plpgsql security invoker set search_path = public as $$
+declare category_slug text;
+begin
+  select category.slug into category_slug
+  from public.styles style
+  join public.service_categories category on category.id = style.category_id
+  where style.id = new.style_id;
+  if not found then raise exception 'The service category could not be verified.' using errcode = '23514'; end if;
+
+  new.name := trim(coalesce(new.name, ''));
+  if new.name = '' then raise exception 'Enter an option name.' using errcode = '23514'; end if;
+  if coalesce(new.price, 0) < 0 then raise exception 'Option price cannot be negative.' using errcode = '23514'; end if;
+
+  if category_slug = 'braiding' then
+    if new.name not in ('Kanekalon (standard)','X-Pression (premium)','Pre-stretched (premium)','Human hair (luxury)','Client provides own hair') then
+      raise exception 'Choose a material from the managed braiding list.' using errcode = '23514';
+    end if;
+    if new.longevity_weeks is null or new.longevity_weeks not between 1 and 12 then
+      raise exception 'Choose braiding longevity from 1 to 12 weeks.' using errcode = '23514';
+    end if;
+    if not public.valid_braiding_material_quality(new.quality_grade) then
+      raise exception 'Choose a valid braiding quality grade.' using errcode = '23514';
+    end if;
+  end if;
+
+  if new.longevity_weeks is not null then
+    new.longevity := new.longevity_weeks || case when new.longevity_weeks = 1 then ' week' else ' weeks' end;
+  end if;
+  if new.quality_grade is not null then new.quality_note := new.quality_grade; end if;
+  return new;
+end $$;
+
 alter function gc_private.assistant_catalog_config(text) rename to assistant_catalog_config_before_options;
 create function gc_private.assistant_catalog_config(p_tool text) returns jsonb language sql immutable set search_path=pg_catalog,gc_private as $config$
  select case when p_tool='prepare_service_change' then jsonb_set(gc_private.assistant_catalog_config_before_options(p_tool),'{schema,properties}',gc_private.assistant_catalog_config_before_options(p_tool)#>'{schema,properties}' || '{"size_options":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string","maxLength":120,"minLength":1},"price_add":{"type":"number","minimum":0,"maximum":100000}},"required":["label","price_add"],"additionalProperties":false},"maxItems":30},"length_options":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string","maxLength":120,"minLength":1},"price_add":{"type":"number","minimum":0,"maximum":100000}},"required":["label","price_add"],"additionalProperties":false},"maxItems":30},"addons":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string","maxLength":120,"minLength":1},"price_add":{"type":"number","minimum":0,"maximum":100000}},"required":["label","price_add"],"additionalProperties":false},"maxItems":30},"included_items":{"type":"array","items":{"type":"string","maxLength":120,"minLength":1},"maxItems":30},"style_materials":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string","maxLength":120,"minLength":1},"price":{"type":"number","minimum":0,"maximum":100000},"longevity_weeks":{"type":"integer","minimum":1,"maximum":12},"quality_grade":{"type":"string","maxLength":50,"minLength":1}},"required":["name","price","longevity_weeks","quality_grade"],"additionalProperties":false},"maxItems":30}}'::jsonb) when p_tool='prepare_professional_change' then jsonb_set(gc_private.assistant_catalog_config_before_options(p_tool),'{schema,properties}',gc_private.assistant_catalog_config_before_options(p_tool)#>'{schema,properties}' || '{"availability":{"type":["object","null"],"properties":{"Mon":{"type":"object","properties":{"open":{"type":["string","null"],"pattern":"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},"close":{"type":["string","null"],"pattern":"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},"closed":{"type":"boolean"}},"required":["open","close","closed"],"additionalProperties":false},"Tue":{"type":"object","properties":{"open":{"type":["string","null"],"pattern":"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},"close":{"type":["string","null"],"pattern":"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},"closed":{"type":"boolean"}},"required":["open","close","closed"],"additionalProperties":false},"Wed":{"type":"object","properties":{"open":{"type":["string","null"],"pattern":"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},"close":{"type":["string","null"],"pattern":"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},"closed":{"type":"boolean"}},"required":["open","close","closed"],"additionalProperties":false},"Thu":{"type":"object","properties":{"open":{"type":["string","null"],"pattern":"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},"close":{"type":["string","null"],"pattern":"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},"closed":{"type":"boolean"}},"required":["open","close","closed"],"additionalProperties":false},"Fri":{"type":"object","properties":{"open":{"type":["string","null"],"pattern":"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},"close":{"type":["string","null"],"pattern":"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},"closed":{"type":"boolean"}},"required":["open","close","closed"],"additionalProperties":false},"Sat":{"type":"object","properties":{"open":{"type":["string","null"],"pattern":"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},"close":{"type":["string","null"],"pattern":"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},"closed":{"type":"boolean"}},"required":["open","close","closed"],"additionalProperties":false},"Sun":{"type":"object","properties":{"open":{"type":["string","null"],"pattern":"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},"close":{"type":["string","null"],"pattern":"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},"closed":{"type":"boolean"}},"required":["open","close","closed"],"additionalProperties":false}},"required":["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],"additionalProperties":false}}'::jsonb) else gc_private.assistant_catalog_config_before_options(p_tool) end;
@@ -94,7 +140,7 @@ begin
     if choice->>'label' not in ('Shoulder','Bra-strap','Mid-back','Waist','Butt/Hip','Tailbone','Classic','Mid-thigh','Knee') then raise exception 'ASSISTANT_CATALOG_CLARIFICATION_REQUIRED';end if;
    end loop;
    for choice in select jsonb_array_elements(coalesce(materials,'[]')) loop
-    if choice->>'name' not in ('Kanekalon (standard)','X-Pression (premium)','Pre-stretched (premium)','Human hair (luxury)','Client provides own hair') or choice->>'quality_grade' not in ('Good','Better','Best','Luxury') then raise exception 'ASSISTANT_CATALOG_CLARIFICATION_REQUIRED';end if;
+    if choice->>'name' not in ('Kanekalon (standard)','X-Pression (premium)','Pre-stretched (premium)','Human hair (luxury)','Client provides own hair') or not public.valid_braiding_material_quality(choice->>'quality_grade') then raise exception 'ASSISTANT_CATALOG_CLARIFICATION_REQUIRED';end if;
    end loop;
   end if;
   for choice in select jsonb_array_elements(coalesce(changes->'addons','[]')) loop

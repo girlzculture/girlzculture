@@ -57,4 +57,3 @@ for(const [locale,width,height,title]of [['en',390,844,'Add a photo'],['fr',768,
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);await page.screenshot({path:info.outputPath('assistant-photo-upload.png')});
  });
 }
-
