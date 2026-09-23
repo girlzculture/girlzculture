@@ -1318,4 +1318,6 @@ console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-goog
 
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-advertising.sql")],"Advertising benefits, reviewed invoices, private-location discovery and tenant boundaries"));
 
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-operations.sql")],"Assistant reviewed stock, media, client cards and review replies"));
+
 await verifyAdvertisingConcurrency(databaseUrl,psql);

@@ -5,6 +5,11 @@ import { ASSISTANT_LANGUAGES, isAssistantLanguage, type AssistantLanguage } from
 const destinations = ["overview", "profile", "photos", "services", "imports", "professionals", "products", "availability", "policies", "bookings", "messages", "reviews", "earnings", "promotions", "subscription", "settings", "support", "security"] as const;
 const purposes: Record<AssistantTool, string> = {
   get_outstanding_balances: "Read current authorized unpaid records with minimal client display names. Requires finance, bookings and client-history permissions together. Use for who owes money. Completed unpaid balances are separate from pending/future agreed amounts, never presumed overdue. Names may be absent; do not invent identity or group unrelated clients by similar names. Lists are capped but counts/totals include the authorized records. Use the returned exact Finances links; do not send reminders or collect money.",
+  get_business_stock: "Search own retail products and supplies with quantities and revisions; empty query lists inventory. Results cap at 30 per kind; inventory_total and matching_total are complete scoped counts. Narrow the query to resolve a missing target. Use before inventory changes.",
+  prepare_stock_change: "After get_business_stock, review strict changes_json: stock_restock {kind:product|supply,quantity,cost_cents,note}; correction/consumption {kind,quantity,note}; settings {kind,track_inventory,low_stock_threshold,note}; supply_create {name,unit,quantity,low_stock_threshold,note}; supply_archive {note}. record_id=own product/supply UUID, null for creation. Never infer quantities or already-spent costs.",
+  prepare_photo_change: "After get_business_media: photo_details changes_json={url,category,title,caption,featured,source_locale}; cover/remove={url}. category=services|before_after|space|team|client_love|other. Use an own saved URL, record_id=null. Removal unlinks, never deletes storage.",
+  prepare_client_card_change: "After get_client_record: record_id=own booking UUID; operation=client_card; changes_json={locale,patch}. Patch requested preferences,notes,cautions,formula only. Formula: instructions,color,size,length,technique,duration_minutes. Never merge identities or alter permissions.",
+  prepare_review_reply: "After get_reviews: record_id=own review UUID; operation=review_reply; changes_json={reply}. Owner review/confirmation precedes publication; never invent approved wording.",
   get_business_summary: "Schedule opportunities, when available, cover the current next seven days independently of the requested historical summary range. Service contribution, when available, uses the exact requested completed local-calendar period and requires fresh finance, booking and service permissions; owner-recorded costs do not establish net profit, demand or capacity. Returning-client advice uses its own current lookback window and explicit completed-visit criteria; its counts are recommendations, never contact permission. Read appointment counts, recorded no-shows, completed booking value and authorized service/professional workload for a date range. Includes comparison with the preceding equal elapsed duration; use its exact timestamps, not an assumed calendar period. A null value is unavailable, not zero. Workload and booking value are not settled revenue or forecasts.",
   get_bookings: "Read appointments and their authoritative IDs for a date range.",
   get_availability: "Read this business's current calendar. For a specific own service, requires Services plus Availability access: provide exact saved option choices; ask for required choices rather than assume. One to seven dates, conservative maximum saved duration plus selected adjustments and buffer. Count overlapping start-time alternatives, never additional appointments, demand or profit. Preserve date, time zone, total/shown/excerpt and exact calendar links. No customer eligibility or reservation is established. For a general calendar use null style_id, days=1 and selected_options=[].",
@@ -73,8 +78,8 @@ function withSharedDefinitions<T extends Record<string, unknown>>(schema: T): T 
     Object.values(node).forEach(collect);
   }
   collect(schema);
-  const shared = new Map([...repeated].filter(([key, node]) => key.length >= 80 && node.count > 1)
-    .map(([key, node], index) => [key, { ...node, name: `shared${index}` }]));
+  const shared = new Map([...repeated].filter(([key, node]) => key.length * (node.count - 1) > 40 * node.count + 16)
+    .map(([key, node], index) => [key, { ...node, name: `s${index}` }]));
   if (!shared.size) return schema;
   function rewrite(value: unknown, definitionRoot = false): unknown {
     if (Array.isArray(value)) return value.map(child => rewrite(child));
@@ -85,6 +90,19 @@ function withSharedDefinitions<T extends Record<string, unknown>>(schema: T): T 
   }
   const $defs = Object.fromEntries([...shared.values()].map(node => [node.name, rewrite(node.value, true)]));
   const compact = { ...rewrite(schema, true) as T, $defs };
+  // Factoring a parent can leave its child referenced only once. Inline those
+  // children; retaining their definitions would increase the request size.
+  for (;;) {
+    const counts=new Map<string,number>();
+    const count=(value:unknown):void=>{if(Array.isArray(value)){value.forEach(count);return;}if(!value||typeof value!=="object")return;for(const [key,child] of Object.entries(value)){if(key==="$ref"&&typeof child==="string")counts.set(child,(counts.get(child)||0)+1);else count(child);}};
+    count(compact);
+    const singleton=Object.keys($defs).find(name=>(counts.get(`#/$defs/${name}`)||0)<2);
+    if(!singleton)break;
+    const replace=(value:unknown):unknown=>{if(Array.isArray(value))return value.map(replace);if(!value||typeof value!=="object")return value;const node=value as Record<string,unknown>;if(node.$ref===`#/$defs/${singleton}`)return $defs[singleton];return Object.fromEntries(Object.entries(node).map(([key,child])=>[key,replace(child)]));};
+    for(const [key,value] of Object.entries(compact))if(key!=="$defs")(compact as Record<string,unknown>)[key]=replace(value);
+    for(const name of Object.keys($defs))if(name!==singleton)$defs[name]=replace($defs[name]);
+    delete $defs[singleton];
+  }
   return JSON.stringify(compact).length < JSON.stringify(schema).length ? compact : schema;
 }
 

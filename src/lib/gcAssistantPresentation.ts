@@ -1,3 +1,4 @@
+import {assistantOperationsCopy} from "@/i18n/assistant-operations-copy";
 import {assistantFinanceCopy} from "@/i18n/assistant-finance-record-copy";
 import { assistantMoneyReadText } from "@/i18n/assistant-money-read-copy";
 import { manualSaleText } from "@/i18n/assistant-manual-sale-source-catalog";
@@ -65,6 +66,10 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
   const t = (source: string, values?: Record<string, string | number>) => launchWorkspaceText(source, language, values);
   const suggest = (items: string[]) => items.map(source => t(source));
 
+  if(tool === "get_business_stock") {
+    const words=assistantOperationsCopy(locale),products=rows(result.products),supplies=rows(result.supplies);
+    return {message:products.length+supplies.length?`${words.stock}: ${Number(result.matching_total??products.length+supplies.length)}.`:words.empty};
+  }
   if (tool === "calculate_service_selection" || tool === "get_booking_price_details") {
     if (result.available !== true) return { message: assistantMoneyReadText("missing", locale) };
     const money = row(tool === "calculate_service_selection" ? result.money : result.original), current = row(result.current);

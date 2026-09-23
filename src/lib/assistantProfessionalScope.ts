@@ -1,6 +1,6 @@
 import "server-only";
 import type { requireSalonOwner } from "@/lib/supabaseAdmin";
-import { AssistantError } from "@/lib/gcAssistantCore";
+import { AssistantError, validateTool } from "@/lib/gcAssistantCore";
 
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 
@@ -16,6 +16,23 @@ export function assistantRequestedProfessional(context: Context, requested: unkn
 }
 
 export async function assertAssistantProposalScope(context: Context, tool: string, args: Record<string, unknown>) {
+  // Recheck narrow private-field grants before replaying old proposals or prose.
+  // SQL checks authorization again at confirmation, including assigned clients.
+  if (tool === "prepare_client_card_change") {
+    validateTool(tool, args);
+    const current = await context.admin.rpc("read_business_client_card", {
+      p_salon: context.salon.id, p_actor: context.user.id, p_booking: args.record_id,
+    });
+    if (current.error) {
+      if (/CLIENT_(NOT_FOUND|ACCESS_DENIED)/.test(current.error.message)) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
+      throw current.error;
+    }
+    const permissions = current.data?.permissions;
+    const patch = (JSON.parse(String(args.changes_json)) as {patch: Record<string, unknown>}).patch;
+    const fields: Record<string, string> = {preferences: "client_history", notes: "client_notes", cautions: "client_cautions", formula: "client_formulas"};
+    if (!permissions?.client_history || !permissions.client_edit ||
+      Object.keys(patch).some(field => !permissions[fields[field]])) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
+  }
   const assigned = assistantAssignedProfessional(context);
   if (!assigned) return;
   if (args.booking_id) {

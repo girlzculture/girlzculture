@@ -9,6 +9,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const booking = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', public_reference: 'GC123', guest_name: 'Sarah Save', appointment_datetime: '2026-09-24T19:00:00Z', status: 'Confirmed', style: { name: 'Save' }, stylist: { name: 'Aminata' } };
 
 for (const [tool, permission, args, result, key, field, expected] of [
+  ['get_business_stock','products',{query:'oil'},{products:[{id:booking.id,name:'Owned oil',inventory_quantity:8,kind:'product'}],supplies:[],inventory_total:12,matching_total:1,capped_per_kind:30},'products','inventory_quantity',8],
   ['get_finance_records','finance_manage',{start:'2026-09-01T00:00:00Z',end:'2026-10-01T00:00:00Z'},{records:[{id:booking.id,kind:'receipt',amount_cents:2500}],totals:{receipt:1},recorded_only:true},'records','amount_cents',2500],
   ['get_booking_messages', 'bookings', { booking_id: booking.id }, { messages: [{ id: 'own-message', original_body: 'Please keep my original braid length.', body: 'Older fallback text', source_locale: 'en', sender_role: 'customer', created_at: '2026-09-19T12:00:00Z' }], total: 1, capped_at: 100, customer_participant: true }, 'messages', 'original_body', 'Please keep my original braid length.'],
   ['get_reviews', 'reviews', { start: '2026-09-01T00:00:00Z', end: '2026-10-01T00:00:00Z' }, { reviews: [{ id: 'own-review', rating_overall: 4, written_review: 'Careful service and a longer wait.', salon_reply: 'Thank you for the feedback.', display_name: 'Original reviewer', moderation_status: 'Published', created_at: '2026-09-19T12:00:00Z' }], total: 1, capped_at: 100 }, 'reviews', 'written_review', 'Careful service and a longer wait.'],
@@ -274,7 +275,7 @@ test('shared planner definitions preserve the complete pre-factoring owner schem
   // contract exactly, then validate the complete expanded tool set below.
   const archive=expanded.properties.decision.anyOf.filter(row=>row.properties.tool?.enum[0]==='prepare_professional_archive');
   assert.equal(archive.length,1);assert.deepEqual(archive[0].properties.args,JSON.parse(JSON.stringify(ASSISTANT_TOOLS.prepare_professional_archive.schema)));
-  const legacy=structuredClone(expanded);legacy.properties.decision.anyOf=legacy.properties.decision.anyOf.filter(row=>!['prepare_professional_archive','get_finance_records','prepare_finance_record'].includes(row.properties.tool?.enum[0]));
+  const legacy=structuredClone(expanded);legacy.properties.decision.anyOf=legacy.properties.decision.anyOf.filter(row=>!['prepare_professional_archive','get_finance_records','prepare_finance_record','get_business_stock','prepare_stock_change','prepare_photo_change','prepare_client_card_change','prepare_review_reply'].includes(row.properties.tool?.enum[0]));
   const financialDescription=legacy.properties.decision.anyOf.find(row=>row.properties.tool?.enum[0]==='get_earnings_summary');
   assert.match(financialDescription.description,/use get_finance_records and prepare_finance_record/);
   financialDescription.description=financialDescription.description.replace('use get_finance_records and prepare_finance_record for reviewed expenses, received balances and money already returned. Other provider operations remain in the controlled Finances workflow.','navigate to Finances for all other individual records or financial actions.');
@@ -1104,4 +1105,20 @@ test('active task retains the exact original appointment across long follow-ups 
  assert.equal(sent.active_task.user_context.length,18);
  assert.equal(sent.active_task.user_context[0].text,original);
  assert.ok(f.requests[0].response_format.json_schema.schema.required.includes('task_tool'));
+});
+
+
+test('client edit history is removed before the model when a field grant or assigned client is revoked', async () => {
+  for (const answerOnly of [false,true]) for (const state of ['allowed','notes','formula','edit','assignment']) {
+    const permissions={client_history:true,client_edit:state!=='edit',client_notes:state!=='notes',client_formulas:state!=='formula'};
+    const f=fixture({answerOnly,clientDenied:state==='assignment',clientRead:{permissions},
+      history:[{tool:'prepare_client_card_change',permission:'client_history',arguments:{operation:'client_card',record_id:booking.id,changes_json:JSON.stringify({locale:'en',patch:{notes:'PRIVATE_CARD_PROSE',formula:{technique:'PRIVATE_FORMULA'}}})},result:{private:'PRIVATE_CARD_PROSE'}}, ...(answerOnly?[{tool:'get_business_stock',permission:'products',arguments:{query:''},result:{products:[],supplies:[]}}]:[])],
+      conversation:[{role:'assistant',text:'PRIVATE_CARD_PROSE'}],
+      ...(answerOnly?{previousRequestIds:['request-1'],conversationRequestIds:['request-0'],output:{reply:'The current authorized record is available.'}}:{})});
+    await f.run('en','What about that private note?');
+    assert.ok(f.calls.some(call=>call.name==='read_business_client_card'));
+    const sent=JSON.stringify(f.requests[0].messages);
+    if(state==='allowed')assert.match(sent,/PRIVATE_CARD_PROSE/);
+    else assert.doesNotMatch(sent,/PRIVATE_CARD_PROSE|PRIVATE_FORMULA/);
+  }
 });
