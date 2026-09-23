@@ -1,5 +1,12 @@
 // Interface copy only. Applicant answers and uploaded filenames stay unchanged.
 export const MASTER_BUILD_COPY = [
+  ["GC AI Assistant", "Assistant IA GC", "Asistente de IA GC", "GC AI 助手"],
+  ["Customer AI assistant", "Assistant IA client", "Asistente de IA para clientes", "客户 AI 助手"],
+  ["Close customer assistant", "Fermer l’assistant client", "Cerrar asistente para clientes", "关闭客户助手"],
+  ["Find a business or service, or ask about Girlz Culture.", "Trouvez un établissement ou un service, ou posez une question sur Girlz Culture.", "Encuentra un negocio o servicio, o pregunta sobre Girlz Culture.", "查找商家或服务，或咨询 Girlz Culture。"],
+  ["Searching…", "Recherche…", "Buscando…", "正在搜索…"],
+  ["Retry this question", "Réessayer cette question", "Reintentar esta pregunta", "重试此问题"],
+  ["Keep your question within the displayed character limit.", "Respectez la limite de caractères indiquée.", "Respeta el límite de caracteres indicado.", "请将问题控制在所示字数限制内。"],
   ["Unfinished task", "Tâche en cours", "Tarea pendiente", "未完成的任务"],
   ["End this task", "Terminer cette tâche", "Finalizar esta tarea", "结束此任务"],
   ["There is an unfinished task. End it before moving to this request?", "Une tâche est en cours. La terminer avant de passer à cette demande ?", "Hay una tarea pendiente. ¿Finalizarla antes de pasar a esta solicitud?", "您还有一项未完成的任务。要结束它并处理此请求吗？"],

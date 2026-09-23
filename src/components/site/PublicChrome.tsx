@@ -15,6 +15,7 @@ import {
 import NewsletterForm from "@/components/site/NewsletterForm";
 import MobilePublicMenu from "@/components/site/MobilePublicMenu";
 import PublicNavigationMenu from "@/components/site/PublicNavigationMenu";
+import PublicCustomerAssistant from "@/components/public/PublicCustomerAssistant";
 import { publicNavigationGroups } from "@/lib/publicNavigation";
 import HeaderStyleSearch from "@/components/search/HeaderStyleSearch";
 import {
@@ -632,6 +633,7 @@ export async function PublicFooter({
         <section className="mt-5 rounded-[16px] border border-white/15 bg-white/5 p-4"><h2 className="font-serif text-xl font-semibold"><LocalizedText messageKey="footer.newsletter" fallback="Stay in the loop"/></h2><p className="mt-1 text-[11px] leading-5 gc-text-on-dark-muted"><LocalizedText messageKey="footer.newsletter_help" fallback="Tips, new salons, and exclusive offers."/></p><NewsletterForm/></section>
         <p className="mt-5 text-[10px] gc-text-on-dark-muted">© {new Date().getFullYear()} Girlz Culture, Inc. <LocalizedText messageKey="footer.rights" fallback="All rights reserved."/></p>
       </div>
+      {discoveryAvailable ? <PublicCustomerAssistant/> : null}
     </footer>
   );
 }

@@ -54,6 +54,16 @@ test('public concierge propagates explicit time windows and authoritative deposi
  assert.equal(parseConciergeIntent(legacy).travels_only,false,'prior search context remains compatible');
  assert.throws(()=>parseConciergeIntent({...legacy,travels_only:'false'}),/AI_INTENT_INVALID/);
 
+ for(const [language,prompt]of [['en','Find businesses in Harlem'],['fr','Trouve des établissements à Harlem'],['es','Busca negocios en Harlem'],['zh-CN','查找哈莱姆的商家']]){
+  const found=await runBeautyConcierge({prompt,language,origin:{lat:40.81,lng:-73.94}});
+  assert.equal(found.clarification,null,language+' must not demand a service for business browsing');
+  assert.equal(found.salons[0].id,'public-business');
+  assert.equal(searches.at(-1).query,'','filter prose must not become an invented service name');
+ }
+ const follow=await runBeautyConcierge({prompt:'any price',language:'en',origin:{lat:40.81,lng:-73.94},previousIntent:{...mobile.intent,maximum_price:80}});
+ assert.equal(follow.intent.maximum_price,null);
+ assert.equal(searches.at(-1).query,'Braids','only the retained service is re-parsed; never the follow-up instruction');
+
 });
 
 test('independent and mobile criteria work in four languages and clear explicitly',()=>{

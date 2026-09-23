@@ -1,4 +1,4 @@
-import { searchPublishedKnowledge } from "@/lib/gcAssistantServer";
+import { searchPublishedKnowledge } from "@/lib/publishedKnowledgeServer";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { enforceRateLimit, RateLimitError, errorResponse } from "@/lib/requestSecurity";
 import { monitoredRouteFailure, rejectRequest } from "@/lib/platformErrors";
@@ -18,10 +18,12 @@ async function POSTHandler(request: Request) {
     } catch {
       rejectRequest("Send a valid JSON question.");
     }
-    if (typeof body.query !== "string" || body.query.trim().length < 2 || body.query.length > 240) rejectRequest("Enter a short question for the published Help center.");
+    if (Object.keys(body).some(key=>!["query","language"].includes(key)) || typeof body.query !== "string" || body.query.trim().length < 2 || body.query.length > 240) rejectRequest("Enter a short question for the published Help center.");
+    const language=body.language??"en";
+    if(typeof language!=="string"||!["en","fr","es","zh-CN"].includes(language))rejectRequest("Choose an available response language.");
     admin = getSupabaseAdmin();
     // Only the public, published CMS snapshot is searched. No account records.
-    return Response.json(await searchPublishedKnowledge({ admin }, body.query), { headers: { "Cache-Control": "private, no-store" } });
+    return Response.json(await searchPublishedKnowledge({ admin }, body.query,language), { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     if (error instanceof RateLimitError) return errorResponse(error, error.message);
     return monitoredRouteFailure({ request, admin, error, feature: "ai_concierge", action: "published-knowledge", actorRole: "public", safeMessage: "Published help could not be searched." });

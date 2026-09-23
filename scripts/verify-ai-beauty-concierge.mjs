@@ -21,7 +21,7 @@ const compiledModule = { exports: {} };
 const sandbox = {
   module: compiledModule,
   exports: compiledModule.exports,
-  require: name => name==='@/lib/searchTimeWindow'?loadNodeTypescript(process.cwd())('src/lib/searchTimeWindow.ts'):({}),
+  require: name => ['@/lib/searchTimeWindow','@/lib/decisionSearchIntentCore'].includes(name)?loadNodeTypescript(process.cwd())(`src/lib/${name.split('/').at(-1)}.ts`):({}),
   process: { env: {} },
   console,
   Buffer,
