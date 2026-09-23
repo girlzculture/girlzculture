@@ -1,4 +1,5 @@
 "use client";
+import AssistantFinanceReport from './AssistantFinanceReport';
 import AssistantTeamPreview from './AssistantTeamPreview';
 import AssistantControlsPreview from "@/components/owner/AssistantControlsPreview";
 import {isCatalogTool} from "@/lib/assistantCatalog";
@@ -468,6 +469,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
                   {turn.navigate && destinations[turn.navigate] ? <Link className="mt-3 inline-flex min-h-10 items-center rounded-full bg-primary-hover px-4 text-xs font-bold text-white" href={destinations[turn.navigate][1]} onClick={() => { if (!desktop) dialog.current?.close(); }}>{t("Open {value0}", { value0: t(destinations[turn.navigate][0]) })}</Link> : null}
                 </div></div> : null}
 
+                {turn.request?.tool === "get_earnings_summary" ? <AssistantFinanceReport value={turn.request.result} locale={turnLocale}/> : null}
                 {turn.request?.tool === "get_outstanding_balances" ? <AssistantBalances value={turn.request.result} onNavigate={() => { if (!desktop) dialog.current?.close(); }}/> : null}
                 {turn.task_switch_required?<section className="rounded-xl border border-border bg-white p-3 text-sm"><p>{t("There is an unfinished task. End it before moving to this request?")}</p><button type="button" disabled={busy} onClick={()=>void endTask(turn)} className="min-h-11 rounded-lg bg-primary px-3 text-white">{t("End task and continue")}</button><button type="button" disabled={busy} onClick={()=>setTurns(previous=>previous.map(item=>item.id===turn.id?{...item,task_switch_required:false,notice:"The current task is still active."}:item))} className="min-h-11 px-3 underline">{t("Keep current task")}</button></section>:null}
                 {turn.request?.risk_class && turn.request.risk_class >= 3 && !turn.request.confirmed_at && !turn.abandoned ? <section className="ml-0 rounded-2xl border border-border bg-white p-4 shadow-[0_6px_20px_rgba(13,17,20,.05)] sm:ml-11">
