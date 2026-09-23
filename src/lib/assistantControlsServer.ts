@@ -5,6 +5,8 @@ import {validateDepositRule,type BusinessDepositRule} from '@/lib/businessDeposi
 import {growthSettingsInput} from '@/lib/businessGrowthSettings';
 import {rebookingSettingsInput} from '@/lib/businessRebookingReminders';
 import {campaignEmailAvailable} from '@/lib/businessCustomerCampaignServer';
+import {moderatePublicContent} from '@/lib/contentModerationServer';
+import {locationSettingsInput} from '@/lib/businessLocationSettings';
 type Context=Awaited<ReturnType<typeof requireSalonOwner>>;
 type Row=Record<string,unknown>;
 async function call(context:Context,name:string,args:Row){
@@ -24,7 +26,12 @@ export async function prepareAssistantControls(context:Context,args:Row){
   if(args.section==='deposits')validateDepositRule({...v,version:preview.before.state.version} as BusinessDepositRule);
   if(args.section==='growth')growthSettingsInput({...v,revision:preview.before.state.revision});
   if(args.section==='rebooking')rebookingSettingsInput({...v,revision:preview.before.state.revision,reviewed:true});
+  if(args.section==='location')locationSettingsInput({...v,revision:preview.before.state.revision});
  }catch{throw new AssistantError('ASSISTANT_INVALID_INPUT');}
+ if(args.section==='profile'&&Object.hasOwn(preview.payload.changes,'name')){
+  const moderation=await moderatePublicContent(context.admin,{name:v.name,body:v.name});
+  if(moderation.outcome!=='allow')throw new AssistantError('ASSISTANT_CONTENT_REVIEW_REQUIRED',409);
+ }
  // Enabling future contact requires the same live channel prerequisite as the
  // existing Settings control. Confirmation calls prepare again before its RPC.
  if(args.section==='rebooking'&&v.enabled&&!await campaignEmailAvailable(context.admin))throw new AssistantError('ASSISTANT_EMAIL_UNAVAILABLE',503);

@@ -20,7 +20,7 @@ begin
  select count(*) into count_before from public.notification_delivery_log;
  perform set_config('request.jwt.claim.role','service_role',true);
  set local role service_role;
- foreach section in array array['deposits','growth','rebooking'] loop
+ foreach section in array array['deposits','growth','rebooking','profile','notifications','booking','location'] loop
   perform pg_temp.creject(format('select public.read_gc_business_controls(%L,%L,%L)',b,oa,section),'ASSISTANT_ACCESS_DENIED');
   perform pg_temp.creject(format('select public.read_gc_business_controls(%L,%L,%L)',a,staff,section),'ASSISTANT_ACCESS_DENIED');
  end loop;
@@ -60,6 +60,42 @@ begin
  perform pg_temp.creject(format('select public.preview_gc_business_controls(%L,%L,%L)',a,oa,jsonb_build_object('section','rebooking','changes_json','{"enabled":true}')),'ASSISTANT_PLAN_REQUIRED');
  d:=pg_temp.control_draft(a,oa,'growth','{"reminder_hours":null,"waitlist_service_ids":[],"waitlist_professional_ids":[]}');r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->'verified'='true','downgraded owner can restore plan defaults');
  reset role;
+ -- Workspace fields share the same review boundary and preserve unrelated state.
+ update public.salons set booking_settings='{"slot_minutes":30,"buffer_minutes":15,"untouched":"keep"}',notification_preferences='{"reviews":true,"marketing":true,"untouched":"keep"}' where id=a;
+ d:=pg_temp.control_draft(a,oa,'profile','{"name":"Original Business Name","phone":"(212) 555-0123","languages":["French","Spanish"]}');
+ perform pg_temp.cassert(d->'execution_payload'->'changes'->>'phone'='+12125550123','normalized contact shown in review');
+ perform pg_temp.cassert((select name='Controls A' from public.salons where id=a),'profile unchanged before confirmation');
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->>'verified'='true','profile confirm '||r::text);
+ perform pg_temp.cassert((select name='Original Business Name' and phone='+12125550123' and email='controls-a@example.test' and languages=array['French','Spanish'] from public.salons where id=a),'profile readback preserves original name and languages');
+ d:=pg_temp.control_draft(a,oa,'notifications','{"marketing":false}');r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->>'verified'='true','notification confirm '||r::text);
+ perform pg_temp.cassert((select notification_preferences->'marketing'='false' and notification_preferences->'reviews'='true' and notification_preferences->>'untouched'='keep' and notification_preferences @> '{"in_app":true,"email":true,"sms":true}' from public.salons where id=a),'optional preference preserved alongside required booking alerts');
+ d:=pg_temp.control_draft(a,oa,'booking','{"slot_minutes":15,"buffer_minutes":30}');r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->>'verified'='true','booking defaults confirm '||r::text);
+ perform pg_temp.cassert((select booking_settings->'slot_minutes'='15' and booking_settings->'buffer_minutes'='30' and booking_settings->>'untouched'='keep' from public.salons where id=a),'booking defaults authoritative readback');
+ before_state:=public.read_gc_business_controls(a,oa,'booking');r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->>'replayed'='true' and public.read_gc_business_controls(a,oa,'booking')=before_state,'workspace replay idempotent');
+ d:=pg_temp.control_draft(a,oa,'notifications','{"reviews":false}');update public.salons set notification_preferences=notification_preferences||'{"marketing":true}' where id=a;r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->>'code'='ASSISTANT_PREVIEW_STALE','late settings edit is not overwritten');
+ foreach section in array array['profile','notifications','booking'] loop
+  perform pg_temp.creject(format('select pg_temp.control_draft(%L,%L,%L,%L)',a,oa,section,'{"salon_id":"foreign"}'),'ASSISTANT_INVALID_INPUT');
+ end loop;
+ perform pg_temp.creject(format('select pg_temp.control_draft(%L,%L,''profile'',%L)',a,oa,'{"phone":"123"}'),'ASSISTANT_INVALID_INPUT');
+ perform pg_temp.creject(format('select pg_temp.control_draft(%L,%L,''profile'',%L)',a,oa,'{"phone":"not a phone"}'),'ASSISTANT_INVALID_INPUT');
+ perform pg_temp.creject(format('select pg_temp.control_draft(%L,%L,''profile'',%L)',a,oa,'{"email":"not email"}'),'ASSISTANT_INVALID_INPUT');
+ perform pg_temp.creject(format('select pg_temp.control_draft(%L,%L,''booking'',%L)',a,oa,'{"slot_minutes":17}'),'ASSISTANT_INVALID_INPUT');
+ perform pg_temp.creject(format('select pg_temp.control_draft(%L,%L,''notifications'',%L)',a,oa,'{"email":false}'),'ASSISTANT_INVALID_INPUT');
+ perform pg_temp.creject(format('select public.read_gc_business_controls(%L,%L,''location'')',a,oa),'ASSISTANT_LOCATION_REVIEW_REQUIRED');
+ update public.salons set service_location_type='home',home_address_public=false,public_neighborhood='Invented neighborhood',offers_mobile=false where id=a;
+ insert into public.business_verification_locations(salon_id,address_street,address_city,address_state,address_zip)values(a,'123 Fictional Street','Brooklyn','NY','11201');
+ d:=pg_temp.control_draft(a,oa,'location','{"home_address_public":true,"offers_mobile":true,"travel_radius_miles":12,"travel_fee_cents":1250}');
+ perform pg_temp.cassert(d->'execution_payload'->>'public_address'='123 Fictional Street, Brooklyn, NY, 11201','exact public address disclosed before confirmation');
+ perform pg_temp.cassert((select address_street is null and not home_address_public from public.salons where id=a),'private address stays hidden during preparation');
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->>'verified'='true','location confirm '||r::text);
+ perform pg_temp.cassert((select address_street='123 Fictional Street' and travel_fee_cents=1250 and travel_radius_miles=12 from public.salons where id=a),'canonical privacy and fee readback');
+ select count(*) into count_before from public.business_location_settings_events where salon_id=a;
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->>'replayed'='true' and (select count(*)=count_before from public.business_location_settings_events where salon_id=a),'location replay no duplicate audit');
+ select count(*) into count_before from public.notification_delivery_log;
+ d:=pg_temp.control_draft(a,oa,'location','{"home_address_public":false,"offers_mobile":false}');r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->>'verified'='true' and (select address_street is null and travel_radius_miles is null and travel_fee_cents=0 from public.salons where id=a),'privacy opt-out redacts address and clears disabled travel');
+ d:=pg_temp.control_draft(a,oa,'location','{"home_address_public":true}');update public.business_verification_locations set address_street='456 Changed Elsewhere' where salon_id=a;r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('c',64));perform pg_temp.cassert(r->>'code'='ASSISTANT_PREVIEW_STALE' and (select address_street is null from public.salons where id=a),'changed verified address cannot be disclosed under old review');
+ perform pg_temp.creject(format('select pg_temp.control_draft(%L,%L,''location'',%L)',a,oa,'{"offers_mobile":true,"travel_radius_miles":null}'),'ASSISTANT_INVALID_INPUT');
+ perform pg_temp.creject(format('select pg_temp.control_draft(%L,%L,''location'',%L)',a,oa,'{"public_neighborhood":""}'),'ASSISTANT_INVALID_INPUT');
  perform pg_temp.cassert((select to_jsonb(x)=booking_before from public.bookings x where id=book),'existing appointment and deposit terms unchanged');
  perform pg_temp.cassert((select count(*)=count_before from public.notification_delivery_log),'reviewed configuration sends no notifications');
  perform pg_temp.cassert(not exists(select 1 from public.business_deposit_rules where salon_id=b) and not exists(select 1 from public.business_growth_settings where salon_id=b),'other business configuration untouched');

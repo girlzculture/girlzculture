@@ -106,6 +106,7 @@ export function Facts({ value, name = "", group = "", depth = 0, timeZone = "Ame
   return <span className="whitespace-pre-wrap break-words" data-no-translate>{String(value)}</span>;
 }
 const errors: Record<string, string> = {
+  ASSISTANT_LOCATION_REVIEW_REQUIRED: "A verified business location is required before changing privacy or travel settings. Contact support to complete the location review.",
   ASSISTANT_EMAIL_UNAVAILABLE: "Email delivery is unavailable. Keep automatic reminders off until support restores the connection.",
   ASSISTANT_TASK_CHANGED: "This task changed in another session. Send your request again to use its current state.",
   ASSISTANT_TASK_CONTEXT_FULL: "This task has reached its context limit. Review and finish it, or end it before starting another task.",

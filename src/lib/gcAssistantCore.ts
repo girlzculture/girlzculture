@@ -28,8 +28,8 @@ const manualAppointment = {
 export const ASSISTANT_TOOLS = {
   get_team_controls:{risk:1,permission:"settings",schema:object({})},
   prepare_team_controls:{risk:4,permission:"settings",schema:object({operation:enumeration("permissions","arrangement"),record_id:uuid,changes_json:{...string(6000),minLength:2}})},
-  get_business_controls:{risk:1,permission:"settings",schema:object({section:enumeration("deposits","growth","rebooking")})},
-  prepare_business_controls:{risk:4,permission:"settings",schema:object({section:enumeration("deposits","growth","rebooking"),changes_json:{...string(6000),minLength:2}})},
+  get_business_controls:{risk:1,permission:"settings",schema:object({section:enumeration(...Object.keys(ASSISTANT_CONTROLS))})},
+  prepare_business_controls:{risk:4,permission:"settings",schema:object({section:enumeration(...Object.keys(ASSISTANT_CONTROLS)),changes_json:{...string(6000),minLength:2}})},
   prepare_service_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_service_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
   prepare_professional_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_professional_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
   prepare_product_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_product_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
