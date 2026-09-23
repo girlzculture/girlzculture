@@ -1,3 +1,4 @@
+import {ASSISTANT_CATALOG,isCatalogTool} from "@/lib/assistantCatalog";
 import {ASSISTANT_OPERATIONS,operationTool,type AssistantOperation} from "@/lib/assistantOperations";
 import { validateBusinessPolicy } from "@/lib/businessPolicyCore";
 import { LENGTH_OPTIONS } from "@/lib/salonPresets";
@@ -23,6 +24,10 @@ const manualAppointment = {
   stylist_id: nullableId, stylist_preference: enumeration("named", "any", "unspecified"), date, time: clockTime, source: enumeration("phone", "walk_in", "instagram", "whatsapp", "other"), notes: string(1200),
 };
 export const ASSISTANT_TOOLS = {
+  prepare_service_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_service_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
+  prepare_professional_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_professional_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
+  prepare_product_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_product_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
+  prepare_promotion_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_promotion_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
   get_business_stock: {risk:1,permission:"products",schema:object({query:string(120)})},
   prepare_stock_change: {risk:4,permission:"products",schema:object({operation:enumeration(...Object.keys(ASSISTANT_OPERATIONS).filter(name=>operationTool(name)==="prepare_stock_change")),record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
   prepare_photo_change: {risk:4,permission:"photos",schema:object({operation:enumeration(...Object.keys(ASSISTANT_OPERATIONS).filter(name=>operationTool(name)==="prepare_photo_change")),record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
@@ -120,6 +125,11 @@ export function validateTool(name: unknown, input: unknown) {
     } } : tool === "get_availability" && input && typeof input === "object" && !Array.isArray(input) ? { days: 1, selected_options: [], ...input } : input;
   assertSchema(candidate, schema);
   const args = candidate as Record<string, unknown>;
+  if(isCatalogTool(tool)){
+    let changes:unknown;try{changes=JSON.parse(String((candidate as Record<string,unknown>).changes_json));}catch{throw new AssistantError("ASSISTANT_INVALID_INPUT");}
+    assertSchema(changes,ASSISTANT_CATALOG[tool].schema);
+    if(!changes||Object.keys(changes).length===0)throw new AssistantError("ASSISTANT_INVALID_INPUT");
+  }
   if (["prepare_stock_change","prepare_photo_change","prepare_client_card_change","prepare_review_reply"].includes(tool)) {
     let changes:unknown;try{changes=JSON.parse(String(args.changes_json));}catch{throw new AssistantError("ASSISTANT_INVALID_INPUT");}
     assertSchema(changes,ASSISTANT_OPERATIONS[args.operation as AssistantOperation].schema);

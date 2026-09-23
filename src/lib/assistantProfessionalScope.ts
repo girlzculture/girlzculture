@@ -1,3 +1,4 @@
+import {isCatalogTool} from "@/lib/assistantCatalog";
 import "server-only";
 import type { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { AssistantError, validateTool } from "@/lib/gcAssistantCore";
@@ -32,6 +33,12 @@ export async function assertAssistantProposalScope(context: Context, tool: strin
     const fields: Record<string, string> = {preferences: "client_history", notes: "client_notes", cautions: "client_cautions", formula: "client_formulas"};
     if (!permissions?.client_history || !permissions.client_edit ||
       Object.keys(patch).some(field => !permissions[fields[field]])) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
+  }
+  if(isCatalogTool(tool)){
+    validateTool(tool,args);
+    const scoped=await context.admin.rpc("preview_gc_catalog_change",{p_salon:context.salon.id,p_actor:context.user.id,p_tool:tool,p_args:args});
+    if(scoped.error){if(/ASSISTANT_(ACCESS_DENIED|RECORD_NOT_FOUND)/.test(scoped.error.message))throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);throw scoped.error;}
+    if(scoped.data?.salon_id!==context.salon.id)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
   }
   const assigned = assistantAssignedProfessional(context);
   if (!assigned) return;

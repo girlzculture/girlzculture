@@ -1,3 +1,5 @@
+import {isCatalogTool} from "@/lib/assistantCatalog";
+import {prepareAssistantCatalog} from "@/lib/assistantCatalogServer";
 import {readAssistantStock,prepareAssistantOperation} from "@/lib/assistantOperationsServer";
 import {readAssistantFinanceRecords,prepareAssistantFinanceRecord} from "@/lib/assistantFinanceRecordsServer";
 import { searchPublishedKnowledge } from "@/lib/publishedKnowledgeServer";
@@ -105,6 +107,7 @@ export async function readAssistantData(context: Context, tool: AssistantTool, a
 }
 
 async function prepare(context: Context, tool: AssistantTool, args: Row) {
+  if(isCatalogTool(tool))return prepareAssistantCatalog(context,tool,args);
   if(["prepare_stock_change","prepare_photo_change","prepare_client_card_change","prepare_review_reply"].includes(tool)) return prepareAssistantOperation(context,args);
   if (tool === "prepare_finance_record") return prepareAssistantFinanceRecord(context,args);
   if (tool === "prepare_professional_archive") return prepareProfessionalArchive(context, args);
