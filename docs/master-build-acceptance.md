@@ -6,7 +6,7 @@ Source: Girlz_Culture_Master_Build.pdf (all five pages), founder pasted correcti
 
 - Branch: `codex/master-build-current-scope`, based on `692b89be11c0599c579f90254032b56431590fe2` (PR #86 CI correction).
 - Baseline required CI: [35815751467](https://github.com/girlzculture/girlzculture/actions/runs/35815751467), successful: **1,402 passed, 5 skipped, 0 failed; 1,407 accounted for exactly once**, eight isolated runners, one worker each, zero retries. TypeScript, lint, build, clean migration chain and focused gates passed on that commit. This does not verify the subsequent Master Build changes.
-- Master Build changes: local implementation checkpoint `c461a6c`, followed by mobile-booking work; not yet pushed or released. No Master Build migration, application change or demo record has been applied to production.
+- Master Build changes: local implementation checkpoints `c461a6c` through `9e4f75d`, followed by reminder/waitlist controls; not yet pushed or released. No Master Build migration, application change or demo record has been applied to production.
 - Last observed published deployment: `6ab1801846433e00086f1d08`. Recheck exact source and rollback compatibility before release.
 - Required acceptance statuses: PASS (verified actual workflow), AUTOMATED ONLY (local/CI evidence), FAIL (demonstrated failure), BLOCKED (not implemented/verified or external dependency). No unchecked requirement counts as complete.
 
@@ -25,7 +25,7 @@ Source: Girlz_Culture_Master_Build.pdf (all five pages), founder pasted correcti
 | V04 | Explore and For Businesses menus exactly specified, no duplicate application destination | Navigation and Why Girlz Culture route written; rendered verification outstanding | BLOCKED |
 | V05 | Honest AI labels on all three assistants and other AI features; concise natural copy | Audit outstanding | BLOCKED |
 | P01 | Two families, five exact monthly prices, complete 23-row comparison, organic visibility statement | Catalog/page/fixture tests written; 4 local plan tests pass; browser outstanding | AUTOMATED ONLY |
-| P02 | Every comparison-row entitlement enforced: reminders, reporting, source, waitlist, rebooking, promotions, products, GBP help, ads | Promotion/product limits implemented; remaining entitlement paths under review | BLOCKED |
+| P02 | Every comparison-row entitlement enforced: reminders, reporting, source, waitlist, rebooking, promotions, products, GBP help, ads | Promotion/product limits and per-plan reminder timing/manual/automated/targeted waitlists implemented. 60 growth SQL assertions, 31 focused units and 16 four-language Chromium/WebKit cases pass; reports, rebooking, GBP help and advertising benefits remain outstanding | BLOCKED |
 | P03 | Core booking, deposits, chat, cards, finance, full Assistant, visibility, language and unlimited bookings for all tiers | Core flags/database resolution updated; 44 local DB checks pass | AUTOMATED ONLY |
 | P04 | Solo one calendar across professionals, simultaneous overlapping booking attempts; team separate calendars | Database advisory lock and occupancy guard; 44 local checks include concurrency with distinct customers/professionals | AUTOMATED ONLY |
 | P05 | One-action Solo to Starter upgrade grants calendars/team with audit, no unverified charging claim | Not implemented; payment configuration excluded | BLOCKED |
@@ -115,3 +115,10 @@ Source: Girlz_Culture_Master_Build.pdf (all five pages), founder pasted correcti
 - At most three real free intervals become explicit alternatives. The original request and incident reference remain in the conversation. Alternatives are bounded structured data, not raw provider errors, and do not save or confirm a booking.
 - Reproduced a database identity loss: a service selected from the catalog with original `style_id=null` was saved without its real service link. Migration `20260923105941` binds the reviewed catalog identity through the existing authorization, occupancy and stale-preview checks. Custom manual services remain supported; no payment or notification provider operations are added.
 - 28 operational/alternative units and 8 Chromium/WebKit cases in en/fr/es/zh-CN passed; TypeScript and focused lint passed. Five new local SQL checks and the existing 55-check operational-calendar suite passed. The first local failures are preserved. Final complete clean/representative upgrade checks and hosted acceptance are still required before release.
+
+## Reminder and waitlist evidence
+
+- Local only: 60 SQL assertions passed, including downgrade enforcement, final notification-claim checks, stale revisions, tenant isolation, manual offer preview and response-loss replay. Existing reminder and waitlist SQL checks also passed.
+- 31 focused units passed; combined Master contracts and production gate: 106 passed, 0 failed, 0 skipped. TypeScript and changed-file lint passed.
+- 16 browser cases passed across Chromium/WebKit and English/French/Spanish/Simplified Chinese. They cover retained edits, authoritative saved readback after refresh, stale save recovery, explicit offer confirmation and unchanged retry identity. Initial invalid mock incident IDs were corrected without relaxing exact-reference assertions.
+- Required CI now includes Master contracts plus representative upgrade and private-demo checks. Complete final-chain/upgrade and hosted verification remain outstanding. No real offer or notification has been sent.

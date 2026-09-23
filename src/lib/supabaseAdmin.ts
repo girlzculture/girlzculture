@@ -854,7 +854,13 @@ export async function processBookingFollowups(){
 
 export async function processBookingReminders(){
   const admin=getSupabaseAdmin();const notification=await bookingNotificationSettings(admin);const results:Array<Record<string,unknown>>=[];
-  for(const reminderHours of notification.reminderHours){
+  const schedules=await admin.rpc("booking_reminder_hours_in_use");
+  if(schedules.error || !Array.isArray(schedules.data) || schedules.data.some((hour:unknown)=>!Number.isInteger(hour)||Number(hour)<1||Number(hour)>336)) {
+    const reference=await capturePlatformError({admin,error:Error("REMINDER_SCHEDULE_UNAVAILABLE"),feature:"booking-reminders",action:"load_business_schedules",actorRole:"system",safeMessage:"Business reminder schedules could not be loaded."});
+    return {configuredHours:[],processed:0,results:[{status:"failed",stage:"load_business_schedules",request_id:reference}],warnings:[]};
+  }
+  const configuredHours=[...new Set<number>(schedules.data)];
+  for(const reminderHours of configuredHours){
     const{data:bookings,error}=await admin.rpc("due_booking_reminders",{p_reminder_hours:reminderHours});
     if(error){
       const reference=await capturePlatformError({admin,error,feature:"booking-reminders",action:"load_due_bookings",actorRole:"system",provider:"supabase",safeMessage:"Due booking reminders could not be loaded."});
@@ -903,5 +909,5 @@ export async function processBookingReminders(){
       }),
     }));
   }
-  return{configuredHours:notification.reminderHours,processed:results.length,results,warnings:notification.warningReferences.map(reference=>({message:`Reminder configuration needs attention. Reference ${reference}.`,request_id:reference}))};
+  return{configuredHours,processed:results.length,results,warnings:notification.warningReferences.map(reference=>({message:`Reminder configuration needs attention. Reference ${reference}.`,request_id:reference}))};
 }

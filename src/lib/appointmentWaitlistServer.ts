@@ -37,9 +37,35 @@ export async function processAppointmentWaitlist() {
 
 export async function waitlistFailure(request:Request,error:unknown,admin?:ReturnType<typeof getSupabaseAdmin>) {
  const message=error&&typeof error==="object"&&"message" in error?String(error.message):"";
- const allowed=new Set(["WAITLIST_AUTH_REQUIRED","WAITLIST_ACCESS_DENIED","WAITLIST_BUSINESS_UNAVAILABLE","WAITLIST_SERVICE_UNAVAILABLE","WAITLIST_INVALID_INPUT","WAITLIST_REQUEST_CONFLICT","WAITLIST_LIMIT"]);
+ const allowed=new Set(["WAITLIST_AUTH_REQUIRED","WAITLIST_ACCESS_DENIED","WAITLIST_BUSINESS_UNAVAILABLE","WAITLIST_SERVICE_UNAVAILABLE","WAITLIST_INVALID_INPUT","WAITLIST_REQUEST_CONFLICT","WAITLIST_LIMIT","WAITLIST_OPENING_CHANGED"]);
  const code=allowed.has(message)?message:message.startsWith("Unauthorized")?"WAITLIST_AUTH_REQUIRED":message.startsWith("Forbidden")?"WAITLIST_ACCESS_DENIED":error instanceof SyntaxError?"WAITLIST_INVALID_INPUT":"WAITLIST_UNAVAILABLE";
- const status=code==="WAITLIST_AUTH_REQUIRED"?401:code==="WAITLIST_ACCESS_DENIED"||message.startsWith("Forbidden")?403:code==="WAITLIST_REQUEST_CONFLICT"?409:code==="WAITLIST_UNAVAILABLE"?500:400;
+ const status=code==="WAITLIST_AUTH_REQUIRED"?401:code==="WAITLIST_ACCESS_DENIED"||message.startsWith("Forbidden")?403:["WAITLIST_REQUEST_CONFLICT","WAITLIST_OPENING_CHANGED"].includes(code)?409:code==="WAITLIST_UNAVAILABLE"?500:400;
  const reference=await capturePlatformError({request,admin,error:Error(code),feature:"appointment-waitlist",action:request.method,actorRole:"customer",safeMessage:"The appointment waitlist could not be updated.",severity:status>=500?"high":"low"});
  return Response.json({code,request_id:reference},{status,headers:{"Cache-Control":"private, no-store","X-Request-ID":reference}});
+}
+
+/** Read-only opening review: private customer identity stays on the server. */
+export async function businessWaitlistOpenings(context:Awaited<ReturnType<typeof import("@/lib/supabaseAdmin").requireSalonPermission>>,requestId:string,sourceId?:string){
+ const result=await context.admin.rpc("business_waitlist_openings",{p_salon:context.salon.id,p_actor:context.user.id,p_request:requestId});
+ if(result.error)throw result.error;
+ const openings=[];
+ for(const item of (result.data||[]) as (Candidate&{offer_id?:string|null})[]){
+  if(item.salon_id!==context.salon.id||item.request_id!==requestId)throw Error("WAITLIST_ACCESS_DENIED");
+  if(sourceId&&item.source_booking_id!==sourceId)continue;
+  if(sourceId&&item.offer_id)return {offered:true,offer_id:item.offer_id,openings:[]};
+  if(item.offer_id)continue;
+  const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:item.time_zone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(item.appointment_at)).map(part=>[part.type,part.value]));
+  const availability=await bookingAvailability({salonId:item.salon_id,styleId:item.style_id,stylistId:item.stylist_id,customerId:item.customer_id,date:`${parts.year}-${parts.month}-${parts.day}`});
+  const slot=availability.slots.find(slot=>slot.value===`${parts.hour}:${parts.minute}`);
+  if(!slot)continue;
+  if(sourceId){
+   const offered=await context.admin.rpc("offer_business_waitlist",{p_salon:context.salon.id,p_actor:context.user.id,p_request:requestId,p_source:sourceId,p_stylist:slot.stylistId||null,p_copy:copy[item.locale]||copy.en});
+   if(offered.error)throw offered.error;if(!offered.data)throw Error("WAITLIST_OPENING_CHANGED");
+   return {offered:true,offer_id:offered.data,openings:[]};
+  }
+  openings.push({source_booking_id:item.source_booking_id,appointment_at:item.appointment_at,time_zone:item.time_zone});
+  if(openings.length===5)break;
+ }
+ if(sourceId)throw Error("WAITLIST_OPENING_CHANGED");
+ return {offered:false,openings};
 }

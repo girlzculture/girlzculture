@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PLAN_ORDER, SUBSCRIPTION_PLANS, parseApplicationPlan, restrictivePlanForLimits } from "../src/lib/plans.ts";
+import { PLAN_ORDER, SUBSCRIPTION_PLANS, parseApplicationPlan, restrictivePlanForLimits, planFromStripePriceId } from "../src/lib/plans.ts";
 
 test("the current catalog has five exact prices and equal core access", () => {
   assert.deepEqual(PLAN_ORDER, ["Solo", "Solo Pro", "Starter", "Growth", "Premium"]);
@@ -11,6 +11,16 @@ test("the current catalog has five exact prices and equal core access", () => {
     assert.equal(entitlement.marketplaceVisibility, "Standard");
     for (const key of ["customerDeposits", "bookingSpecificCustomerChat", "unlimitedAppointmentBookings", "gcAssistant", "finances", "clientCards"]) assert.equal(entitlement[key], true, `${plan}: ${key}`);
   }
+});
+test("all five provider price mappings retain the configured plan without inventing a configured subscription",()=>{
+ const saved=new Map(PLAN_ORDER.map(plan=>[SUBSCRIPTION_PLANS[plan].stripePriceEnv,process.env[SUBSCRIPTION_PLANS[plan].stripePriceEnv]]));
+ try{
+  for(const plan of PLAN_ORDER)process.env[SUBSCRIPTION_PLANS[plan].stripePriceEnv]='price_fixture_'+SUBSCRIPTION_PLANS[plan].key;
+  for(const plan of PLAN_ORDER)assert.equal(planFromStripePriceId('price_fixture_'+SUBSCRIPTION_PLANS[plan].key),plan);
+  assert.equal(planFromStripePriceId(''),null);assert.equal(planFromStripePriceId('price_not_configured'),null);
+  process.env.STRIPE_PRICE_SOLO_PRO=process.env.STRIPE_PRICE_STARTER;
+  assert.equal(planFromStripePriceId(process.env.STRIPE_PRICE_STARTER),null,'an ambiguous configuration cannot grant the wrong calendar family');
+ }finally{for(const [key,value]of saved){if(value===undefined)delete process.env[key];else process.env[key]=value;}}
 });
 test("solo limits distinguish one calendar from team capacity", () => {
   for (const plan of ["Solo", "Solo Pro"]) {

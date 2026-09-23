@@ -581,6 +581,9 @@ begin
  if exists(select 1 from public.bookings where salon_id=p_salon and (not is_demo or stripe_payment_id is not null or stripe_charge_id is not null))
   or exists(select 1 from public.product_orders where salon_id=p_salon and (not is_demo or stripe_payment_intent_id is not null)) then raise exception 'DEMO_RESET_EXTERNAL_RECORD';end if;
  perform set_config('request.jwt.claim.role','service_role',true);
+ if to_regclass('public.business_growth_settings') is not null then
+  execute 'delete from public.business_growth_settings where salon_id=$1' using p_salon;
+ end if;
  if to_regclass('public.gc_assistant_active_tasks') is not null then
   execute 'delete from public.gc_assistant_active_tasks where salon_id=$1' using p_salon;
  end if;

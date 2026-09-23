@@ -8,7 +8,7 @@ const {operatingBooksFromData}=load('src/lib/businessFinanceData.ts');
 const {summarizeOperatingBooks}=load('src/lib/businessFinanceCore.ts');
 const source=new URL(process.env.CLEAN_DATABASE_URL||'');
 assert.ok(['127.0.0.1','localhost','[::1]'].includes(source.hostname));
-assert.match(source.pathname,/^\/girlzculture_[a-z_0-9]+(?:release|clean)$/);
+assert.match(source.pathname,/^\/girlzculture_(?:[a-z_0-9]+)?(?:release|clean)$/);
 for(const name of ['seed-private-demo.sql','check-private-demo.sql','reset-private-demo.sql'])assert.ok(readFileSync('supabase/migrations/20260923064718_master_build_demo_workspace.sql','utf8').includes(readFileSync('supabase/demo/'+name,'utf8')),'Reviewed migration and canonical demo procedure diverged: '+name);
 const psql=process.env.PSQL_BIN||'psql',clone='girlzculture_master_demo_'+randomUUID().replaceAll('-','');
 const control=new URL(source);control.pathname='/postgres';const target=new URL(source);target.pathname='/'+clone;

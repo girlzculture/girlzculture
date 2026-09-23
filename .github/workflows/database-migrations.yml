@@ -95,6 +95,8 @@ jobs:
       - run: npm ci
       - name: Verify migration dispatch guard regressions
         run: node --test tests/production-migration-gate.test.mjs
+      - name: Verify Master Build contract and behavior regressions
+        run: node --test tests/master-build-*.test.mjs
       - name: Verify browser fixture setup budget ownership
         run: node --test tests/browser-page-fixture.test.mjs
       - name: Verify browser collection reconciliation
@@ -123,6 +125,10 @@ jobs:
           npm run verify:promotion-enforcement
       - name: Execute the complete migration chain from an empty database
         run: npm run verify:database-clean
+      - name: Verify Master Build representative upgrade and demo isolation
+        run: |
+          node scripts/verify-master-build-upgrade.mjs
+          node scripts/verify-master-build-demo.mjs
       - name: Verify business signup migration results in the isolated database
         run: psql "$CLEAN_DATABASE_URL" -X --set ON_ERROR_STOP=1 --file scripts/sql/verify-business-signup-migration.sql
       - name: Verify authoritative salon-submission lifecycle

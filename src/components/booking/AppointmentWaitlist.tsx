@@ -1,4 +1,5 @@
 "use client";
+import BusinessWaitlistOpenings from "./BusinessWaitlistOpenings";
 import {useEffect,useRef,useState} from "react";
 import Link from "next/link";
 import {getSessionForScope,getSupabaseForScope} from "@/lib/supabase";
@@ -57,6 +58,7 @@ export default function AppointmentWaitlist({scope="customer",timeZone="America/
    <p className="text-xs text-muted">{formatDate(row.starts_after,{dateStyle:"medium",timeStyle:"short",timeZone:row.time_zone||timeZone})} – {formatDate(row.starts_before,{dateStyle:"medium",timeStyle:"short",timeZone:row.time_zone||timeZone})}</p>
    <span className="inline-block rounded-full bg-subtle px-3 py-1 text-xs">{t(({waiting:"Waiting",cancelled:"Cancelled",fulfilled:"Booked",expired:"Expired"} as Record<string,string>)[row.status]||"Unavailable")}</span>
    {scope==="salon"?<p className="text-xs">{t("{value0} open offers",{value0:formatNumber(row.open_offers||0)})}</p>:null}
+   {scope==="salon"&&row.status==="waiting"?<BusinessWaitlistOpenings requestId={row.id} onOffered={()=>void load()}/>:null}
    {(row.offers||[]).map(offer=><div key={offer.id} className="rounded-xl bg-subtle p-3 text-sm"><b>{formatDate(offer.appointment_at,{dateStyle:"medium",timeStyle:"short",timeZone:row.time_zone||timeZone})}</b>
     {offer.status==="offered"&&new Date(offer.expires_at).getTime()>Date.now()&&row.status==="waiting"?<><p className="my-2 text-xs">{t("Offer expires {value0}",{value0:formatDate(offer.expires_at,{timeStyle:"short",timeZone:row.time_zone||timeZone})})}</p><Link href={offerHref(row,offer)} className="inline-flex min-h-11 items-center rounded-lg bg-primary px-3 text-white">{t("Review opening")}</Link></>:<p className="mt-2">{t(offer.status==="booked"?"Booked":offer.status==="claimed"?"Checkout in progress":"Offer closed")}</p>}
    </div>)}

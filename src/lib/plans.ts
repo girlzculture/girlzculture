@@ -513,9 +513,8 @@ export function stripePriceEnv(plan: SubscriptionPlan) {
 export function planFromStripePriceId(priceId: unknown): StoredSubscriptionPlan | null {
   const value = String(priceId || "").trim();
   if (!value) return null;
-  if (value === process.env.STRIPE_PRICE_STARTER) return "Starter";
-  if (value === process.env.STRIPE_PRICE_GROWTH) return "Growth";
-  if (value === process.env.STRIPE_PRICE_PREMIUM) return "Premium";
+  const current=PLAN_ORDER.filter(plan=>value===process.env[SUBSCRIPTION_PLANS[plan].stripePriceEnv]);
+  if(current.length)return current.length===1?current[0]:null;
   if (value === process.env.STRIPE_BASIC_PRICE_ID) return "Basic";
   if (value === process.env.STRIPE_STARTER_PRICE_ID) return "Starter";
   if (value === process.env.STRIPE_GROWTH_PRICE_ID) return "Growth";

@@ -64,6 +64,7 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
     const respond = (json: unknown, status = 200) => route.fulfill({ json, status });
     if (path === "/api/i18n") return route.continue();
     if (path === "/api/i18n/preference") { accountLocale = req.postDataJSON().locale; return respond({ locale: accountLocale }); }
+    if (req.method() === "GET" && path === "/api/salon/growth-settings") return respond({settings:{revision:0,plan:'starter',reminder_hours:null,effective_reminder_hours:[24,2],reminder_limit:0,waitlist_mode:'manual',waitlist_service_ids:[],waitlist_professional_ids:[],services:[],professionals:[]}});
     if (path === "/api/salon/workspace") return respond({ salon: business, isOwner: true, isTeamMember: false, permissions: {}, records });
     // Existing fixtures supply no seven-day calendar evidence; dedicated
     // opportunity cases provide that response instead of inventing zero capacity.

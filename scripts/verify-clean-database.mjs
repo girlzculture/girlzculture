@@ -1304,3 +1304,5 @@ console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-mobile-book
 
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-assistant-active-task.sql")],"Assistant active task continuity, confirmed completion and cancellation boundary"));
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-catalog-binding.sql")],"Assistant selected catalog service, exact time and reviewed confirmation"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-growth-controls.sql")],"Plan reminder and manual/targeted waitlist authority"));
