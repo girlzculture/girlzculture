@@ -1,6 +1,7 @@
 import { DASHBOARD_REDESIGN_SOURCE_MESSAGES } from "@/i18n/dashboard-redesign-source-catalog";
 // Launch workspace copy. Source completeness is automated; native-language review remains a release check.
 const rows: readonly (readonly [string, string, string, string, string])[] = [
+  ["Review all four versions and confirm permission to publish the selected photos.", "Revisa las cuatro versiones y confirma que tienes permiso para publicar las fotos seleccionadas.", "Vérifiez les quatre versions et confirmez votre autorisation de publier les photos sélectionnées.", "Review all four versions and confirm permission to publish the selected photos.", "请审核全部四种语言版本，并确认您有权发布所选照片。"],
   [
     "{value0} calendar",
     "Calendario de {value0}",

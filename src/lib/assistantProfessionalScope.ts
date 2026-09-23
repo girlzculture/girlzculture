@@ -17,6 +17,11 @@ export function assistantRequestedProfessional(context: Context, requested: unkn
 }
 
 export async function assertAssistantProposalScope(context: Context, tool: string, args: Record<string, unknown>) {
+  if(tool==='prepare_marketing_change'){
+    if(!context.isOwner)throw new AssistantError('ASSISTANT_ACCESS_DENIED',403);
+    const read=await context.admin.rpc('read_gc_business_marketing',{p_salon:context.salon.id,p_actor:context.user.id,p_record:args.record_id});
+    if(read.error||read.data?.salon_id!==context.salon.id)throw new AssistantError('ASSISTANT_ACCESS_DENIED',403);
+  }
   // Recheck narrow private-field grants before replaying old proposals or prose.
   // SQL checks authorization again at confirmation, including assigned clients.
   if (tool === "prepare_client_card_change") {

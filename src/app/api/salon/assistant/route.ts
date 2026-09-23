@@ -43,13 +43,14 @@ async function POSTHandler(request: Request) {
     validId(body.request_id);
     audit.assistant_request_id = body.request_id; audit.locale = body.locale;
     if (["tool", "plan", "confirm"].includes(body.action)) audit.stage = body.action;
-    const allowed = body.action === "confirm" ? ["action", "request_id", "locale", "digest", "confirm", "policy_reviewed"] : body.action === "plan" ? ["action", "request_id", "locale", "text", "previous_request_ids", "conversation", "page"] : ["action", "request_id", "locale", "tool", "args"];
+    const allowed = body.action === "confirm" ? ["action", "request_id", "locale", "digest", "confirm", "policy_reviewed", "marketing_reviewed"] : body.action === "plan" ? ["action", "request_id", "locale", "text", "previous_request_ids", "conversation", "page"] : ["action", "request_id", "locale", "tool", "args"];
     allowed.push('task_tracking');
     if(body.task_tracking!==undefined&&body.task_tracking!==true)throw new AssistantError('ASSISTANT_INVALID_INPUT');
     if (Object.keys(body).some(key => !allowed.includes(key))) throw new AssistantError("ASSISTANT_INVALID_INPUT");
     if (body.action === "confirm") {
       if (body.confirm !== true || typeof body.policy_reviewed !== "boolean" || !/^[0-9a-f]{64}$/.test(body.digest)) throw new AssistantError("ASSISTANT_CONFIRMATION_REQUIRED");
-      const confirmed = await confirmAssistantTool(context, body.request_id, body.digest, body.policy_reviewed);
+      if(body.marketing_reviewed!==undefined && typeof body.marketing_reviewed!=="boolean")throw new AssistantError("ASSISTANT_INVALID_INPUT");
+      const confirmed = await confirmAssistantTool(context, body.request_id, body.digest, body.policy_reviewed, body.marketing_reviewed===true);
       if(body.task_tracking){const active=await readActiveTask(context);if(active&&active.user_context.some(turn=>turn.request_id===body.request_id)&&active.tool===confirmed.tool)await endActiveTask(context,active,body.request_id);}
       let warnings: { code: string; request_id: string }[] = [];
       if (confirmed.tool === "prepare_booking_reschedule_proposal") {

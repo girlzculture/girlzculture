@@ -26,6 +26,8 @@ const manualAppointment = {
   stylist_id: nullableId, stylist_preference: enumeration("named", "any", "unspecified"), date, time: clockTime, source: enumeration("phone", "walk_in", "instagram", "whatsapp", "other"), notes: string(1200),
 };
 export const ASSISTANT_TOOLS = {
+  get_marketing_records:{risk:1,permission:"promotions",schema:object({record_id:nullableId})},
+  prepare_marketing_change:{risk:4,permission:"promotions",schema:object({operation:enumeration("marketing_draft","marketing_publish","marketing_cancel"),record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
   get_team_controls:{risk:1,permission:"settings",schema:object({})},
   prepare_team_controls:{risk:4,permission:"settings",schema:object({operation:enumeration("permissions","arrangement"),record_id:uuid,changes_json:{...string(6000),minLength:2}})},
   get_business_controls:{risk:1,permission:"settings",schema:object({section:enumeration(...Object.keys(ASSISTANT_CONTROLS))})},
@@ -137,13 +139,13 @@ export function validateTool(name: unknown, input: unknown) {
     assertSchema(changes,ASSISTANT_CATALOG[tool].schema);
     if(!changes||Object.keys(changes).length===0)throw new AssistantError("ASSISTANT_INVALID_INPUT");
   }
-  if (["prepare_booking_progress","prepare_stock_change","prepare_photo_change","prepare_client_card_change","prepare_review_reply"].includes(tool)) {
+  if (["prepare_marketing_change","prepare_booking_progress","prepare_stock_change","prepare_photo_change","prepare_client_card_change","prepare_review_reply"].includes(tool)) {
     let changes:unknown;try{changes=JSON.parse(String(args.changes_json));}catch{throw new AssistantError("ASSISTANT_INVALID_INPUT");}
     assertSchema(changes,ASSISTANT_OPERATIONS[args.operation as AssistantOperation].schema);
     if(args.operation==="booking_service"&&(changes as {attested:boolean}).attested!==true)throw new AssistantError("ASSISTANT_INVALID_INPUT");
     if(args.operation==="booking_attendance"&&((changes as {action:string;kind:unknown}).action==="confirm"?!(changes as {kind:unknown}).kind:(changes as {kind:unknown}).kind!==null))throw new AssistantError("ASSISTANT_INVALID_INPUT");
     const noId=String(args.operation).startsWith("photo_")||args.operation==="supply_create";
-    if(noId ? args.record_id!==null : !args.record_id)throw new AssistantError("ASSISTANT_INVALID_INPUT");
+    if(args.operation!=="marketing_draft" && (noId ? args.record_id!==null : !args.record_id))throw new AssistantError("ASSISTANT_INVALID_INPUT");
     if(args.operation==="client_card"&&!Object.keys((changes as {patch:object}).patch).length)throw new AssistantError("ASSISTANT_INVALID_INPUT");
   }
   if(tool === "prepare_team_controls") {

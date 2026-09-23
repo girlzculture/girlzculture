@@ -5,6 +5,7 @@ export function isActionTool(tool:unknown):tool is AssistantTool{return typeof t
 // Read dependencies are explicit. An unfinished booking cannot silently turn
 // into finance, marketing or another write because the provider changed topics.
 const reads:Partial<Record<AssistantTool,readonly AssistantTool[]>>={
+ prepare_marketing_change:['get_marketing_records','get_services_and_prices','get_business_media','get_promotions','get_bookings'],
  prepare_team_controls:['get_team_controls','get_professionals','get_plan_status'],
  prepare_business_controls:['get_business_controls','get_business_policies','get_services_and_prices','get_professionals','get_plan_status'],
  prepare_service_change:['get_services_and_prices'],prepare_professional_change:['get_professionals','get_services_and_prices'],prepare_product_change:['get_products','get_business_stock'],prepare_promotion_change:['get_promotions','get_services_and_prices','get_products'],

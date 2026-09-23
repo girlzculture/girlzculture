@@ -6,7 +6,7 @@ export function validateSearchTimeWindow(start:unknown,end:unknown):SearchTimeWi
  return {start,end};
 }
 function clock(hour:string,minute:string|undefined,meridiem:string|undefined){
- let h=Number(hour),m=Number(minute||0);if(m>59||h>23)return null;
+ let h=Number(hour);const m=Number(minute||0);if(m>59||h>23)return null;
  if(meridiem){if(h<1||h>12)return null;h=h%12+(meridiem.toLowerCase()==='pm'?12:0);}
  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
 }

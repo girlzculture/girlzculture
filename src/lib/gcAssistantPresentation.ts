@@ -1,3 +1,4 @@
+import {assistantMarketingCopy} from '@/i18n/assistant-marketing-copy';
 import {assistantTeamCopy} from '@/i18n/assistant-team-copy';
 import {assistantOperationsCopy} from "@/i18n/assistant-operations-copy";
 import {assistantFinanceCopy} from "@/i18n/assistant-finance-record-copy";
@@ -67,6 +68,7 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
   const t = (source: string, values?: Record<string, string | number>) => launchWorkspaceText(source, language, values);
   const suggest = (items: string[]) => items.map(source => t(source));
 
+  if(tool === "get_marketing_records")return {message:assistantMarketingCopy(locale).read.replace("{count}",String(number(result.total)))};
   if(tool === "get_team_controls")return {message:assistantTeamCopy(locale).read};
   if(tool === "get_business_stock") {
     const words=assistantOperationsCopy(locale),products=rows(result.products),supplies=rows(result.supplies);

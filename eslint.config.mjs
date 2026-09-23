@@ -9,6 +9,8 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    // Isolated acceptance builds contain generated bundles, not source.
+    ".next-*/**",
     "out/**",
     "build/**",
     // Browser evidence includes bundled third-party trace viewer JavaScript.
