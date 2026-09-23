@@ -114,7 +114,7 @@ async function prepare(context: Context, tool: AssistantTool, args: Row) {
   if(tool==="prepare_team_controls")return prepareAssistantTeam(context,args);
   if(tool==="prepare_business_controls")return prepareAssistantControls(context,args);
   if(isCatalogTool(tool))return prepareAssistantCatalog(context,tool,args);
-  if(["prepare_stock_change","prepare_photo_change","prepare_client_card_change","prepare_review_reply"].includes(tool)) return prepareAssistantOperation(context,args);
+  if(["prepare_booking_progress","prepare_stock_change","prepare_photo_change","prepare_client_card_change","prepare_review_reply"].includes(tool)) return prepareAssistantOperation(context,args);
   if (tool === "prepare_finance_record") return prepareAssistantFinanceRecord(context,args);
   if (tool === "prepare_professional_archive") return prepareProfessionalArchive(context, args);
   if (tool === "prepare_booking_reschedule_proposal") return prepareAssistantBookingReschedule(context, args);

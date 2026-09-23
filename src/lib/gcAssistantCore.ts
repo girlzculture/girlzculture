@@ -35,6 +35,7 @@ export const ASSISTANT_TOOLS = {
   prepare_product_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_product_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
   prepare_promotion_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_promotion_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
   get_business_stock: {risk:1,permission:"products",schema:object({query:string(120)})},
+  prepare_booking_progress: {risk:4,permission:"bookings",schema:object({operation:enumeration("booking_service","booking_attendance"),record_id:uuid,changes_json:{...string(6000),minLength:2}})},
   prepare_stock_change: {risk:4,permission:"products",schema:object({operation:enumeration(...Object.keys(ASSISTANT_OPERATIONS).filter(name=>operationTool(name)==="prepare_stock_change")),record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
   prepare_photo_change: {risk:4,permission:"photos",schema:object({operation:enumeration(...Object.keys(ASSISTANT_OPERATIONS).filter(name=>operationTool(name)==="prepare_photo_change")),record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
   prepare_client_card_change: {risk:4,permission:"client_history",schema:object({operation:enumeration(...Object.keys(ASSISTANT_OPERATIONS).filter(name=>operationTool(name)==="prepare_client_card_change")),record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
@@ -136,9 +137,11 @@ export function validateTool(name: unknown, input: unknown) {
     assertSchema(changes,ASSISTANT_CATALOG[tool].schema);
     if(!changes||Object.keys(changes).length===0)throw new AssistantError("ASSISTANT_INVALID_INPUT");
   }
-  if (["prepare_stock_change","prepare_photo_change","prepare_client_card_change","prepare_review_reply"].includes(tool)) {
+  if (["prepare_booking_progress","prepare_stock_change","prepare_photo_change","prepare_client_card_change","prepare_review_reply"].includes(tool)) {
     let changes:unknown;try{changes=JSON.parse(String(args.changes_json));}catch{throw new AssistantError("ASSISTANT_INVALID_INPUT");}
     assertSchema(changes,ASSISTANT_OPERATIONS[args.operation as AssistantOperation].schema);
+    if(args.operation==="booking_service"&&(changes as {attested:boolean}).attested!==true)throw new AssistantError("ASSISTANT_INVALID_INPUT");
+    if(args.operation==="booking_attendance"&&((changes as {action:string;kind:unknown}).action==="confirm"?!(changes as {kind:unknown}).kind:(changes as {kind:unknown}).kind!==null))throw new AssistantError("ASSISTANT_INVALID_INPUT");
     const noId=String(args.operation).startsWith("photo_")||args.operation==="supply_create";
     if(noId ? args.record_id!==null : !args.record_id)throw new AssistantError("ASSISTANT_INVALID_INPUT");
     if(args.operation==="client_card"&&!Object.keys((changes as {patch:object}).patch).length)throw new AssistantError("ASSISTANT_INVALID_INPUT");

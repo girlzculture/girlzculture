@@ -1,5 +1,8 @@
 // Interface copy only. Applicant answers and uploaded filenames stay unchanged.
 export const MASTER_BUILD_COPY = [
+["This appointment is not ready for that action. Refresh its status and review again.", "Ce rendez-vous n’est pas prêt pour cette action. Actualisez son statut et vérifiez à nouveau.", "Esta cita no está lista para esa acción. Actualiza su estado y vuelve a revisar.", "此预约尚不能执行该操作。请刷新状态并重新核实。"],
+["Early or late check-in needs your actual reason and confirmation that it is accurate.", "Une arrivée anticipée ou tardive nécessite votre motif réel et votre confirmation de son exactitude.", "La llegada temprana o tardía requiere el motivo real y confirmar su exactitud.", "提前或迟到签到需要提供真实原因并确认其准确性。"],
+
  ["A verified business location is required before changing privacy or travel settings. Contact support to complete the location review.","Un lieu professionnel vérifié est nécessaire avant de modifier la confidentialité ou les déplacements. Contactez l’assistance pour terminer la vérification.","Se requiere una ubicación verificada antes de cambiar la privacidad o los desplazamientos. Contacta con soporte para completar la revisión.","更改隐私或上门服务设置前，需要完成经营地址核实。请联系支持团队完成地址审核。"],
  ["Email delivery is unavailable. Keep automatic reminders off until support restores the connection.", "L’envoi d’e-mails est indisponible. Laissez les rappels automatiques désactivés jusqu’au rétablissement par l’assistance.", "El envío de correo no está disponible. Mantén desactivados los recordatorios automáticos hasta que soporte restablezca la conexión.", "邮件发送暂不可用。请保持自动提醒关闭，等待支持团队恢复连接。"],
  ["Monthly appointment report", "Rapport mensuel des rendez-vous", "Informe mensual de citas", "每月预约报告"],

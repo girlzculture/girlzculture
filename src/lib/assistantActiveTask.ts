@@ -8,6 +8,7 @@ const reads:Partial<Record<AssistantTool,readonly AssistantTool[]>>={
  prepare_team_controls:['get_team_controls','get_professionals','get_plan_status'],
  prepare_business_controls:['get_business_controls','get_business_policies','get_services_and_prices','get_professionals','get_plan_status'],
  prepare_service_change:['get_services_and_prices'],prepare_professional_change:['get_professionals','get_services_and_prices'],prepare_product_change:['get_products','get_business_stock'],prepare_promotion_change:['get_promotions','get_services_and_prices','get_products'],
+ prepare_booking_progress:['get_bookings','get_upcoming_appointments'],
  prepare_stock_change:['get_business_stock','get_products'],prepare_photo_change:['get_business_media'],prepare_client_card_change:['get_bookings','get_client_record'],prepare_review_reply:['get_reviews'],
  prepare_manual_appointment:['get_services_and_prices','get_professionals','get_availability','get_calendar_gaps','get_bookings'],
  prepare_manual_reschedule:['get_bookings','get_availability','get_calendar_gaps','get_services_and_prices','get_professionals'],

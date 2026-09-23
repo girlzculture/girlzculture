@@ -57,6 +57,14 @@ export async function assertAssistantProposalScope(context: Context, tool: strin
     if(!current.data)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
   }
   const assigned = assistantAssignedProfessional(context);
+  if(tool==="prepare_booking_progress"){
+    validateTool(tool,args);
+    let query=context.admin.from("bookings").select("id").eq("salon_id",context.salon.id).eq("id",args.record_id);
+    if(assigned)query=query.eq("stylist_id",assigned);
+    const current=await query.maybeSingle();
+    if(current.error)throw current.error;
+    if(!current.data)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
+  }
   if (!assigned) return;
   if (args.booking_id) {
     const record = await context.admin.from("bookings").select("id").eq("salon_id", context.salon.id).eq("id", args.booking_id).eq("stylist_id", assigned).maybeSingle();
