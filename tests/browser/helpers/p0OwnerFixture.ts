@@ -73,6 +73,7 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
     // Dedicated returning-client cases provide verified evidence explicitly.
     // This generic workspace has no complete monthly aggregate. Dedicated report tests provide it.
     if (req.method() === "GET" && path === "/api/salon/booking-report") return respond({code:"REPORT_UNAVAILABLE"},503);
+    if (req.method() === "GET" && path === "/api/salon/rebooking-settings") return respond({code:"REBOOKING_UNAVAILABLE"},503);
     if (req.method() === "GET" && path === "/api/salon/rebooking-advice") return respond({code:"REBOOKING_UNAVAILABLE"},503);
     if (req.method() === "GET" && path === "/api/salon/service-contribution") {
       const query=new URL(req.url()).searchParams;

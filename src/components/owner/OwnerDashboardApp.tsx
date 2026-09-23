@@ -1,5 +1,6 @@
 "use client";
 import BusinessGrowthControls from "./BusinessGrowthControls";
+import BusinessRebookingControls from "./BusinessRebookingControls";
 import BusinessLocationControls from "@/components/owner/BusinessLocationControls";
 import BookedMobileLocation from "@/components/booking/BookedMobileLocation";
 import { isSoloPlan } from "@/lib/plans";
@@ -3970,7 +3971,8 @@ function SettingsPage({ c, focus = "account" }: { c: Ctx; focus?: "account" | "n
           </button>
         </Panel> : null}
       </form>
-      {focus === "notifications" && c.isOwner ? <BusinessGrowthControls key={c.salon.id}/> : null}
+      {focus === "notifications" && c.isOwner ? <BusinessGrowthControls key={`growth:${c.salon.id}`}/> : null}
+      {focus === "notifications" && c.isOwner ? <BusinessRebookingControls key={`rebooking:${c.salon.id}`}/> : null}
     </>
   );
 }
