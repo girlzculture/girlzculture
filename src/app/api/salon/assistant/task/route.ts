@@ -1,3 +1,4 @@
+import {withOperationalMonitoring,routeMonitoringProfile} from '@/lib/operationalMonitoring';
 import {requireSalonOwner} from '@/lib/supabaseAdmin';
 import {readActiveTask,endActiveTask} from '@/lib/assistantActiveTaskServer';
 import {taskSummary} from '@/lib/assistantActiveTask';
@@ -20,4 +21,5 @@ async function handle(request:Request){
   return monitoredRouteFailure({request,error,feature:'gc-assistant',action:'active-task',actorRole:'salon',safeMessage:'The unfinished task could not be loaded. Try again.'});
  }
 }
-export const GET=handle;export const DELETE=handle;
+export const GET=withOperationalMonitoring(routeMonitoringProfile('/api/salon/assistant/task','GET'),handle);
+export const DELETE=withOperationalMonitoring(routeMonitoringProfile('/api/salon/assistant/task','DELETE'),handle);

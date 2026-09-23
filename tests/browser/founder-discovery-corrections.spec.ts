@@ -12,6 +12,8 @@ type SearchBody = {
     date?: string | null;
     sort?: string;
     promotionOnly?: boolean;
+    travelsOnly?: boolean;
+    independentOnly?: boolean;
     page?: number;
     pageSize?: number;
   };
@@ -152,6 +154,8 @@ type RequiredSearchFilters = Required<NonNullable<SearchBody["filters"]>>;
 
 const defaultRequestFilters: RequiredSearchFilters = {
   serviceId: null,
+      travelsOnly: false,
+      independentOnly: false,
   radiusMiles: 50,
   minimumRating: null,
   maximumPrice: null,
@@ -261,6 +265,8 @@ test("public results keep real signals and align the matched service, price and 
   });
   expect(requests.at(-1)?.filters).toEqual({
       serviceId: null,
+      travelsOnly: false,
+      independentOnly: false,
       radiusMiles: 25,
       minimumRating: 4.5,
       maximumPrice: 150,

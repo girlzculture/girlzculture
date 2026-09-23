@@ -1,3 +1,4 @@
+import {releaseInterfaceLocale,assertDeferredLocale} from './helpers/releaseLocales';
 import { expect } from "@playwright/test";
 import { test } from "./helpers/hydration";
 import { p0OwnerFixture } from "./helpers/p0OwnerFixture";
@@ -37,10 +38,12 @@ test("P0 owner core language flow retains account preference and original busine
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/salon/dashboard/my-page/business-policies");
   await expect(page.getByRole("heading", { name: "Your Business Policies", exact: true })).toBeVisible();
-  for (const locale of ["fr", "wo", "es", "zh-CN", "en"]) {
+  for (const requestedLocale of ["fr", "wo", "es", "zh-CN", "en"]) {
+  const locale=releaseInterfaceLocale(requestedLocale);
     const t = (text: string) => DASHBOARD_SOURCE_MESSAGES[locale]?.[text] || text;
     const selector = page.locator('select').filter({ has: page.locator('option[value="zh-CN"]') }).first();
     await selector.selectOption(locale);
+    await assertDeferredLocale(page,requestedLocale);
     await expect(page.locator('html')).toHaveAttribute('lang', locale);
     await expect.poll(fixture.accountLocale).toBe(locale);
     await expect(page.getByRole('heading', { name: t('Your Business Policies'), exact: true })).toBeVisible();

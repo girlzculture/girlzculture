@@ -31,7 +31,7 @@ test('demonstration exit requires a same-origin POST and preserves prefetch read
   assert.equal(r.status,303);assert.equal(new URL(r.headers.get('location')).pathname,'/');
 });
 
-test('published CMS links survive grouping; subscription pricing only appears under For Businesses', () => {
+test('Master Build menus replace legacy duplicates; subscription pricing stays under For Businesses', () => {
   const groups=publicNavigationGroups([
     {item_key:'home',label:'Home',href:'/'}, {item_key:'styles',label:'Styles',href:'/styles'},
     {item_key:'price',label:'Old pricing link',href:'/pricing'}, {item_key:'plans',label:'Plans',href:'/plans'},
@@ -39,12 +39,13 @@ test('published CMS links survive grouping; subscription pricing only appears un
     {item_key:'login',label:'Business login',href:'/business/login'}
   ],true);
   assert.deepEqual(Array.from(groups,g=>g.label),['Explore','For Businesses']);
-  assert.ok(groups[0].links.some(i=>i.href==='/site-access'));
-  assert.ok(groups[0].links.some(i=>i.href==='/about' && i.label==='Our story'));
+  assert.deepEqual(Array.from(groups[0].links.slice(0,3),i=>[i.label,i.href]),[['Browse Services','/styles'],['Browse Businesses','/salons'],['Near You','/salons?near=1']]);
+  assert.deepEqual(Array.from(groups[0].links.slice(-2),i=>[i.label,i.href]),[['About Us','/about'],['Blog','/blog']]);
+  assert.ok(groups[0].links.every(i=>i.href!=='/site-access'),'Founder access remains available through its direct route, not an advertised public menu item');
   assert.ok(groups[0].links.some(i=>i.href==='/salons'));
   assert.equal(groups[0].links.filter(i=>i.href==='/plans'||i.href==='/pricing').length,0);
   assert.equal(groups[1].links.filter(i=>i.href==='/plans').length,1);
-  assert.equal(groups[1].links.filter(i=>i.href==='/business/login').length,1);
+  assert.deepEqual(Array.from(groups[1].links,i=>[i.label,i.href]),[['Why Girlz Culture','/business'],['Pricing & Plans','/plans'],['Apply to Join','/business/signup'],['Help Center','/help']]);
 });
 
 test('OpenAI REST URLs support Netlify AI Gateway without duplicating v1', () => {

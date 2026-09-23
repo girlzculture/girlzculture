@@ -6,7 +6,7 @@ Source: Girlz_Culture_Master_Build.pdf (all five pages), founder pasted correcti
 
 - Branch: `codex/master-build-current-scope`, based on `692b89be11c0599c579f90254032b56431590fe2` (PR #86 CI correction).
 - Baseline required CI: [35815751467](https://github.com/girlzculture/girlzculture/actions/runs/35815751467), successful: **1,402 passed, 5 skipped, 0 failed; 1,407 accounted for exactly once**, eight isolated runners, one worker each, zero retries. TypeScript, lint, build, clean migration chain and focused gates passed on that commit. This does not verify the subsequent Master Build changes.
-- Master Build changes: local implementation checkpoints from `c461a6c` through `e62280b`, plus reviewed waitlist offers; not yet pushed or released. No Master Build migration, application change or demo record has been applied to production.
+- Master Build changes: implementation checkpoints from `c461a6c` through `4514f4b`, plus the CI corrections recorded below; pushed for review in [PR #87](https://github.com/girlzculture/girlzculture/pull/87), not released. No Master Build migration, application change or demo record has been applied to production.
 - Last observed published deployment: `6ab1801846433e00086f1d08`. Recheck exact source and rollback compatibility before release.
 - Required acceptance statuses: PASS (verified actual workflow), AUTOMATED ONLY (local/CI evidence), FAIL (demonstrated failure), BLOCKED (not implemented/verified or external dependency). No unchecked requirement counts as complete.
 
@@ -280,3 +280,19 @@ Source: Girlz_Culture_Master_Build.pdf (all five pages), founder pasted correcti
 - Demo provision/reset instructions are in `supabase/demo/README.md`. Dedicated hosted account and private founder credential handoff remain outstanding. Full remote CI, guarded merge, protected production migration, held-candidate acceptance and publication still remain; no live completion is claimed.
 
 - Combined acceptance build passed; final production migration contract **32/32 passed** after adding plan and location checks to required CI.
+
+
+## 23 September — demonstrated CI corrections
+
+The first combined checks on `4514f4b` failed; their evidence is retained in [required run 35925288351](https://github.com/girlzculture/girlzculture/actions/runs/35925288351) and [release run 35925288004](https://github.com/girlzculture/girlzculture/actions/runs/35925288004). No unchanged run was retried, no assertions skipped, and no failed check was declared successful.
+
+- Full P0 units with CI process isolation: **1,023 passed, 0 failed/skipped**. Fixtures now include the Engine-read contract. Tool-inventory tests fold the immutable baseline and subsequent append-only constraints, then require the exact live catalog; historical migration assertions remain intact.
+- Actual UI regressions: delayed Engine translations reloaded a failed booking report instead of preserving its error/retry; initial server-rendered booking controls accepted input before hydration; the offline cached Next document depended on unavailable JS. The report now translates stored errors at render time without refetching, booking fields are disabled until handlers are ready and capture event values synchronously, and the service worker caches self-contained offline HTML.
+- Browser regressions cover held translations/error/retry, blocked booking JavaScript plus exact name/email in the reviewed checkout request, and offline navigation. The image/category/navigation contracts now match the explicitly approved seven-category and generic-business scope; retired Other still has a direct-route denial test.
+- Stored Wolof preference cases are retained as explicit English-interface fallback checks, with the same calendar, consent, readback, message, and accessibility assertions. The missing-device-voice case still proves readable fallback. These are not evidence of live Wolof support.
+- Plan/application static contracts now enforce the five reviewed prices, independent-plan limits, private supporting documents, and team-size range. Monitoring covers all **184 API routes and eight scheduled functions**; two newly added routes now use the existing sanitizer/wrapper.
+- Focused affected task/rebooking unit checks: **23 passed, 0 failed/skipped**. Focused booking/image Chromium/WebKit rerun after fixes: **16 passed**. Full current CI and hosted acceptance are still required before merge/release.
+
+- The completed shard-failure reproductions now pass **37/37 Chromium/WebKit cases**: stored unsupported-language fallback, unchanged review/confirmation/persistence, all three booking recipients, mobile/desktop Assistant state, and exact updated navigation. Current lint remains **0 errors, 17 warnings**. Eight remaining static final-release gates passed.
+
+- Additional final focuses: **2/2 WebKit offline lifecycle cases** and **5 browser cases passed, one existing desktop exclusion** for the mobile-only navigation test. The excluded test is still exercised on iPhone, Android and landscape projects. No new skips/retries were introduced.

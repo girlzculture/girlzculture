@@ -1,3 +1,4 @@
+import {releaseInterfaceLocale,assertDeferredLocale} from './helpers/releaseLocales';
 import { expect } from '@playwright/test';
 import { test } from './helpers/hydration';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
@@ -104,10 +105,11 @@ for (const viewport of [
 
 // Browser API and speech fixtures exercise the real components. SQL/server
 // suites separately prove persistence and authorization; this is not live AI.
-for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
-  test(`P0 operational calendar keeps original record names and supports service searches in ${locale}`, async ({ page }) => {
+for (const requestedLocale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
+  const locale=releaseInterfaceLocale(requestedLocale);
+  test(`P0 operational calendar keeps original record names and supports service searches in ${requestedLocale==='wo'?'stored wo fallback to English':locale}`, async ({ page }) => {
     test.setTimeout(60_000);
-    const fixture = await p0OwnerFixture(page, { populated: true, locale });
+    const fixture = await p0OwnerFixture(page, { populated: true, locale: requestedLocale });
     const t = (source: string) => DASHBOARD_SOURCE_MESSAGES[locale]?.[source] || source;
     fixture.records.styles[0].name = 'Silk Press';
     fixture.records.stylists[0].name = 'Danielle Save';
@@ -115,6 +117,7 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     fixture.records.bookings.push({ ...fixture.records.bookings[0], id: '33000000-0000-4000-8000-000000000019', guest_name: 'Manual guest', style_id: null, manual_service_name: 'Custom Save', booking_origin: 'business_added', source: 'phone' });
     await page.setViewportSize({ width: locale === 'en' ? 1440 : locale === 'fr' ? 768 : locale === 'es' ? 844 : 390, height: locale === 'es' ? 390 : 900 });
     await page.goto('/salon/dashboard/availability/calendar');
+    await assertDeferredLocale(page,requestedLocale);
     const calendar = page.getByRole('region', { name: t('Appointment calendar'), exact: true });
     await calendar.getByLabel(t('Calendar date'), { exact: true }).fill('2030-09-24');
     const recorded = calendar.locator(`a[href="/salon/dashboard/bookings/${fixture.ids.booking}"]`);
@@ -130,6 +133,7 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     await expect(recorded).toBeVisible();
     await expect(manual).toHaveCount(0);
     await page.goto('/salon/dashboard/bookings?group=All');
+    await assertDeferredLocale(page,requestedLocale);
     const search = page.getByRole('searchbox', { name: t('Search bookings'), exact: true });
     for (const query of ['Silk Press', 'Danielle Save', 'Custom Save']) {
       await search.fill(query);
@@ -139,8 +143,8 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     expect(fixture.unexpected).toEqual([]);
   });
 
-  test(`P0 operational calendar expanded reads and drafts in ${locale}`, async ({ page }) => {
-    const fixture = await p0OwnerFixture(page, { populated: true, locale });
+  test(`P0 operational calendar expanded reads and drafts in ${requestedLocale==='wo'?'stored wo fallback to English':locale}`, async ({ page }) => {
+    const fixture = await p0OwnerFixture(page, { populated: true, locale: requestedLocale });
     const t = (source: string) => DASHBOARD_SOURCE_MESSAGES[locale]?.[source] || source;
     const range = { start: '2030-09-24T13:00:00Z', end: '2030-09-24T23:00:00Z' };
     const reads = [
@@ -177,6 +181,7 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
       return route.fulfill({ json: { request: pending, preview_required: contract.risk >= 3 } });
     });
     await page.goto('/salon/dashboard');
+    await assertDeferredLocale(page,requestedLocale);
     await page.getByRole('button', { name: 'GC Assistant', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'GC Assistant' });
     async function ask() { await dialog.locator('textarea').fill('Business request'); await dialog.getByRole('button', { name: t('Ask GC Assistant'), exact: true }).click(); }
@@ -196,8 +201,8 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     expect(fixture.unexpected).toEqual([]);
   });
 
-  test(`P0 operational calendar dashboard preview and persistence in ${locale}`, async ({ page }, testInfo) => {
-    const fixture = await p0OwnerFixture(page, { populated: true, locale });
+  test(`P0 operational calendar dashboard preview and persistence in ${requestedLocale==='wo'?'stored wo fallback to English':locale}`, async ({ page }, testInfo) => {
+    const fixture = await p0OwnerFixture(page, { populated: true, locale: requestedLocale });
     const t = (source: string) => DASHBOARD_SOURCE_MESSAGES[locale]?.[source] || source;
     const date = new Date(Date.now() + 10 * 86400000).toISOString().slice(0, 10);
     let pending: Record<string, unknown> | null = null;
@@ -220,6 +225,7 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     });
     await page.setViewportSize({ width: locale === 'en' ? 1440 : locale === 'fr' ? 768 : locale === 'wo' ? 844 : 390, height: locale === 'wo' ? 390 : 900 });
     await page.goto('/salon/dashboard/bookings/new');
+    await assertDeferredLocale(page,requestedLocale);
     await page.getByLabel(t('Customer name'), { exact: true }).fill('Sheila');
     await page.getByRole('combobox', { name: t('Service'), exact: true }).selectOption(fixture.ids.service);
     await page.getByRole('combobox', { name: t('Professional'), exact: true }).selectOption(fixture.ids.professional);
@@ -237,7 +243,7 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     const gallery = 'docs/screenshots/p0/' + testInfo.project.name + '/operations';
     await mkdir(gallery, { recursive: true });
-    await page.screenshot({ path: gallery + '/manual-preview-' + locale + '.png', fullPage: true });
+    await page.screenshot({ path: gallery + '/manual-preview-' + requestedLocale + '.png', fullPage: true });
     await page.getByRole('button', { name: t('Confirm this change'), exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/bookings/${pending!.id}`));
     expect(writes).toBe(1);
@@ -248,8 +254,8 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     expect(fixture.unexpected).toEqual([]);
   });
 
-  test(`P0 operational calendar dictated transcript requires preview and confirmation in ${locale}`, async ({ page }) => {
-    const fixture = await p0OwnerFixture(page, { populated: true, locale });
+  test(`P0 operational calendar dictated transcript requires preview and confirmation in ${requestedLocale==='wo'?'stored wo fallback to English':locale}`, async ({ page }) => {
+    const fixture = await p0OwnerFixture(page, { populated: true, locale: requestedLocale });
     const t = (source: string) => DASHBOARD_SOURCE_MESSAGES[locale]?.[source] || source;
     await page.addInitScript(() => {
       class Speech {
@@ -268,6 +274,7 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/salon/dashboard');
+    await assertDeferredLocale(page,requestedLocale);
     await page.getByRole('button', { name: 'GC Assistant', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'GC Assistant' });
     await dialog.getByRole('button', { name: t('Start dictation') }).click();

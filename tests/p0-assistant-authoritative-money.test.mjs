@@ -1,3 +1,4 @@
+import { migratedAssistantTools } from './helpers/assistant-migration-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -97,7 +98,7 @@ test('186 preserves every prior audit tool and adds only the two risk-1 money re
  const source=file=>readFileSync(file,'utf8');const names=s=>[...s.match(/check\(tool in \((.*?)\)\)/s)[1].matchAll(/'([^']+)'/g)].map(match=>match[1]);
  const previous=source('supabase/migrations/20260919134859_assistant_profile_settings_read.sql'),current=source('supabase/migrations/20260919143452_assistant_authoritative_money_reads.sql');
  assert.deepEqual(new Set(names(current)),new Set([...names(previous),'calculate_service_selection','get_booking_price_details']));
- const core=fixture().loader('src/lib/gcAssistantCore.ts');assert.deepEqual(new Set([...names(current),'prepare_professional_archive']),new Set(Object.keys(core.ASSISTANT_TOOLS)));
+ const core=fixture().loader('src/lib/gcAssistantCore.ts');assert.deepEqual(migratedAssistantTools(),new Set(Object.keys(core.ASSISTANT_TOOLS)));
  assert.match(source('supabase/migrations/20260923075422_master_build_assistant_professional_archive.sql'),/tool = ''prepare_professional_archive'' or/);
  for(const tool of ['calculate_service_selection','get_booking_price_details'])assert.equal(core.ASSISTANT_TOOLS[tool].risk,1);
  assert.doesNotMatch(current,/\bgrant\s|permission_check|create\s+(table|function)/i);

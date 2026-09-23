@@ -6,7 +6,7 @@ test("salon spreadsheet controls remain usable without page overflow", async ({
   await page.goto("/internal/acceptance/salon-spreadsheet");
 
   await expect(
-    page.getByRole("heading", { name: "Styles & Pricing" }),
+    page.getByRole("heading", { name: "Services & Pricing" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Products" })).toBeVisible();
   await expect(

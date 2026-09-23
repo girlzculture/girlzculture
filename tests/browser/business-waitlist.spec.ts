@@ -9,7 +9,6 @@ const categories = [
   ["Tattoo Studio", "tattoo-studio"],
   ["Lash & Brow Bar", "lash-brow-bar"],
   ["Barbershop", "barbershop"],
-  ["Other", "other"],
 ] as const;
 
 async function fillContact(page: Page, name = "Nail Studio") {
@@ -169,3 +168,10 @@ for (const [width, height] of [[390, 844], [430, 932], [768, 1024], [834, 1194],
     await page.screenshot({ path: testInfo.outputPath(`business-waitlist-${width}x${height}.png`), fullPage: true });
   });
 }
+
+
+test("retired Other cannot open a new waitlist application",async({page})=>{
+ await page.goto("/business/signup");await expect(page.getByRole("link",{name:"Other",exact:true})).toHaveCount(0);
+ await page.goto("/business/waitlist?category=other");await expect(page).toHaveURL(/\/business\/signup$/);
+ await expect(page.getByLabel("Business Type",{exact:true})).toHaveCount(0);
+});

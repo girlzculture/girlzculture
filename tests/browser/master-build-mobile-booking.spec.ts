@@ -15,10 +15,23 @@ for(const [width,height]of [[390,844],[768,1024],[1440,1000],[844,390]])test(`Ma
    return checks===1?r.fulfill({status:409,json:{code:'TRAVEL_OUTSIDE_RADIUS',request_id:'TRAVEL-FIXTURE'}}):r.fulfill({json:{quote:{id:quoteId,address:body.address,fee_cents:1500,expires_at:new Date(Date.now()+900000).toISOString()}}});
   });
   await page.route('**/api/stripe/booking-checkout',r=>{
-   const body=r.request().postDataJSON();reservations++;expect(body.expected_total).toBe(115);expect(body.expected_deposit).toBe(10);expect(body.travel_quote_id).toBe(quoteId);expect(body.service_visit_mode).toBe('mobile');
+   const body=r.request().postDataJSON();reservations++;expect(body.guest_name).toBe('Fixture customer');expect(body.guest_email).toBe('fixture@example.test');expect(body.expected_total).toBe(115);expect(body.expected_deposit).toBe(10);expect(body.travel_quote_id).toBe(quoteId);expect(body.service_visit_mode).toBe('mobile');
    return r.fulfill({json:{booking:{id,public_reference:'GC-TRAVEL',status:'Confirmed',estimated_total:115,deposit_amount:10,balance_due:105}}});
   });
-  await page.goto(`/salon/${slug}/book`);
+  // Exercise the first desktop field before JavaScript is available. Inputs
+  // must not accept text that React would discard during hydration.
+  if(width===1440){
+   let release!:()=>void;const hydration=new Promise<void>(resolve=>{release=resolve;});
+   await page.route(/\/_next\/static\/chunks\/app\/salon\/.*\/book\/page-[^/]+\.js/,async route=>{await hydration;await route.continue();});
+   try{
+    const response=await page.goto(`/salon/${slug}/book`,{waitUntil:'commit'});
+    // React may keep the streamed boundary hidden until its module arrives.
+    // The actual server HTML must disable its controls in either case.
+    expect(await response!.text()).toMatch(/<fieldset[^>]*disabled=""[^>]*aria-busy="true"/);
+   }
+   finally{release();}
+   await expect(page.getByPlaceholder('Full Name',{exact:true}).filter({visible:true})).toBeEnabled();
+  }else await page.goto(`/salon/${slug}/book`);
   if(width<1280)for(let step=0;step<3;step++)await page.getByRole('button',{name:'Continue',exact:true}).filter({visible:true}).click();
   const shown=(placeholder:string)=>page.getByPlaceholder(placeholder,{exact:true}).filter({visible:true});
   await shown('Full Name').fill('Fixture customer');await shown('name@example.com').fill('fixture@example.test');await shown('+1 (555) 123-4567').fill('3055550123');

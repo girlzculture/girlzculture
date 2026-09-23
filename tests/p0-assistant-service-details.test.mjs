@@ -222,12 +222,12 @@ function planner(f, { answerOnly = false, denied = false, query = 'boho' } = {})
     return originalRpc(name, args);
   };
   admin.from = table => {
-    if (!['gc_assistant_requests', 'ai_automation_features', 'ai_usage_events', 'master_styles'].includes(table)) return originalFrom(table);
+    if (!['gc_assistant_requests', 'ai_automation_features', 'ai_usage_events', 'master_styles', 'engine_settings'].includes(table)) return originalFrom(table);
     const filters = [];
-    const q = { select() { return q; }, eq(key, value) { filters.push([key, value]); return q; }, in() { return q; }, order() { return q; }, limit() { return q; }, update() { return q; }, maybeSingle() { return q; }, then(resolve, reject) {
+    const q = { abortSignal() { return q; }, select() { return q; }, eq(key, value) { filters.push([key, value]); return q; }, in() { return q; }, order() { return q; }, limit() { return q; }, update() { return q; }, maybeSingle() { return q; }, then(resolve, reject) {
       return Promise.resolve().then(() => {
         if (table === 'ai_automation_features') return { data: { is_enabled: true, provider_key: 'openai', model_key: 'fixture-model', timeout_ms: 10000 } };
-        if (table === 'master_styles') return { data: [], error: null };
+        if (table === 'master_styles' || table === 'engine_settings') return { data: [], error: null };
         if (table === 'gc_assistant_requests') {
           assert.ok(filters.some(([key, value]) => key === 'salon_id' && value === business));
           assert.ok(filters.some(([key, value]) => key === 'requested_by' && value === actor));

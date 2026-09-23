@@ -1,3 +1,4 @@
+import {releaseInterfaceLocale,assertDeferredLocale} from './helpers/releaseLocales';
 import { expect, type Locator } from '@playwright/test';
 import { test, screenshotCaret } from './helpers/hydration';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
@@ -66,9 +67,11 @@ for (const recipient of ['customer', 'team', 'support'] as const) {
     await expect(page.getByRole('heading', { name: 'Your booking conversation', exact: true })).toBeVisible();
     const gallery = `docs/screenshots/p0/${testInfo.project.name}/recipient-${recipient}`;
     await mkdir(gallery, { recursive: true });
-    for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
+    for (const requestedLocale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
+  const locale=releaseInterfaceLocale(requestedLocale);
       const t = (source: string) => DASHBOARD_SOURCE_MESSAGES[locale]?.[source] || source;
       await page.locator('select').filter({ has: page.locator('option[value="zh-CN"]') }).first().selectOption(locale);
+    await assertDeferredLocale(page,requestedLocale);
       await expect.poll(fixture.accountLocale).toBe(locale);
       await expect(page.getByRole('heading', { name: t('Your booking conversation'), exact: true })).toBeVisible();
       if (recipient === 'support') {
@@ -91,7 +94,7 @@ for (const recipient of ['customer', 'team', 'support'] as const) {
       await expect(fullPolicy).toHaveJSProperty('open', true);
       await expect(fullPolicy).toContainText(t('Rescheduling notice (hours)'));
       await expect(evidence).toContainText(t('Deposits follow platform rules. The remaining balance is due after the service. Contact the business for satisfaction concerns; platform refund and Care protections still apply.'));
-      await page.screenshot({ path: `${gallery}/${locale}-translated-policy.png`, fullPage: true, ...screenshotCaret });
+      await page.screenshot({ path: `${gallery}/${requestedLocale}-translated-policy.png`, fullPage: true, ...screenshotCaret });
       if (locale !== 'en') {
         await page.getByRole('button', { name: t('Show original'), exact: true }).first().click();
         expect(await page.locator('[data-no-translate]').filter({ hasText: original.trim() }).last().textContent()).toBe(original);
@@ -102,7 +105,7 @@ for (const recipient of ['customer', 'team', 'support'] as const) {
         const inbox = page.locator('section').filter({ has: page.getByRole('heading', { name: t('Your booking conversation'), exact: true }) }).last();
         const audit = await new AxeBuilder({ page }).include(await inbox.evaluate(element => { element.setAttribute('data-p0-inbox-audit', 'true'); return '[data-p0-inbox-audit=true]'; })).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
         expect(audit.violations).toEqual([]);
-        await page.screenshot({ path: `${gallery}/${locale}-${width}.png`, fullPage: true, ...screenshotCaret });
+        await page.screenshot({ path: `${gallery}/${requestedLocale}-${width}.png`, fullPage: true, ...screenshotCaret });
       }
       await clickPolicySummary(fullPolicy.locator('summary'));
       await expect(fullPolicy).toHaveJSProperty('open', false);

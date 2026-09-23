@@ -1,6 +1,6 @@
 const APP_CACHE_PREFIX = "girlz-culture-";
-const CACHE = `${APP_CACHE_PREFIX}public-v6`;
-const CORE = ["/offline", "/manifest.webmanifest", "/pwa-icon-192.png", "/pwa-icon-512.png"];
+const CACHE = `${APP_CACHE_PREFIX}public-v7`;
+const CORE = ["/offline.html", "/manifest.webmanifest", "/pwa-icon-192.png", "/pwa-icon-512.png"];
 const PRIVATE_PATHS = [
   "/account",
   "/business",
@@ -62,7 +62,7 @@ async function navigationResponse(request) {
   } catch {
     const cached = await caches.match(request);
     if (cached) return cached;
-    const offline = await caches.match("/offline");
+    const offline = await caches.match("/offline.html");
     if (offline) return offline;
     // A failed optional precache must not leave offline navigation without a
     // usable page. This self-contained response needs no network or scripts.

@@ -98,6 +98,7 @@ for (const path of ['booking-checkout', 'commerce-checkout', 'pickup-reservation
     if(name==='@/lib/supabaseAdmin')return{getSupabaseAdmin:()=>({})};
     if(name==='@/lib/marketplaceEligibilityServer')return{rejectRegisteredTestCheckout:async()=>{throw Error('MARKETPLACE_ELIGIBILITY_UNAVAILABLE')}};
     if(name==='@/lib/platformErrors')return{capturePlatformError:async()=> 'registry-outage-reference'};
+    if(name==='@/lib/mobileBooking')return{TravelBookingError:class extends Error{}};
     if(name==='@/lib/stripeServer')return{stripeRequest(){stripeCalls++;throw Error('Registry failure reached Stripe')}};
     return new Proxy({},{get:()=>()=>{throw Error('Unexpected downstream '+name)}});
   });

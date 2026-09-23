@@ -15,20 +15,27 @@ test("latest forward migration advances both Engine markers to the repository he
   const assignments = sql.match(/update\s+public\.engine_settings\s+set\s+([\s\S]*?)where\s+setting_key\s*=\s*'integrations\.expected_migration'\s*;/i)?.[1];
   expect(assignments, "The newest migration must advance the scoped Engine deployment marker").toBeTruthy();
   for (const field of ["published_value", "draft_value"]) {
-    const literal = assignments!.match(new RegExp(`${field}\\s*=\\s*'([^']+)'::jsonb`, "i"))?.[1];
+    const literal = assignments!.match(new RegExp(`${field}\\s*=\\s*'([^']+)'(?:\\s*::jsonb)?`, "i"))?.[1];
     expect(literal, `${field} must contain the migration version as a JSON string`).toBeTruthy();
     expect(JSON.parse(literal!)).toBe(repositoryHead);
   }
 });
 
-test("forward content seed exactly matches the validated public business signup defaults", () => {
+test("historical content seed remains valid with only the reviewed Master Build presentation changes", () => {
   const sql = readFileSync("supabase/migrations/20260910133806_business_signup_content_management.sql", "utf8");
   const literal = sql.match(/\$business_signup\$([\s\S]*?)\$business_signup\$::jsonb/)?.[1];
   expect(literal, "The forward migration must contain the business signup seed payload").toBeTruthy();
   const payload = JSON.parse(literal!);
   const serialized = payload.labels[BUSINESS_SIGNUP_CONTENT_LABEL];
   const content = validateBusinessSignupContent(JSON.parse(serialized), { forPublication: true });
-  expect(content).toEqual(DEFAULT_BUSINESS_SIGNUP_CONTENT);
+  const current = structuredClone(content);
+  // Deployed historical seeds must remain immutable. Only these two reviewed
+  // default presentation changes are allowed; all other content stays exact.
+  expect(current.categories.find(category => category.id === "other")?.visible).toBe(true);
+  current.categories.find(category => category.id === "other")!.visible = false;
+  expect(current.waitlist.description).toBe("We’re opening access to more beauty and wellness businesses in stages. Join the waitlist and we’ll reach out when onboarding opens for {businessType} businesses in your area.");
+  current.waitlist.description = "We're opening access to more beauty and wellness businesses in your area soon. Join the waitlist and we'll reach out when onboarding opens for {businessType} businesses in your area.";
+  expect(current).toEqual(DEFAULT_BUSINESS_SIGNUP_CONTENT);
   expect(decodeBusinessSignupContent(payload.labels)).toEqual(content);
   expect(payload).toMatchObject({
     slug: "business-signup", title: "Business Signup Landing Page",

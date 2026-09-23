@@ -165,7 +165,7 @@ for (const [width, height] of [[390, 844], [430, 932], [768, 1024], [834, 1194],
     expect(dimensions.selector.top - dimensions.hero.bottom).toBeLessThanOrEqual(48);
     expect((await card.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await expect(page.locator(".business-category img")).toHaveCount(7);
-    await expect.poll(() => page.locator(".business-photo img").evaluateAll(images => images.length === 9 && images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
+    await expect.poll(() => page.locator(".business-photo img").evaluateAll(images => images.length === 8 && images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
     await expect(page.locator(".business-hero-copy ul")).toHaveCount(0);
     await expect(page.locator(".business-hero-copy")).not.toContainText(/Get More Bookings|Grow Your Brand|Reach New Clients|Join a Supportive Community/);
     const cards = await page.locator(".business-category").evaluateAll(elements => elements.map(element => {
@@ -185,7 +185,7 @@ for (const [width, height] of [[390, 844], [430, 932], [768, 1024], [834, 1194],
     const rows = new Set(cards.map(card => Math.round(card.top)));
     if (width <= 430) expect(rows.size).toBe(4);
     if (width >= 1366) expect(rows.size).toBe(1);
-    if (width <= 430) for (const row of rows) expect(cards.filter(card => Math.round(card.top) === row)).toHaveLength(2);
+    if (width <= 430) expect([...rows].map(row => cards.filter(card => Math.round(card.top) === row).length)).toEqual([2, 2, 2, 1]);
     await expect(page.locator(".business-trust")).toBeVisible();
     expect(failedMedia).toEqual([]);
     const audit = await new AxeBuilder({ page }).include("main").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
@@ -252,7 +252,7 @@ test("service worker clears old versions and cannot resurrect cached onboarding 
 });
 
 test("service worker shows an offline page when the optional offline precache fails", async ({ page, baseURL }) => {
-  const network = await createNetworkOrigin(baseURL, ["/offline"]);
+  const network = await createNetworkOrigin(baseURL, ["/offline.html"]);
   try {
     await page.goto(network.url("/robots.txt"));
     await page.evaluate(async () => {
@@ -260,7 +260,7 @@ test("service worker shows an offline page when the optional offline precache fa
       await navigator.serviceWorker.ready;
     });
     await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
-    expect(await page.evaluate(async () => Boolean(await caches.match("/offline")))).toBe(false);
+    expect(await page.evaluate(async () => Boolean(await caches.match("/offline.html")))).toBe(false);
     await network.disconnect();
     const response = await page.goto(network.url("/uncached-public-offline-check"));
     expect(response?.status()).toBe(503);

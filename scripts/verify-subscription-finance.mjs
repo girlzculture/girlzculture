@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { SUBSCRIPTION_PLANS } from "../src/lib/plans.ts";
 
 const root = process.cwd();
 const read = (path) => readFileSync(resolve(root, path), "utf8");
@@ -66,12 +67,12 @@ requireMatch("webhook rejects unknown plan mappings", subscriptionSync, /STRIPE_
 if (/normalizePlan\(/.test(subscriptionSync)) failures.push("webhook subscription sync must not normalize unknown provider values to Starter");
 if (/featured_weight/.test(subscriptionSync)) failures.push("webhook subscription sync must not write organic or featured placement weights");
 
-for (const [plan, amount] of [["Starter", 89], ["Growth", 109], ["Premium", 129]]) {
+for (const [plan, amount] of [["Solo", 69], ["Solo Pro", 99], ["Starter", 99], ["Growth", 149], ["Premium", 199]]) {
   requireMatch(`application includes ${plan}`, salonApplication, new RegExp(`PLAN_ORDER|${plan}`));
-  requireMatch(`canonical plan catalog price ${amount}`, read("src/lib/plans.ts"), new RegExp(`monthlyAmountCents:\\s*${amount}00`));
+  if (SUBSCRIPTION_PLANS[plan].monthlyAmountCents !== amount * 100 || SUBSCRIPTION_PLANS[plan].monthlyPrice !== amount) failures.push(`canonical ${plan} price must be $${amount}`);
 }
-requireMatch("application persists plan in URL", salonApplication, /next\.set\("plan", plan\.toLowerCase\(\)\)/);
-requireMatch("application displays whole-dollar catalog price", salonApplication, /plan\.monthlyAmountCents \/ 100/);
+requireMatch("application persists plan in URL", salonApplication, /next\.set\("plan", SUBSCRIPTION_PLANS\[plan\]\.key\)/);
+requireMatch("application displays whole-dollar catalog price", salonApplication, /plan\.monthlyPrice/);
 requireMatch("admin accepts Starter", adminSalonRoute, /ALLOWED_PLANS[^\n]*"Starter"/);
 requireMatch("admin preserves legacy Basic filter", adminSalonRoute, /ALLOWED_PLANS[^\n]*"Basic"/);
 

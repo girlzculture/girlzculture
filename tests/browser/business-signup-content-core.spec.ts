@@ -152,7 +152,7 @@ test("category destination modes cannot send unimplemented businesses into the H
   for (const invalidPlan of ["", "invalid", "pro", ["starter", "growth"], undefined]) {
     expect(businessSignupCategoryHref(hair, invalidPlan)).toBe("/business/signup/hair");
   }
-  for (const category of content.categories.slice(1)) {
+  for (const category of visibleBusinessCategories(content).slice(1)) {
     expect(businessSignupCategoryHref(category, "premium")).toBe(`/business/waitlist?category=${category.id}`);
   }
   content.categories[1].mode = "live_application";
