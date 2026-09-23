@@ -48,7 +48,7 @@ test("each plan CTA carries the normalized selection through the business gatewa
 }) => {
   for (const { name: plan, key } of expected.plans) {
     await page.goto("/plans");
-    await page.getByRole("link", { name: `Choose ${plan}` }).click();
+    await page.getByRole("link", { name: `Choose ${plan}`, exact: true }).click();
     await expect(page).toHaveURL(
       new RegExp(`/business/signup\\?plan=${key}$`),
     );

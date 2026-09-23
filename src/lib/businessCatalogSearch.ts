@@ -45,3 +45,18 @@ export function matchBusinessCatalog<T extends CatalogRow>(records: T[], query: 
   });
   return matches.sort((a, b) => b.score - a.score || String(a.record.name).localeCompare(String(b.record.name)));
 }
+
+/** Person names use no service aliases and require every supplied token.
+ * Candidates remain original records; ambiguity is never resolved by order. */
+export function matchProfessionalNames<T extends CatalogRow>(records:T[],query:string){
+ const requested=query.trim(),wanted=normalize(requested).split(/\s+/u).filter(Boolean);
+ return records.flatMap(record=>{
+  const name=String(record.name||''),direct=name.toLocaleLowerCase('en').includes(requested.toLocaleLowerCase('en'));
+  if(!requested)return [{record,exact:true,score:1}];
+  if(/[%_]/u.test(requested))return direct?[{record,exact:true,score:1000}]:[];
+  const parts=normalize(name).split(/\s+/u).filter(Boolean);
+  if(direct)return [{record,exact:true,score:1000+requested.length}];
+  if(!wanted.length||!wanted.every(token=>parts.some(candidate=>closeSpelling(token,candidate))))return [];
+  return [{record,exact:false,score:wanted.length}];
+ }).sort((a,b)=>b.score-a.score||String(a.record.name).localeCompare(String(b.record.name)));
+}
