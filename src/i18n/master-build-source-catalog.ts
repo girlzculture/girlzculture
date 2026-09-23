@@ -1,5 +1,7 @@
 // Interface copy only. Applicant answers and uploaded filenames stay unchanged.
 export const MASTER_BUILD_COPY = [
+  ["Available alternatives", "Autres créneaux disponibles", "Horarios alternativos disponibles", "可用的其他时段"],
+  ["These times fit the full service. Choose one to review; nothing has been saved.", "Ces créneaux permettent la prestation complète. Choisissez-en un pour vérifier ; rien n’a été enregistré.", "Estos horarios permiten el servicio completo. Elige uno para revisar; no se ha guardado nada.", "这些时段足以完成全部服务。请选择一个时段进行审核；尚未保存任何更改。"],
   ["GC AI Assistant", "Assistant IA GC", "Asistente de IA GC", "GC AI 助手"],
   ["Customer AI assistant", "Assistant IA client", "Asistente de IA para clientes", "客户 AI 助手"],
   ["Close customer assistant", "Fermer l’assistant client", "Cerrar asistente para clientes", "关闭客户助手"],

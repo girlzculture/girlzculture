@@ -1,6 +1,7 @@
 import { requireSalonOwner, deliverBookingMessageNotifications } from "@/lib/supabaseAdmin";
 import { enforceRateLimit, RateLimitError } from "@/lib/requestSecurity";
 import { AssistantError, ASSISTANT_TOOLS, assertSchema, stableJson, type AssistantTool } from "@/lib/gcAssistantCore";
+import {AssistantAvailabilityConflict} from "@/lib/assistantAppointmentAvailability";
 import { createHash } from "node:crypto";
 import { executeAssistantTool, confirmAssistantTool } from "@/lib/gcAssistantServer";
 import { deliverAssistantReschedule } from "@/lib/assistantBookingReschedule";
@@ -103,7 +104,7 @@ async function POSTHandler(request: Request) {
     if (error instanceof RateLimitError) return Response.json({ code: "ASSISTANT_RATE_LIMIT" }, { status: 429, headers: { ...headers, "Retry-After": String(error.retryAfter) } });
     if (error instanceof AssistantError || error instanceof PolicyInputError) {
       const reference = await capturePlatformError({ request, admin, error, feature: "gc-assistant", action: "owner-request-rejected", actorRole: "salon", actorId, salonId, severity: "low", safeMessage: "GC Assistant could not complete this request.", metadata: { ...audit, failure_code: error.code } });
-      return Response.json({ code: error.code, request_id: reference }, { status: error instanceof AssistantError ? error.status : 400, headers: { ...headers, "X-Request-ID": reference } });
+      return Response.json({ code: error.code, request_id: reference,...(error instanceof AssistantAvailabilityConflict?{alternatives:error.alternatives}:{}) }, { status: error instanceof AssistantError ? error.status : 400, headers: { ...headers, "X-Request-ID": reference } });
     }
     if (error instanceof SyntaxError) return Response.json({ code: "ASSISTANT_INVALID_INPUT" }, { status: 400, headers });
     if (error instanceof Error && /Unauthorized|Forbidden/.test(error.message)) return Response.json({ code: /Unauthorized/.test(error.message) ? "AUTH_REQUIRED" : "ASSISTANT_ACCESS_DENIED" }, { status: /Unauthorized/.test(error.message) ? 401 : 403, headers });

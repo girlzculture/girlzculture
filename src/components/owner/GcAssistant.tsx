@@ -1,4 +1,5 @@
 "use client";
+import type {AppointmentAlternative} from "@/lib/assistantAppointmentAlternatives";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -25,7 +26,7 @@ import { presentAssistantResult, presentPreparedAssistantAction } from "@/lib/gc
 type Row = Record<string, unknown>;
 type SavedRequest = { id: string; tool: string; arguments: Row; execution_payload: Row; before_summary: Row; result: unknown; risk_class: number; digest: string; confirmed_at: string | null };
 type ActiveTask={id:string;tool:string;revision:number;label:string};
-type Turn = { task_switch_required?:boolean; abandoned?:boolean; id: string; locale?: string; text?: string; request?: SavedRequest; assistant_message?: string; reply?: string; clarification?: string; navigate?: string; notice?: string; suggestions?: string[]; submission?: Row; pending?: boolean; error?: string; errorReference?: string };
+type Turn = { alternatives?:AppointmentAlternative[]; task_switch_required?:boolean; abandoned?:boolean; id: string; locale?: string; text?: string; request?: SavedRequest; assistant_message?: string; reply?: string; clarification?: string; navigate?: string; notice?: string; suggestions?: string[]; submission?: Row; pending?: boolean; error?: string; errorReference?: string };
 const AssistantOpenContext = createContext<{ open: (button: HTMLButtonElement) => void; openAppearance: (button: HTMLButtonElement) => void; expanded: boolean; docked: boolean; avatar: AssistantAvatar } | null>(null);
 const AssistantBusinessBinding = createContext<((business: AssistantBusinessContext) => void) | null>(null);
 export function useAssistantBusinessBinding() { return useContext(AssistantBusinessBinding); }
@@ -271,7 +272,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     submissionInFlight.current = true;
     followConversation.current = true;
     setBusy(true); setNotice(""); setReference("");
-    if (retry) setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, pending: true, error: undefined, errorReference: undefined } : turn));
+    if (retry) setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, pending: true, error: undefined, errorReference: undefined, alternatives:undefined } : turn));
     else {
       const quickAction = quickActions.find(action => action.tool === tool);
       setTurns(previous => [...previous, { id, text: tool ? t(quickAction?.label || "Business information") : message, submission, pending: true }]);
@@ -283,12 +284,12 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
       if(Object.hasOwn(result,"active_task"))setActiveTask(result.active_task as ActiveTask|null);
       const resultLocale = isAssistantLanguage(result.response_locale) ? result.response_locale : (responseLanguage.current?.display === locale ? responseLanguage.current.response : locale);
       responseLanguage.current = { display: locale, response: resultLocale };
-      setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, ...result, id, locale: resultLocale, pending: false, error: undefined, errorReference: undefined } : turn));
+      setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, ...result, id, locale: resultLocale, pending: false, error: undefined, errorReference: undefined, alternatives:undefined } : turn));
     } catch (error) {
       if (generation !== actorGeneration.current) return;
       const message = errors[error instanceof Error ? error.message : ""] || "GC Assistant is temporarily unavailable. You can still use the dashboard and the quick actions below.";
       setNotice(message);
-      setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, pending: false, error: message, errorReference: error instanceof OwnerActionError ? error.reference : "" } : turn));
+      setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, pending: false, error: message, errorReference: error instanceof OwnerActionError ? error.reference : "",alternatives:error instanceof OwnerActionError?error.alternatives:[] } : turn));
     } finally { if (generation === actorGeneration.current) { submissionInFlight.current = false; setBusy(false); } }
   }
   async function endTask(next?:Turn){
@@ -452,7 +453,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
               const suggestions = turn.suggestions || fallback?.suggestions || [];
               return <article key={turn.id} className="space-y-3">
                 {turn.text ? <div className="flex justify-end"><p data-no-translate className="max-w-[86%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-md bg-primary-hover px-4 py-3 text-sm font-medium leading-6 text-white shadow-sm">{turn.text}</p></div> : null}
-                {turn.error ? <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-text-danger"><p role="status">{t(turn.error)}</p>{turn.errorReference ? <p className="mt-1 break-words text-xs">{t("Support reference")}: <span data-no-translate>{turn.errorReference}</span></p> : null}<button type="button" disabled={busy} onClick={() => void submit(undefined, false, turn)} className="mt-2 min-h-11 rounded-lg border border-border bg-white px-3 font-semibold text-text-primary gc-disabled-control">{t("Retry message")}</button></div> : null}
+                {turn.error ? <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-text-danger"><p role="status">{t(turn.error)}</p>{turn.alternatives?.length ? <section aria-label={t("Available alternatives")} className="mt-3 rounded-lg bg-white p-3 text-text-primary"><p className="font-semibold">{t("These times fit the full service. Choose one to review; nothing has been saved.")}</p><ul className="mt-2 space-y-2">{turn.alternatives.map((option,index)=><li key={index} className="rounded-lg border border-border p-2"><p data-no-translate>{new Intl.DateTimeFormat(turnLocale,{dateStyle:"medium",timeStyle:"short",timeZone:option.time_zone}).format(new Date(option.start))} · {option.professional_name} · {option.service_name}</p><p>{t("Duration (minutes)")}: {option.duration_minutes} · {t("Buffer (minutes)")}: {option.buffer_minutes}</p></li>)}</ul></section> : null}{turn.errorReference ? <p className="mt-1 break-words text-xs">{t("Support reference")}: <span data-no-translate>{turn.errorReference}</span></p> : null}<button type="button" disabled={busy} onClick={() => void submit(undefined, false, turn)} className="mt-2 min-h-11 rounded-lg border border-border bg-white px-3 font-semibold text-text-primary gc-disabled-control">{t("Retry message")}</button></div> : null}
                 {responseText || turn.navigate ? <div className="flex items-start gap-3"><Avatar value={avatar} small/><div className="max-w-[88%] rounded-2xl rounded-tl-md border border-border bg-white px-4 py-3 shadow-[0_4px_16px_rgba(13,17,20,.04)]">
                   {responseText ? <><p role={turn.request?.risk_class === 1 || !turn.request ? "status" : undefined} data-no-translate className="whitespace-pre-wrap break-words text-sm font-medium leading-6 text-text-primary">{responseText}</p><AssistantSpeech text={responseText} sessionKey={dictationSession} language={turn.assistant_message || turn.reply || turn.clarification ? turn.locale : locale} showExplanation={false}/></> : null}
                   {turn.navigate && destinations[turn.navigate] ? <Link className="mt-3 inline-flex min-h-10 items-center rounded-full bg-primary-hover px-4 text-xs font-bold text-white" href={destinations[turn.navigate][1]} onClick={() => { if (!desktop) dialog.current?.close(); }}>{t("Open {value0}", { value0: t(destinations[turn.navigate][0]) })}</Link> : null}

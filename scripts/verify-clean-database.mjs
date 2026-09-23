@@ -1303,3 +1303,4 @@ console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-google-busi
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-mobile-booking.sql")],"Private mobile destination, immutable travel terms and retention"));
 
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-assistant-active-task.sql")],"Assistant active task continuity, confirmed completion and cancellation boundary"));
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-catalog-binding.sql")],"Assistant selected catalog service, exact time and reviewed confirmation"));

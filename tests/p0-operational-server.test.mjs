@@ -267,6 +267,25 @@ test('Master exact Alma walk-in preserves Thursday September 24 at 3:30 PM and n
  assert.equal(result.request.execution_payload.stylist_id,professional);assert.equal(result.request.execution_payload.service_name,'Medium knotless');
  assert.equal(result.request.arguments.guest_name,'Alma Aba');assert.equal(result.request.arguments.time,'15:30');
  const blocked=fixture({...options,gaps:[{start:'2026-09-24T19:00:00Z',end:'2026-09-24T20:15:00Z',stylist_id:professional}]});
- await assert.rejects(blocked.run('prepare_manual_appointment',args),/ASSISTANT_AVAILABILITY_CONFLICT/);
+ await assert.rejects(blocked.run('prepare_manual_appointment',args),error=>{
+  assert.equal(error.code,'ASSISTANT_AVAILABILITY_CONFLICT');
+  assert.equal(error.alternatives[0].start,'2026-09-24T19:00:00.000Z');
+  assert.equal(error.alternatives[0].service_name,'Medium knotless');
+  assert.equal(error.alternatives[0].professional_name,'Aisha');
+  assert.equal(error.alternatives[0].time_zone,'America/New_York');
+  return true;
+ });
  assert.equal(blocked.calls.filter(c=>c.name==='save_gc_assistant_request').length,0);
+});
+
+test('any service selects an assigned service that fits the exact time instead of stopping at the first catalog row',async()=>{
+ const short='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+ const f=fixture({now:Date.parse('2026-09-23T12:00:00Z'),professional,tables:{
+  styles:[{id:service,salon_id:business,name:'Long braids',duration_min_hours:4,duration_max_hours:4,buffer_minutes:15,is_draft:false,archived_at:null},{id:short,salon_id:business,name:'Quick finish',duration_min_hours:0.5,duration_max_hours:0.5,buffer_minutes:15,is_draft:false,archived_at:null}],
+  stylists:[{id:professional,salon_id:business,name:'Aisha',is_active:true,archived_at:null,assigned_service_ids:[short]}],
+ },gaps:[{start:'2026-09-24T19:30:00Z',end:'2026-09-24T20:30:00Z',stylist_id:professional}]});
+ const result=await f.run('prepare_manual_appointment',{...manual,date:'2026-09-24',time:'15:30',style_id:null,service_name:'',service_preference:'any',duration_minutes:null,stylist_id:null,stylist_preference:'any'});
+ assert.equal(result.request.execution_payload.appointment_datetime,'2026-09-24T19:30:00.000Z');
+ assert.equal(result.request.execution_payload.service_facts.id,short);assert.equal(result.request.execution_payload.duration_minutes,30);
+ assert.equal(result.request.execution_payload.professional_name,'Aisha');
 });
