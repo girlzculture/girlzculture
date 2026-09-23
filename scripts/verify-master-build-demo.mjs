@@ -113,5 +113,5 @@ try{
  equal(run('select row_to_json(m) from public.platform_admin_overview_metrics() m;'),before,'reset leaves real business and platform totals unchanged');
  equal(run(`select count(*) from auth.users where id='${demo}' and raw_app_meta_data->>'gc_demo'='true';`),'1','reset preserves owner login identity');
  denied(`select public.reset_private_demo('${sid}','${demo}','${stamp}','RESET PRIVATE DEMO');`,/DEMO_RESET_CONFIRMATION_REQUIRED/);
- console.log(`Master Build demo isolation: ${checks} checks passed against an isolated local upgrade database.`);
+ console.log(`Master Build demo isolation: ${checks} checks passed against an isolated local ${process.env.MASTER_UPGRADE_AFTER?'upgrade':'current-schema clone'} database.`);
 }finally{const removed=execute(control,`drop database ${clone} with(force);`);assert.equal(removed.status,0,removed.stderr);}

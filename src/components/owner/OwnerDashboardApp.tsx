@@ -1,5 +1,6 @@
 "use client";
 import BusinessLocationControls from "@/components/owner/BusinessLocationControls";
+import BookedMobileLocation from "@/components/booking/BookedMobileLocation";
 import { isSoloPlan } from "@/lib/plans";
 
 import BookingChangeProposal from "./BookingChangeProposal";
@@ -3236,7 +3237,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                 </div>
                 <Status value={String(selected.status || "Confirmed")} />
               </div>
-              <BookingAttendance key={String(selected.id)} bookingId={String(selected.id)} scope="salon" onSaved={status=>c.setBookings(rows=>rows.map(row=>row.id===selected.id?{...row,status}:row))}/><BookingNotes bookingId={String(selected.id)}/>{(!c.access || c.access.client_history) ? <BusinessClientCard key={`${c.salon.id}:${selected.id}:${JSON.stringify(c.access)}`} bookingId={String(selected.id)} timeZone={String(c.salon.time_zone)}/> : null}<BookingPriceEvidence booking={selected}/><BookingPolicyEvidence booking={selected}/>
+              <BookingAttendance key={String(selected.id)} bookingId={String(selected.id)} scope="salon" onSaved={status=>c.setBookings(rows=>rows.map(row=>row.id===selected.id?{...row,status}:row))}/><BookingNotes bookingId={String(selected.id)}/>{(!c.access || c.access.client_history) ? <BusinessClientCard key={`${c.salon.id}:${selected.id}:${JSON.stringify(c.access)}`} bookingId={String(selected.id)} timeZone={String(c.salon.time_zone)}/> : null}<BookedMobileLocation snapshot={selected.service_location_snapshot}/><BookingPriceEvidence booking={selected}/><BookingPolicyEvidence booking={selected}/>
               <div className="mt-5 space-y-3 text-xs">
                 <p>
                   <b className="block text-ink/50">Customer</b>

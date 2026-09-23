@@ -138,3 +138,22 @@ export async function geocodeSalonAddress(salonId: string, options: { force?: bo
   if (updateError) throw updateError;
   return { status: "success" as const, coordinates, formattedAddress: result.formatted_address, borough, marketId };
 }
+
+/** Customer-supplied appointment address only. No provider response or address
+ * is logged, and a low-confidence match cannot establish mobile eligibility. */
+export async function geocodeCustomerServiceAddress(address: import('@/lib/mobileBooking').TravelAddress) {
+  const key=process.env.GOOGLE_MAPS_SERVER_API_KEY;
+  if(!key)throw Error('TRAVEL_CHECK_UNAVAILABLE');
+  const url=new URL('https://maps.googleapis.com/maps/api/geocode/json');
+  url.searchParams.set('address',addressText({id:'customer-service-address',...address}));
+  url.searchParams.set('components','country:US');url.searchParams.set('key',key);
+  const response=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(8000)});
+  if(!response.ok)throw Error('TRAVEL_CHECK_UNAVAILABLE');
+  const body=await response.json() as {status:string;results?:GoogleResult[]};
+  if(!['OK','ZERO_RESULTS'].includes(body.status))throw Error('TRAVEL_CHECK_UNAVAILABLE');
+  const rows=body.results||[];
+  if(confidenceFailure(rows))throw Error('TRAVEL_ADDRESS_INVALID');
+  const point=rows[0].geometry.location;
+  if(!validCoordinates(point))throw Error('TRAVEL_ADDRESS_INVALID');
+  return point;
+}

@@ -18,6 +18,10 @@ type SalonRecord = {
   address_state?: string | null;
   address_zip?: string | null;
   description?: string | null;
+  service_location_type?: string | null;
+  offers_mobile?: boolean;
+  travel_fee_cents?: number;
+  travel_radius_miles?: number;
   status?: string | null;
   is_discoverable?: boolean | null;
   accepting_bookings?: boolean | null;
@@ -61,7 +65,7 @@ export default async function SalonBookingPage({ params }: { params: Promise<{ s
 
   const { data: salonRecord, error: salonError } = await admin
     .from("salons")
-    .select("id,name,slug,address_street,address_line2,address_city,address_state,address_zip,description,status,is_discoverable,subscription_status,accepting_bookings")
+    .select("id,name,slug,address_street,address_line2,address_city,address_state,address_zip,description,service_location_type,offers_mobile,travel_fee_cents,travel_radius_miles,status,is_discoverable,subscription_status,accepting_bookings")
     .eq("slug", slug)
     .maybeSingle<SalonRecord>();
 
@@ -90,6 +94,8 @@ export default async function SalonBookingPage({ params }: { params: Promise<{ s
     address_state: salonRecord.address_state,
     address_zip: salonRecord.address_zip,
     description: salonRecord.description,
+    service_location_type:salonRecord.service_location_type,offers_mobile:salonRecord.offers_mobile,
+    travel_fee_cents:salonRecord.travel_fee_cents,travel_radius_miles:salonRecord.travel_radius_miles,
     business_policy: await currentBusinessPolicy(admin, salonRecord.id),
   };
   const depositRule = await readBusinessDepositRule(admin,salonData.id);

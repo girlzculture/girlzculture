@@ -1,11 +1,13 @@
 import test from 'node:test';
+import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {loadNodeTypescript} from './helpers/load-node-typescript.mjs';
 const salon='71000000-0000-4000-8000-000000000001',style='71000000-0000-4000-8000-000000000002',offerId='71000000-0000-4000-8000-000000000003',intent='71000000-0000-4000-8000-000000000004';
 const at=new Date(Date.now()+2*86400000).toISOString().slice(0,10);
-function fixture({offer=true,value=20,rate=10,threshold=null,customer=null,claimError=null,stylePatch={},materialRow=null}={}){
+function fixture({offer=true,value=20,rate=10,threshold=null,customer=null,claimError=null,stylePatch={},materialRow=null,travel=false}={}){
  const stripe=[],reservations=[],events=[],bookings=[];
  const rows={salons:{id:salon,slug:'fixture',name:'Business A',status:'Active',is_discoverable:true,subscription_status:'active',subscription_tier:'Premium',time_zone:'UTC',stripe_account_id:'acct_fixture'},styles:{id:style,salon_id:salon,name:'Braids',base_price:100,duration_min_hours:1},supported_locales:{locale:'en'},salon_promotions:{id:offerId,salon_id:salon,status:'Active',is_active:true,target_scope:'salon',promotion_type:'percentage',discount_value:value},business_deposit_rules:{id:'rule-A',salon_id:salon,rate,threshold_amount:threshold,threshold_rate:threshold===null?null:40,repeat_incident_count:null,repeat_incident_rate:null,incident_window_days:365},booking_checkout_intents:{id:intent},promo_codes:{id:'code-A',code:'GC20',is_active:true,applies_to:'booking',discount_type:'percent',discount_value:20,stripe_coupon_id:'coupon_NOT_APPLIED',usage_limit:null}};
+ if(travel){Object.assign(rows.salons,{service_location_type:'mobile',offers_mobile:true,travel_fee_cents:1500,location_settings_revision:1});rows.business_travel_quotes={id:intent,salon_id:salon,customer_id:customer,email_hash:createHash('sha256').update('test@example.test').digest('hex'),address:{address_street:'100 Sample Avenue'},fee_cents:1500,location_revision:1,intent_id:null,expires_at:new Date(Date.now()+60000).toISOString()};}
  Object.assign(rows.styles,stylePatch);
  if(materialRow)rows.style_materials=materialRow;
  const admin={auth:{getUser:async()=>({data:{user:customer?{id:customer}:null}})},from(table){assert.ok(table==='bookings'||Object.hasOwn(rows,table)||['salon_promotion_redemptions','promo_code_redemptions'].includes(table),table);const q={insert:(payload)=>{bookings.push(payload);return q;}};for(const method of ['select','eq','is','ilike','limit','order','gt','update'])q[method]=(...args)=>{events.push([table,method,args]);return q;};const result=()=>({data:table==='bookings'?{id:'confirmed-fixture',...bookings.at(-1)}:rows[table]||null,error:null,count:0});q.single=q.maybeSingle=async()=>result();q.then=(resolve,reject)=>Promise.resolve(result()).then(resolve,reject);return q;},async rpc(name,args){events.push([name,args]);if(name==='reserve_booking_checkout'){reservations.push(args);return{data:claimError?null:intent,error:claimError?{message:claimError}:null};}if(name==='reserve_salon_promotion')return{data:'redemption-A',error:null};if(name==='redeem_salon_promotion')return{data:true,error:null};if(name==='reserve_promo_code')return{data:{promo_code_id:'code-A',redemption_id:'code-redemption',code:'GC20',discount_type:'percent',discount_value:20,stripe_coupon_id:'coupon_NOT_APPLIED'},error:null};throw Error(name);}};
@@ -75,4 +77,13 @@ test('checkout snapshots all selected price adjustments and protected monetary t
  const response=await f.post({selected_size:'large',selected_length:'long',selected_addons:['trim'],selected_options:{finish:['gloss']},selected_material_id:material,expected_total:119.6,expected_deposit:14.95});assert.equal(response.status,200,JSON.stringify(await response.json()));
  const saved=f.reservations[0].p_payload;assert.equal(saved.subtotal_before_promotion,149.50);assert.equal(saved.deposit_amount,14.95);assert.equal(saved.promotion_discount_amount,29.90);assert.equal(saved.estimated_total,119.60);assert.equal(saved.balance_due,104.65);assert.equal(saved.selected_material_id,material);assert.deepEqual(saved.selected_options,{finish:['gloss']});assert.equal(saved.duration_hours,1+20/60);
  assert.ok(f.events.some(([table,method,args])=>table==='style_materials'&&method==='eq'&&args[0]==='style_id'&&args[1]===style));
+});
+
+
+test('reviewed travel fee remains outside promotion and deposit calculations through checkout',async()=>{
+ const f=fixture({travel:true});const response=await f.post({service_visit_mode:'mobile',travel_quote_id:intent,expected_total:95});assert.equal(response.status,200,JSON.stringify(await response.json()));
+ const saved=f.reservations[0].p_payload;assert.equal(saved.estimated_total,95);assert.equal(saved.subtotal_before_promotion,115);assert.equal(saved.promotion_discount_amount,20);assert.equal(saved.deposit_amount,10);assert.equal(saved.balance_due,85);assert.equal(saved.travel_fee_cents,1500);assert.equal(saved.travel_quote_id,intent);
+});
+test('missing mobile destination stops checkout before booking or provider operations',async()=>{
+ const f=fixture({travel:true});const response=await f.post();assert.equal(response.status,409);assert.equal((await response.json()).code,'TRAVEL_ADDRESS_REQUIRED');assert.equal(f.reservations.length,0);assert.equal(f.stripe.length,0);
 });

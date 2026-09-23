@@ -1,5 +1,18 @@
 // Interface copy only. Applicant answers and uploaded filenames stay unchanged.
 export const MASTER_BUILD_COPY = [
+  ["I want the professional to travel to me", "Je souhaite une prestation à domicile", "Quiero que el profesional venga a mi domicilio", "我希望专业人员上门服务"],
+  ["This appointment takes place at your address.", "Ce rendez-vous a lieu à votre adresse.", "Esta cita tendrá lugar en tu domicilio.", "此次预约将在您的地址进行。"],
+  ["Enter the address where the service will take place. It is shared only for this booking.", "Indiquez l’adresse de la prestation. Elle est partagée uniquement pour ce rendez-vous.", "Introduce la dirección del servicio. Solo se compartirá para esta reserva.", "请输入服务地点地址。该地址仅用于此次预约。"],
+  ["Enter your booking email before checking the address.", "Indiquez votre e-mail de réservation avant de vérifier l’adresse.", "Introduce el correo de la reserva antes de comprobar la dirección.", "请先填写预约邮箱，再核验地址。"],
+  ["The appointment address could not be checked.", "L’adresse du rendez-vous n’a pas pu être vérifiée.", "No se pudo comprobar la dirección de la cita.", "无法核验预约地址。"],
+  ["This address is outside the business’s travel radius.", "Cette adresse est hors du rayon de déplacement de l’entreprise.", "Esta dirección está fuera del radio de desplazamiento del negocio.", "该地址超出商家的上门服务范围。"],
+  ["Enter a complete street address.", "Saisissez une adresse postale complète.", "Introduce una dirección completa.", "请输入完整街道地址。"],
+  ["Check address and travel fee", "Vérifier l’adresse et les frais de déplacement", "Comprobar dirección y gastos de desplazamiento", "核验地址和上门服务费"],
+  ["Checking address…", "Vérification de l’adresse…", "Comprobando dirección…", "正在核验地址…"],
+  ["Address checked. Travel fee: {value0}", "Adresse vérifiée. Frais de déplacement : {value0}", "Dirección comprobada. Gastos de desplazamiento: {value0}", "地址已核验。上门服务费：{value0}"],
+  ["Travel fee: {value0}", "Frais de déplacement : {value0}", "Gastos de desplazamiento: {value0}", "上门服务费：{value0}"],
+  ["Check your address and current travel fee before booking.", "Vérifiez votre adresse et les frais de déplacement avant de réserver.", "Comprueba tu dirección y los gastos actuales antes de reservar.", "请在预约前核验地址及当前上门服务费。"],
+
   ["Your response language could not be saved. Retry this message; no business change was made.", "La langue de réponse n’a pas pu être enregistrée. Réessayez ce message ; aucune modification n’a été effectuée.", "No se pudo guardar el idioma de respuesta. Reintenta este mensaje; no se modificó el negocio.", "无法保存回复语言。请重试此消息；尚未更改任何业务记录。"],
   ["Independent professional", "Professionnel indépendant", "Profesional independiente", "独立专业人士"],
   ["Travels to you", "Se déplace chez vous", "Se desplaza a tu domicilio", "提供上门服务"],

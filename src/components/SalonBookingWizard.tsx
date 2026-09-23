@@ -2,6 +2,8 @@
 "use client";
 import BookingPriceEvidence from "@/components/booking/BookingPriceEvidence";
 import BookingPolicyEvidence from "@/components/booking/BookingPolicyEvidence";
+import MobileBookingLocation, {EMPTY_TRAVEL_ADDRESS} from "@/components/booking/MobileBookingLocation";
+import {totalWithTravel,type TravelQuote} from "@/lib/mobileBooking";
 import BusinessPolicyDisclosure from "@/components/booking/BusinessPolicyDisclosure";
 
 import { useEffect, useRef, useState } from "react";
@@ -83,8 +85,15 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
   const [salonPromotion, setSalonPromotion] = useState<SalonPromotion | null>(null);
   const [salonPromotionMessage, setSalonPromotionMessage] = useState("");
   const [guest, setGuest] = useState({ name: "", email: "", phone: "" });
+  const hasMobile=salon.service_location_type==='mobile'||salon.offers_mobile===true;
+  const [mobile,setMobile]=useState(salon.service_location_type==='mobile');
+  const [travelAddress,setTravelAddress]=useState(EMPTY_TRAVEL_ADDRESS);
+  const [travelQuote,setTravelQuote]=useState<TravelQuote|null>(null);
+  useEffect(()=>{setTravelQuote(null);},[guest.email]);
   const [businessConsent, setBusinessConsent] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
+  // A new destination or fee requires a fresh review of the booking terms.
+  useEffect(()=>{setConsent(false);},[mobile,travelQuote?.id]);
   const [message, setMessage] = useState(searchParams.get("payment") === "cancelled" ? "Checkout was cancelled. Your appointment was not booked." : closedToday ? "This salon is closed today. You can still choose a future date." : "");
   const [fieldErrors, setFieldErrors] = useState<Record<string,string>>({});
   const [saving, setSaving] = useState(false);
@@ -119,7 +128,8 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
   const depositPercentage=terms.rate,originalDeposit=terms.deposit,deposit=terms.deposit;
   const promotionPrice = calculateSalonPromotion(salonPromotion, { salonId: String(salon.id || ""), styleId: String(style?.id || ""), serviceGroupId: style?.service_group_id, masterStyleId: style?.master_style_id, basePrice: Number(style?.base_price ?? style?.price_display_min ?? 0), selectedAddons: selectedAddonDetails, subtotal, protectedDeposit:deposit });
   const codePrice=protectedBookingDiscount(subtotal,deposit,promoDiscount);
-  const total = promotionPrice.eligible ? promotionPrice.total : codePrice.total;
+  const travelFeeCents=mobile?travelQuote?.fee_cents??Number(salon.travel_fee_cents||0):0;
+  const total = totalWithTravel(promotionPrice.eligible ? promotionPrice.total : codePrice.total,travelFeeCents);
   const balance = Math.round((total - deposit)*100)/100;
   useEffect(()=>{promoRequest.current++;setPromoDiscount(0);setPromoMessage("");},[subtotal,styleId,salon.id]);
   const minimumBookingDate=searchParams.has("waitlist_offer")
@@ -249,6 +259,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
     if (!guest.email.trim()) errors.email="This field is required"; else if(!isValidEmail(guest.email))errors.email="Enter a valid email address";
     if (!guest.phone.trim()) errors.phone="This field is required"; else if(!isValidUsPhone(guest.phone))errors.phone="Enter a valid US phone number";
     if (salon.business_policy?.id && businessConsent !== salon.business_policy.id) errors.business_consent = "This confirmation is required";
+    if(mobile&&(!travelQuote||Date.parse(travelQuote.expires_at)<=Date.now()))errors.travel="Check your address and current travel fee before booking.";
     if (!consent) errors.consent="This confirmation is required";
     if (!date || !time || !slots.some((slot) => slot.value === time)) errors.date_time="Choose an available appointment time";
     if(Object.keys(errors).length){setFieldErrors(errors);setMessage("Check the highlighted fields and try again.");setStep(errors.date_time?3:4);return;}
@@ -263,6 +274,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
         headers: { "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
         body: JSON.stringify({
           salon_id: salon.id,
+          ...(mobile?{service_visit_mode:"mobile",travel_quote_id:travelQuote?.id}:{}),
           waitlist_offer_id: searchParams.get("waitlist_offer") || null,
           style_id: style.id,
           stylist_id: stylistId === "any" ? null : stylistId,
@@ -298,6 +310,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
       });
       const body = await readApiResponse(response, "Unable to start checkout.");
       if (!response.ok) {
+        if(String(body.code||"").startsWith("TRAVEL_")){setTravelQuote(null);setConsent(false);setStep(4);}
         if (body.code === "BOOKING_PRICE_CHANGED" && body.deposit_terms) {
           setReviewedDeposit(body.deposit_terms as ReturnType<typeof bookingDepositTerms>);
           setPromoDiscount(Number(body.discount || 0));
@@ -333,7 +346,7 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
     <StylePanel key="style" {...{ style, styles, styleId, setStyleId, size, setSize, length, setLength, addons, setAddons, selectedOptions, setSelectedOptions, genericOptionGroups, total, subtotal, promotionDiscount: promotionPrice.eligible ? promotionPrice.discount : 0, salonPromotion }} />,
     <StylistPanel key="stylist" stylists={eligibleStylists} value={stylistId} setValue={setStylistId} />,
     <div key="date"><DatePanel {...{ date, setDate, time, setTime, slots, style, availabilityLoading, availabilityReason, suggested, applySuggested, fieldErrors, setFieldErrors, minimumBookingDate, maximumBookingDate }} /><JoinAppointmentWaitlist key={`${salon.id}:${styleId}:${stylistId}:${date}`} salonId={String(salon.id)} styleId={String(styleId)} stylistId={stylistId==="any"?null:String(stylistId)} date={date} timeZone={String(salon.time_zone||"America/New_York")}/></div>,
-    <div key="review" data-booking-policy-review><BusinessPolicyDisclosure businessName={salon.name} revision={salon.business_policy || null}/>{salon.business_policy?.id ? <div className="my-4 rounded-xl border bg-white p-4"><label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={businessConsent === salon.business_policy.id} onChange={event => { setBusinessConsent(event.target.checked ? salon.business_policy.id : null); setFieldErrors(current => ({ ...current, business_consent: "" })); }}/><span>{t("I have read and agree to {value0}'s Business Policies, including its Refund & Service Satisfaction Policy. These policies are set by the business and are separate from Girlz Culture's platform policies and protections.", { value0: salon.name })}</span></label><a className="mt-2 inline-flex min-h-11 items-center text-sm underline" href="#business-policies" onClick={event => {
+    <div key="review" data-booking-policy-review>{hasMobile?<MobileBookingLocation salonId={salon.id} email={guest.email} required={salon.service_location_type==="mobile"} {...{mobile,setMobile,address:travelAddress,setAddress:setTravelAddress,quote:travelQuote,setQuote:setTravelQuote}} error={fieldErrors.travel}/>:null}{mobile?<p className="my-3 text-sm">{t("Travel fee: {value0}",{value0:money(travelFeeCents/100)})}</p>:null}<BusinessPolicyDisclosure businessName={salon.name} revision={salon.business_policy || null}/>{salon.business_policy?.id ? <div className="my-4 rounded-xl border bg-white p-4"><label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={businessConsent === salon.business_policy.id} onChange={event => { setBusinessConsent(event.target.checked ? salon.business_policy.id : null); setFieldErrors(current => ({ ...current, business_consent: "" })); }}/><span>{t("I have read and agree to {value0}'s Business Policies, including its Refund & Service Satisfaction Policy. These policies are set by the business and are separate from Girlz Culture's platform policies and protections.", { value0: salon.name })}</span></label><a className="mt-2 inline-flex min-h-11 items-center text-sm underline" href="#business-policies" onClick={event => {
       // Desktop and mobile review panels coexist. Resolve the clicked panel,
       // not the first (possibly hidden) policy in the document.
       event.preventDefault();
