@@ -1,4 +1,4 @@
-import { categoryOpeningMessage } from "@/lib/businessCategories";
+import {CategoryOpeningMessage} from "@/components/business/CategoryComingSoonContent";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -29,7 +29,7 @@ export default async function BusinessWaitlistPage({ searchParams }: { searchPar
         <Link href="/business/signup" className="business-back-link">All business types</Link>
         {copy.eyebrow ? <p className="business-waitlist-eyebrow">{copy.eyebrow}</p> : null}
         <h1 id="business-waitlist-title">{interpolateBusinessSignupTemplate(category.waitlist?.heading ?? copy.heading, category.name)}</h1>
-        <p>{categoryOpeningMessage(category.name)}</p>
+        <p><CategoryOpeningMessage name={category.name}/></p>
         <BusinessWaitlistForm category={category} copy={copy} />
       </section>
     </div>

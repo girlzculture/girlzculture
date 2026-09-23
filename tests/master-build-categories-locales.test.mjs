@@ -33,3 +33,24 @@ test('category team and service labels are translated while solo team controls s
   }
  }
 });
+
+// Load the same navigation module used by both desktop and mobile chrome.
+import fs from 'node:fs';
+import ts from 'typescript';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url);
+const source=fs.readFileSync(new URL('../src/lib/publicNavigation.ts',import.meta.url),'utf8');
+const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+const navigation={exports:{}};
+new Function('require','module','exports',output)(name=>name==='./businessCategories'?{ACTIVE_BUSINESS_CATEGORIES}:require(name),navigation,navigation.exports);
+test('curated navigation keeps every category and one business application destination',()=>{
+ for(const available of [true,false]){
+  const groups=navigation.exports.publicNavigationGroups([],available);
+  assert.deepEqual(groups[1].links.map(link=>[link.label,link.href]),[['Why Girlz Culture','/business'],['Pricing & Plans','/plans'],['Apply to Join','/business/signup'],['Help Center','/help']]);
+  assert.equal(groups[1].links.filter(link=>link.href==='/business/signup').length,1);
+  assert.equal(groups[0].links.filter(link=>link.href.startsWith('/categories/')).length,6);
+  assert.equal(groups[0].links.some(link=>link.label==='Other'),false);
+  assert.equal(groups[0].links.some(link=>link.label==='Browse Services'),available);
+  for(const link of groups[1].links){const row=MASTER_BUILD_COPY.find(row=>row[0]===link.label);assert.equal(row.length,4);}
+ }
+});

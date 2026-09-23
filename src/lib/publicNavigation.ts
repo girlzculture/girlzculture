@@ -26,4 +26,4 @@ export function publicNavigationGroups(_records: PublicNavigationLink[], discove
     ] },
   ] satisfies PublicNavigationGroup[];
 }
-import { ACTIVE_BUSINESS_CATEGORIES } from "@/lib/businessCategories";
+import { ACTIVE_BUSINESS_CATEGORIES } from "./businessCategories";
