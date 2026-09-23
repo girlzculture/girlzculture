@@ -1,5 +1,23 @@
 // Interface copy only. Applicant answers and uploaded filenames stay unchanged.
 export const MASTER_BUILD_COPY = [
+ ["Monthly appointment report", "Rapport mensuel des rendez-vous", "Informe mensual de citas", "每月预约报告"],
+ ["Appointments are grouped by their scheduled date in your business time zone. Completed value is the saved appointment price, not cash received or profit. Ledger-only walk-in sales stay in your finance reports.", "Les rendez-vous sont regroupés par date prévue dans votre fuseau horaire. La valeur terminée correspond au prix enregistré, pas aux encaissements ni au bénéfice. Les ventes sans rendez-vous enregistrées uniquement en comptabilité restent dans les rapports financiers.", "Las citas se agrupan por fecha programada en la zona horaria del negocio. El valor completado es el precio registrado, no cobros ni beneficios. Las ventas sin cita registradas solo en contabilidad siguen en los informes financieros.", "预约按商家时区中的计划日期分组。已完成预约价值是保存的预约价格，不代表实收款或利润。仅记入账本的到店销售仍显示在财务报告中。"],
+ ["The appointment report could not be loaded.", "Impossible de charger le rapport des rendez-vous.", "No se pudo cargar el informe de citas.", "无法加载预约报告。"],
+ ["Loading report…", "Chargement du rapport…", "Cargando informe…", "正在加载报告…"],
+ ["Basic reporting", "Rapports de base", "Informes básicos", "基础报告"],
+ ["Detailed reporting", "Rapports détaillés", "Informes detallados", "详细报告"],
+ ["Advanced reporting", "Rapports avancés", "Informes avanzados", "高级报告"],
+ ["Your assigned appointments only", "Vos rendez-vous attribués uniquement", "Solo tus citas asignadas", "仅限分配给您的预约"],
+ ["Completed appointment value", "Valeur des rendez-vous terminés", "Valor de citas completadas", "已完成预约价值"],
+ ["Missing saved prices", "Prix enregistrés manquants", "Precios registrados faltantes", "缺失的已存价格"],
+ ["Booking sources", "Sources des réservations", "Origen de las reservas", "预约来源"],
+ ["Outside the platform", "Hors plateforme", "Fuera de la plataforma", "平台外"],
+ ["No appointments in this month.", "Aucun rendez-vous ce mois-ci.", "No hay citas en este mes.", "本月没有预约。"],
+ ["Previous month", "Mois précédent", "Mes anterior", "上个月"],
+ ["Daily appointment counts", "Nombre de rendez-vous par jour", "Recuento diario de citas", "每日预约数量"],
+ ["Services in this month", "Prestations du mois", "Servicios de este mes", "本月服务"],
+ ["Team appointment comparison", "Comparaison des rendez-vous de l’équipe", "Comparación de citas del equipo", "团队预约对比"],
+
  ["Open navigation menu", "Ouvrir le menu de navigation", "Abrir el menú de navegación", "打开导航菜单"],
  ["Close navigation menu", "Fermer le menu de navigation", "Cerrar el menú de navegación", "关闭导航菜单"],
  ["Coming soon", "Prochainement", "Próximamente", "即将推出"],

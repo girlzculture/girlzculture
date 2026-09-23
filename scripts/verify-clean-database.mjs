@@ -1308,3 +1308,5 @@ console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assi
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-growth-controls.sql")],"Plan reminder and manual/targeted waitlist authority"));
 
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-finance.sql")],"Assistant finance preview, readback, replay and two-business isolation"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-booking-reports.sql")],"Current-plan monthly appointment reports and tenant/staff projections"));

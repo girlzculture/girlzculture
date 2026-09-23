@@ -1,0 +1,4 @@
+export type BookingReportTotals={bookings:number;completed:number;cancelled:number;no_shows:number;completed_value_cents:number;missing_prices:number};
+export type BookingReportSource={name:string;bookings:number};
+export type BusinessBookingReport={salon_id:string;plan:string;level:"basic"|"detailed"|"advanced";scope:"business"|"assigned_professional";month:string;through:string;time_zone:string;is_demo:boolean;as_of:string;totals:BookingReportTotals;sources:BookingReportSource[];daily:{day:string;bookings:number;completed:number}[]|null;services:{name:string;bookings:number;completed:number}[]|null;team:{name:string;bookings:number;completed:number}[]|null;comparison:{month:string;totals:BookingReportTotals;sources:BookingReportSource[]}|null};
+export function bookingReportMonth(value:string|null){if(!value||!/^20[0-9]{2}-(0[1-9]|1[012])$/.test(value))throw Error("REPORT_INVALID_MONTH");return value+"-01";}

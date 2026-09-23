@@ -55,8 +55,8 @@ try{
  assert.equal(sql(`select status from public.salons where id='${salon}';`),statusBefore,'Existing business lifecycle unchanged');
  // Existing independently maintained assertions cover financial permissions,
  // immutable booking terms, reviewed writes, replay, and provider isolation.
- for(const file of ['verify-business-service-contribution.sql','verify-business-deposits.sql','verify-business-inventory.sql','verify-business-reviews.sql','verify-business-client-cards.sql','verify-google-business-profile.sql']){
+ for(const file of ['verify-business-service-contribution.sql','verify-business-deposits.sql','verify-business-inventory.sql','verify-business-reviews.sql','verify-business-client-cards.sql','verify-google-business-profile.sql','verify-master-booking-reports.sql']){
   sql(readFileSync('scripts/sql/'+file,'utf8'));console.log(file+': PASS');
  }
- console.log(`Master Build representative upgrade: 188 + ${pending.length} migrations; 10 preservation checks and 6 existing SQL suites passed.`);
+ console.log(`Master Build representative upgrade: 188 + ${pending.length} migrations; 10 preservation checks and 7 SQL suites passed.`);
 }finally{execute(control,`drop database ${name} with(force);`);}
