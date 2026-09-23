@@ -13,7 +13,7 @@ function forwardedHeaders(headers: IncomingHttpHeaders) {
 
 // Forward the real acceptance app, then remove its network origin. WebKit's
 // setOffline emulation can reject navigation before a service worker handles it.
-export async function createNetworkOrigin(baseURL: string | undefined) {
+export async function createNetworkOrigin(baseURL: string | undefined, unavailablePaths: string[] = []) {
   if (!baseURL) throw new Error("Network outage tests require a loopback acceptance baseURL.");
   const upstream = new URL(baseURL);
   if (upstream.protocol !== "http:" || !["127.0.0.1", "[::1]"].includes(upstream.hostname)
@@ -25,6 +25,10 @@ export async function createNetworkOrigin(baseURL: string | undefined) {
   const requests = new Set<ClientRequest>();
   const server = createServer((incoming, outgoing) => {
     const target = new URL(incoming.url || "/", upstream);
+    if (unavailablePaths.includes(target.pathname)) {
+      outgoing.writeHead(503, { "Content-Type": "text/plain" }).end("Intentional unavailable precache fixture");
+      return;
+    }
     if (target.origin !== upstream.origin) {
       outgoing.writeHead(400).end();
       return;

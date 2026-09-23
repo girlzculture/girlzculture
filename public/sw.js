@@ -1,5 +1,5 @@
 const APP_CACHE_PREFIX = "girlz-culture-";
-const CACHE = `${APP_CACHE_PREFIX}public-v5`;
+const CACHE = `${APP_CACHE_PREFIX}public-v6`;
 const CORE = ["/offline", "/manifest.webmanifest", "/pwa-icon-192.png", "/pwa-icon-512.png"];
 const PRIVATE_PATHS = [
   "/account",
@@ -64,9 +64,11 @@ async function navigationResponse(request) {
     if (cached) return cached;
     const offline = await caches.match("/offline");
     if (offline) return offline;
-    return new Response("You are offline. Reconnect and try again.", {
+    // A failed optional precache must not leave offline navigation without a
+    // usable page. This self-contained response needs no network or scripts.
+    return new Response('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline | Girlz Culture</title><body><main><h1>You’re offline</h1><p>Reconnect to view live availability, pricing, and bookings.</p><a href="/">Try home again</a></main></body></html>', {
       status: 503,
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
+      headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
     });
   }
 }

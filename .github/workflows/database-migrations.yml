@@ -57,8 +57,8 @@ jobs:
         timeout-minutes: 5
         run: npm run test:assistant:smoke
   verify:
-    needs: assistant_focused
-    if: github.event_name != 'workflow_dispatch' && needs.assistant_focused.result == 'success'
+    needs: [assistant_focused, browser_shards]
+    if: github.event_name != 'workflow_dispatch' && needs.assistant_focused.result == 'success' && needs.browser_shards.result == 'success'
     # Normal PR/main CI keeps every browser and application check. A manual
     # database dispatch proves this exact main commit already passed that CI.
     runs-on: ubuntu-latest
@@ -97,6 +97,8 @@ jobs:
         run: node --test tests/production-migration-gate.test.mjs
       - name: Verify browser fixture setup budget ownership
         run: node --test tests/browser-page-fixture.test.mjs
+      - name: Verify browser collection reconciliation
+        run: node --test tests/browser-shard-results.test.mjs
       - name: Require secure full and production dependency trees
         run: |
           npm audit --audit-level=high
@@ -213,25 +215,20 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: acceptance-fixture-service-role-key
           PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL: http://127.0.0.1:3105
           PLAYWRIGHT_USE_PRODUCTION_SERVER: "true"
+      - name: Download all exact-run browser results
+        uses: actions/download-artifact@v5
+        with:
+          pattern: browser-shard-*-results
+          path: playwright-shards
+          merge-multiple: true
       - name: Exercise responsive and affected browser workflows
-        # The full collection is intentionally unchanged. Eight deterministic
-        # shards retain Chromium, Firefox, WebKit and mobile projects, while
-        # four continuously occupied shard slots keep one runner from being
-        # CPU and memory oversubscribed. Each shard owns its fixture/app ports.
-        timeout-minutes: 90
-        run: node scripts/run-browser-shards.mjs
-        env:
-          PLAYWRIGHT_BROWSER_SHARDS: "8"
-          PLAYWRIGHT_SHARD_WORKERS: "1"
-          PLAYWRIGHT_SHARD_CONCURRENCY: "4"
-          GIRLZ_CULTURE_ACCEPTANCE_MODE: "true"
-          NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS: "true"
-          NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3104
-          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:3105
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: acceptance-fixture-anon-key
-          SUPABASE_SERVICE_ROLE_KEY: acceptance-fixture-service-role-key
-          PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL: http://127.0.0.1:3105
-          PLAYWRIGHT_USE_PRODUCTION_SERVER: "true"
+        # Gate on complete, nonduplicated, exact-commit results from every job.
+        run: node scripts/verify-browser-shard-results.mjs
+      - name: Upload full browser totals
+        uses: actions/upload-artifact@v5
+        with:
+          name: browser-totals
+          path: playwright-shards/totals.json
       - name: Upload browser failure report
         if: ${{ failure() }}
         uses: actions/upload-artifact@v5
@@ -241,6 +238,50 @@ jobs:
             playwright-report
             test-results
             playwright-shards
+          if-no-files-found: warn
+          retention-days: 7
+
+  browser_shards:
+    name: Browser shard ${{ matrix.shard }}/8
+    needs: assistant_focused
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    env:
+      PLAYWRIGHT_BROWSER_SHARDS: "8"
+      PLAYWRIGHT_SHARD_INDEX: ${{ matrix.shard }}
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_TEST_BROWSER_KEY }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - name: Build and exercise one isolated browser shard
+        run: node scripts/run-browser-shards.mjs
+      - name: Preserve shard results even on failure
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: browser-shard-${{ matrix.shard }}-results
+          path: |
+            playwright-shards/shard-*.json
+            playwright-shards/shard-*.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Preserve failure screenshots and traces
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: browser-shard-${{ matrix.shard }}-failures
+          path: playwright-shards/shard-*-results
           if-no-files-found: warn
           retention-days: 7
 

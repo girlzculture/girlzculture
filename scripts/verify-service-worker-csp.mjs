@@ -89,4 +89,11 @@ fetchFails = true;
 const offlineResponse = await dispatchFetch("/salons");
 assert.equal(await offlineResponse.text(), "offline", "failed public navigation should use the safe offline fallback");
 
+// Installation deliberately tolerates failed precache requests. The offline
+// journey must still work if /offline was the resource that could not load.
+cacheEntries.delete("https://example.test/offline");
+const uncachedOffline = await dispatchFetch("/uncached-public-offline-check");
+assert.match(uncachedOffline.headers.get("Content-Type"), /text\/html/);
+assert.match(await uncachedOffline.text(), /<h1>You’re offline<\/h1>/);
+
 console.log("Verified service-worker response cloning, private-route bypasses, offline containment, cache scoping, and CSP allowlists.");

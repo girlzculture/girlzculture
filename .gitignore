@@ -14,10 +14,12 @@
 /coverage
 /playwright-report/
 /test-results/
+/playwright-shards/
 /docs/screenshots/p0/
 
 # next.js
 /.next/
+/.next-*/
 /out/
 
 # production

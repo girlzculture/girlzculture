@@ -250,3 +250,21 @@ test("service worker clears old versions and cannot resurrect cached onboarding 
     await expect(page.goto(network.url("/business/signup"), { waitUntil: "domcontentloaded" })).rejects.toThrow();
   } finally { await network.close(); }
 });
+
+test("service worker shows an offline page when the optional offline precache fails", async ({ page, baseURL }) => {
+  const network = await createNetworkOrigin(baseURL, ["/offline"]);
+  try {
+    await page.goto(network.url("/robots.txt"));
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
+      await navigator.serviceWorker.ready;
+    });
+    await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+    expect(await page.evaluate(async () => Boolean(await caches.match("/offline")))).toBe(false);
+    await network.disconnect();
+    const response = await page.goto(network.url("/uncached-public-offline-check"));
+    expect(response?.status()).toBe(503);
+    await expect(page.getByRole("heading", { name: "You’re offline" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Try home again" })).toHaveAttribute("href", "/");
+  } finally { await network.close(); }
+});

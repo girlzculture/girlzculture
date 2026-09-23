@@ -1,25 +1,19 @@
 import { createWriteStream } from "node:fs";
-import { mkdir as mkdirAsync } from "node:fs/promises";
+import { mkdir as mkdirAsync, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 
 const shardCount = Number(process.env.PLAYWRIGHT_BROWSER_SHARDS || 8);
-const workers = Number(process.env.PLAYWRIGHT_SHARD_WORKERS || 1);
-const shardConcurrency = Number(process.env.PLAYWRIGHT_SHARD_CONCURRENCY || Math.min(4, shardCount));
-if (!Number.isInteger(shardCount) || shardCount < 2 || shardCount > 8 || !Number.isInteger(workers) || workers < 1 || workers > 4 || !Number.isInteger(shardConcurrency) || shardConcurrency < 1 || shardConcurrency > shardCount) {
+const workers = 1;
+const shard = Number(process.env.PLAYWRIGHT_SHARD_INDEX);
+if (shardCount !== 8 || !Number.isInteger(shard) || shard < 1 || shard > shardCount) {
   throw new Error("Invalid browser shard configuration");
 }
 
 const outputRoot = path.resolve("playwright-shards");
 await mkdirAsync(outputRoot, { recursive: true });
 
-function command() {
-  return process.platform === "win32" ? "npx.cmd" : "npx";
-}
-
-function npmCommand() {
-  return process.platform === "win32" ? "npm.cmd" : "npm";
-}
+const playwrightCLI = path.resolve("node_modules/@playwright/test/cli.js");
 
 function streamOutput(stream, target, log, prefix) {
   stream.on("data", (chunk) => {
@@ -69,6 +63,13 @@ function environmentForShard(config) {
     PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL: config.fixtureURL,
     GIRLZ_CULTURE_BROWSER_DIST_DIR: config.distDir,
     PLAYWRIGHT_CI_WORKERS: String(workers),
+    PLAYWRIGHT_USE_PRODUCTION_SERVER: "true",
+    GIRLZ_CULTURE_ACCEPTANCE_MODE: "true",
+    NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS: "true",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "acceptance-fixture-anon-key",
+    SUPABASE_SERVICE_ROLE_KEY: "acceptance-fixture-service-role-key",
+    CUSTOMER_MARKETPLACE_LIVE: "true",
+    PLAYWRIGHT_JSON_OUTPUT_FILE: path.join(outputRoot, `shard-${shard}.json`),
   };
 }
 
@@ -91,7 +92,9 @@ async function buildShard(shard) {
     // deterministic production-artifact step, so use the repository's
     // Webpack path here instead of allowing Turbopack's CSS transform to vary
     // across isolated shard builds.
-    const build = spawn(npmCommand(), ["run", "build", "--", "--webpack"], {
+    const metadata = spawn(process.execPath, ["scripts/generate-repository-metadata.mjs"], { env: environment, stdio: "inherit" });
+    if (await waitForExit(metadata) !== 0) throw new Error("Repository metadata generation failed.");
+    const build = spawn(process.execPath, ["node_modules/next/dist/bin/next", "build", "--webpack"], {
       env: environment,
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -112,12 +115,12 @@ async function runShard(shard) {
   const logPath = path.join(outputRoot, `shard-${shard}.log`);
   const log = createWriteStream(logPath, { flags: "a" });
   const environment = environmentForShard(config);
-  const child = spawn(command(), [
-    "--no-install", "playwright", "test",
+  const child = spawn(process.execPath, [
+    playwrightCLI, "test",
     `--shard=${shard}/${shardCount}`,
     "--workers", String(workers),
     "--retries=0",
-    "--reporter=list",
+    "--reporter=list,json",
     "--output", resultDirectory,
   ], {
     env: environment,
@@ -131,16 +134,14 @@ async function runShard(shard) {
   return { shard, code, logPath };
 }
 
-for (let shard = 1; shard <= shardCount; shard += 1) await buildShard(shard);
-const results = [];
-let nextShard = 1;
-async function runNextShard() {
-  while (nextShard <= shardCount) {
-    const shard = nextShard;
-    nextShard += 1;
-    results.push(await runShard(shard));
-  }
-}
-await Promise.all(Array.from({ length: shardConcurrency }, () => runNextShard()));
-for (const result of results) process.stdout.write(`Browser shard ${result.shard}/${shardCount} exited ${result.code}; log ${result.logPath}\n`);
-if (results.some(result => result.code !== 0)) process.exitCode = 1;
+// One job owns exactly one build, fixture, app and browser worker. Separate
+// hosted runners eliminate the serial-build delay and shared-runner contention.
+await buildShard(shard);
+const started = Date.now();
+const result = await runShard(shard);
+await writeFile(path.join(outputRoot, `shard-${shard}-summary.json`), JSON.stringify({
+  ...result, shardCount, workers, elapsedMs: Date.now() - started,
+  commit: process.env.GITHUB_SHA || null,
+}));
+process.stdout.write(`Browser shard ${shard}/${shardCount} exited ${result.code}; log ${result.logPath}\n`);
+if (result.code !== 0) process.exitCode = result.code;
