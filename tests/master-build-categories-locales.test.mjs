@@ -54,3 +54,14 @@ test('curated navigation keeps every category and one business application desti
   for(const link of groups[1].links){const row=MASTER_BUILD_COPY.find(row=>row[0]===link.label);assert.equal(row.length,4);}
  }
 });
+
+const metricsSource=fs.readFileSync(new URL('../src/lib/ownerBusinessMetrics.ts',import.meta.url),'utf8');
+const metrics={exports:{}};
+new Function('module','exports',ts.transpileModule(metricsSource,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(metrics,metrics.exports);
+test('Solo profile completion does not require a team while team plans do',()=>{
+ const business={name:'A real Salon name',description:'Original',phone:'2125550100',address_street:'Address',cover_photo_url:'/photo.png',subscription_tier:'Solo Pro'};
+ assert.equal(metrics.exports.profileCompletion(business,1,0),100);
+ assert.equal(metrics.exports.profileCompletion({...business,subscription_tier:'Starter'},1,0),86);
+ assert.equal(metrics.exports.profileCompletion({...business,subscription_tier:'Starter'},1,1),100);
+ assert.equal(business.name,'A real Salon name');
+});

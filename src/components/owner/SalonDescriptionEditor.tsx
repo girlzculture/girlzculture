@@ -27,7 +27,7 @@ export default function SalonDescriptionEditor({
 
   useEffect(() => {
     textareaRef.current?.setCustomValidity(
-      count > 200 ? "Shorten the salon description to 200 words or fewer." : "",
+      count > 200 ? "Shorten the business description to 200 words or fewer." : "",
     );
   }, [count]);
 
@@ -101,9 +101,9 @@ export default function SalonDescriptionEditor({
         </span>
       </div>
       <div className="mt-3 rounded-[10px] border border-plum/10 bg-blush/20 p-3 sm:p-4">
-        <div className="text-sm font-bold text-plum">Optional writing assistance</div>
+        <div className="text-sm font-bold text-plum">Optional AI writing assistance</div>
         <p className="mt-1 text-xs leading-5 text-ink/65">
-          Enter truthful services and qualities. The system creates an editable draft and never publishes it until you choose the draft and save the page.
+          Enter truthful services and qualities. AI creates an editable draft and never publishes it until you choose the draft and save the page.
         </p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input
@@ -125,7 +125,7 @@ export default function SalonDescriptionEditor({
         {draft ? (
           <div className="mt-3 rounded-[8px] bg-white p-3">
             <span className="text-xs font-semibold text-ink/55">
-              Writing-assisted draft
+              AI-assisted draft
             </span>
             <p className="mt-2 text-sm leading-6 text-ink/75">{draft}</p>
             <button
