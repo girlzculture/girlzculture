@@ -17,7 +17,9 @@ export async function prepareAssistantCatalog(context:Context,tool:AssistantCata
  // Reuse the manual editor's full record validation, without accepting new
  // values returned by a model or interpreting a missing field as deletion.
  try{sanitizeSalonRecord(table,values,!args.record_id);}catch{throw new AssistantError("ASSISTANT_INVALID_INPUT");}
- const moderation=await moderatePublicContent(context.admin,{name:typeof values.name==="string"?values.name:undefined,title:typeof values.title==="string"?values.title:undefined,body:[values.description,values.bio,values.public_headline,values.discount_label,...(Array.isArray(values.specialties)?values.specialties:[])].filter(value=>typeof value==="string").join("\n")});
+ const optionText=["size_options","length_options","addons"].flatMap(key=>Array.isArray(values[key])?(values[key] as Row[]).map(row=>row.label):[]);
+ const materials=Array.isArray(preview.payload.materials)?preview.payload.materials as Row[]:[];
+ const moderation=await moderatePublicContent(context.admin,{name:typeof values.name==="string"?values.name:undefined,title:typeof values.title==="string"?values.title:undefined,body:[values.description,values.bio,values.public_headline,values.discount_label,...(Array.isArray(values.specialties)?values.specialties:[]),...optionText,...(Array.isArray(values.included_items)?values.included_items:[]),...materials.flatMap(row=>[row.name,row.quality_grade])].filter(value=>typeof value==="string").join("\n")});
  if(moderation.outcome!=="allow")throw new AssistantError("ASSISTANT_CONTENT_REVIEW_REQUIRED",409);
  return {before:preview.before,payload:preview.payload,notices:[]};
 }

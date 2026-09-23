@@ -10,7 +10,7 @@ for(const [locale,width,height]of [['en',390,844],['fr',768,900],['es',1440,900]
   const f=await p0OwnerFixture(page,{populated:true,locale});await page.setViewportSize({width,height});
   const copy=assistantCatalogCopy(locale),t=(s:string)=>DASHBOARD_SOURCE_MESSAGES[locale]?.[s]||s;
   const cases=[
-   {tool:'prepare_service_change',changes:{name:'Original service GC41',base_price:125,duration_min_hours:1.5,duration_max_hours:2,is_draft:false},shown:'Original service GC41'},
+   {tool:'prepare_service_change',changes:{name:'Original service GC41',base_price:125,duration_min_hours:1.5,duration_max_hours:2,is_draft:false,size_options:[{label:'Small',price_add:20}],length_options:[{label:'Waist',price_add:30}],addons:[{label:'Scalp treatment',price_add:15}],included_items:['Original inclusion GC45'],style_materials:[{name:'Kanekalon (standard)',price:25,longevity_weeks:6,quality_grade:'Best'}]},shown:'Original service GC41'},
    {tool:'prepare_professional_change',changes:{name:'Original professional GC42',bio:'Reviewed biography',is_draft:false,assigned_service_ids:[f.ids.service]},shown:'Original professional GC42'},
    {tool:'prepare_product_change',changes:{name:'Original product GC43',price:35,is_visible:true,product_status:'Active',pickup_enabled:true},shown:'Original product GC43'},
    {tool:'prepare_promotion_change',changes:{title:'Original offer GC44',promotion_type:'percentage',discount_value:20,status:'Active',target_scope:'services',target_ids:[f.ids.service]},shown:'Original offer GC44'},
@@ -40,6 +40,7 @@ for(const [locale,width,height]of [['en',390,844],['fr',768,900],['es',1440,900]
    await expect(review.getByText(cases[index].shown,{exact:true})).toHaveCount(2);
    await expect(review).not.toContainText('changes_json');await expect(review).not.toContainText(f.ids.service);
    if(index===1||index===3)await expect(review.getByText('Original service GC41',{exact:true})).toBeVisible();
+   if(index===0){await expect(review).toContainText('Original inclusion GC45');await expect(review).toContainText('Kanekalon (standard)');await expect(review).toContainText(copy.price_add);await expect(review).toContainText(new Intl.NumberFormat(locale,{style:'currency',currency:'USD'}).format(25));await expect(review).not.toContainText('[object Object]');}
    expect(writes).toBe(index);await expect(page).toHaveURL(/\/salon\/dashboard$/);
    const confirm=dialog.getByRole('button',{name:t('Confirm this change'),exact:true});await confirm.click();
    if(index===0){await expect(confirm).toBeDisabled();release();await expect(dialog).toContainText('20000000-0000-4000-8000-000000000088');await expect(confirm).toBeEnabled();await expect(review).toBeVisible();await confirm.click();}

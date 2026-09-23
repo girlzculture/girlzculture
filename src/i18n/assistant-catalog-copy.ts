@@ -377,5 +377,16 @@ const rows=[
   "Productos",
   "商品"
  ]
+,
+["size_options", "Sizes", "Tailles", "Tamaños", "尺寸"],
+["length_options", "Lengths", "Longueurs", "Largos", "长度"],
+["addons", "Add-ons", "Suppléments", "Complementos", "附加项目"],
+["included_items", "Included items", "Éléments inclus", "Elementos incluidos", "包含项目"],
+["style_materials", "Materials", "Matériaux", "Materiales", "材料"],
+["label", "Label", "Libellé", "Etiqueta", "名称"],
+["price_add", "Additional price", "Prix supplémentaire", "Precio adicional", "附加价格"],
+["longevity_weeks", "Longevity (weeks)", "Durée (semaines)", "Duración (semanas)", "维持时间（周）"],
+["quality_grade", "Quality", "Qualité", "Calidad", "品质"],
+["empty", "None", "Aucun", "Ninguno", "无"]
 ] as const;
 export function assistantCatalogCopy(locale:string){const column=locale==="fr"?2:locale==="es"?3:locale==="zh-CN"?4:1;return Object.fromEntries(rows.map(row=>[row[0],row[column]])) as Record<string,string>;}

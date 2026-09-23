@@ -34,6 +34,36 @@ begin
  r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('a',64));perform pg_temp.oassert(r->'verified'='true',r::text);
  perform pg_temp.oassert((select base_price=120 and description='Reviewed service' and not is_draft from public.styles where id=service),'public service edit readback');
  again:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('a',64));perform pg_temp.oassert(again->'replayed'='true' and again->'result'=r->'result','durable exact replay');
+ -- Price options/materials match the canonical manual editor and bind exact
+ -- current rows into the review. Every fixture rolls back.
+ insert into public.service_addons(category_id,name,is_active) select category_id,'Scalp treatment',true from public.styles where id=service on conflict do nothing;
+ insert into public.style_materials(style_id,name,price,longevity_weeks,quality_grade)values(service,'Kanekalon (standard)',5,4,'Good');
+ for v in select * from (values ('{"size_options":[{"label":"","price_add":5}]}'::jsonb),('{"size_options":[{"label":"A","price_add":-1}]}'::jsonb),('{"addons":[{"label":"A","price_add":5,"salon_id":"00000000-0000-4000-8000-000000000000"}]}'::jsonb),('{"style_materials":[{"name":"A","price":5,"longevity_weeks":13,"quality_grade":"Good"}]}'::jsonb),('{"style_materials":[{"name":"A","price":5,"quality_grade":"Good"}]}'::jsonb),('{"style_materials":null}'::jsonb),('{"style_materials":[{"name":42,"price":5,"longevity_weeks":4,"quality_grade":"Good"}]}'::jsonb)) input(value) loop
+  perform pg_temp.oreject(format('select public.preview_gc_catalog_change(%L,%L,%L,%L)',a,oa,'prepare_service_change',jsonb_build_object('record_id',service,'changes_json',v::text)),'ASSISTANT_INVALID_INPUT');
+ end loop;
+ perform pg_temp.oreject(format('select public.preview_gc_catalog_change(%L,%L,%L,%L)',a,oa,'prepare_service_change',jsonb_build_object('record_id',service,'changes_json','{"addons":[{"label":"Not a managed addon","price_add":5}]}')),'ASSISTANT_CATALOG_CLARIFICATION_REQUIRED');
+ set local role service_role;
+ d:=pg_temp.cdraft(a,oa,'prepare_service_change',service,'{"size_options":[{"label":"Small","price_add":20}],"length_options":[{"label":"Waist","price_add":30}],"addons":[{"label":"Scalp treatment","price_add":15}],"included_items":["Wash original"],"style_materials":[{"name":" Kanekalon (standard) ","price":25,"longevity_weeks":6,"quality_grade":" Best "}]}');
+ perform pg_temp.oassert(d#>>'{execution_payload,materials,0,name}'='Kanekalon (standard)' and d#>>'{execution_payload,changes,style_materials,0,quality_grade}'='Best','normalized canonical material strings displayed before confirmation');
+ reset role;
+ perform pg_temp.oassert((select price=5 from public.style_materials where style_id=service),'preparing options never writes materials');
+ set local role service_role;
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('a',64));perform pg_temp.oassert(r->'verified'='true',r::text);
+ again:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('a',64));perform pg_temp.oassert(again->'replayed'='true','materials response-loss replay');
+ reset role;
+ perform pg_temp.oassert((select size_options='[{"label":"Small","price_add":20}]' and length_options='[{"label":"Waist","price_add":30}]' and addons='[{"label":"Scalp treatment","price_add":15}]' and included_items=array['Wash original'] and base_price=120 from public.styles where id=service),'all reviewed options persisted without changing base price');
+ perform pg_temp.oassert((select count(*)=1 and bool_and(price=25 and longevity_weeks=6 and quality_grade='Best' and option_type='material') from public.style_materials where style_id=service),'canonical material metadata and one row after replay');
+ perform pg_temp.oassert((select estimated_total=100 and duration_hours=1 from public.bookings where id=booka),'historical appointment price and duration unchanged');
+ d:=pg_temp.cdraft(a,oa,'prepare_service_change',service,'{"description":"Options preserved"}');
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('a',64));perform pg_temp.oassert(r->'verified'='true',r::text);
+ perform pg_temp.oassert((select count(*)=1 and bool_and(price=25) from public.style_materials where style_id=service),'unrequested material edits never delete materials');
+ d:=pg_temp.cdraft(a,oa,'prepare_service_change',service,'{"style_materials":[{"name":"X-Pression (premium)","price":35,"longevity_weeks":4,"quality_grade":"Good"}]}');
+ update public.style_materials set price=26 where style_id=service;
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('a',64));perform pg_temp.oassert(r->>'code'='ASSISTANT_PREVIEW_STALE','concurrent material changes invalidate review');
+ perform pg_temp.oassert((select price=26 from public.style_materials where style_id=service),'stale material review cannot overwrite editor');
+ d:=pg_temp.cdraft(a,oa,'prepare_service_change',service,'{"style_materials":[],"size_options":[]}');
+ r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('a',64));perform pg_temp.oassert(r->'verified'='true',r::text);
+ perform pg_temp.oassert(not exists(select 1 from public.style_materials where style_id=service) and (select size_options='[]' and jsonb_array_length(length_options)=1 from public.styles where id=service),'explicit clearing removes only selected options/materials');
  d:=pg_temp.cdraft(a,oa,'prepare_product_change',pa,'{"price":22}');
  update public.salon_products set description='Concurrent editor' where id=pa;
  r:=public.confirm_gc_assistant_request((d->>'id')::uuid,a,oa,repeat('a',64));perform pg_temp.oassert(r->>'code'='ASSISTANT_PREVIEW_STALE','concurrent unrelated edit invalidates review');
