@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 import * as plans from "../src/lib/plans.ts";
+import {loadNodeTypescript} from "../tests/helpers/load-node-typescript.mjs";
+const applicationProgress=loadNodeTypescript(process.cwd())("src/lib/applicationProgress.ts");
 
 // Execute the actual route handlers with in-memory provider adapters. No
 // credentials, network requests, account creation, or database writes occur.
 const missingPlans = [undefined, null, "", "   ", "invalid", "basic", "pro", "essentials", "platinum", false, 0, {}, ["starter"]];
 for (const value of missingPlans) assert.equal(plans.parseApplicationPlan(value), null);
-const choices = [["starter", "Starter"], ["growth", "Growth"], ["premium", "Premium"]];
+const choices = [["solo", "Solo"], ["solo-pro", "Solo Pro"], ["starter", "Starter"], ["growth", "Growth"], ["premium", "Premium"]];
 for (const [value, expected] of choices) assert.equal(plans.parseApplicationPlan(value), expected);
 
 assert.equal(plans.parseApplicationPlanQuery("basic"), "Starter");
@@ -22,6 +24,7 @@ function loadRoute(path, overrides) {
   }).outputText;
   const adapters = {
     "@/lib/plans": plans,
+    "@/lib/applicationProgress": applicationProgress,
     "@/lib/businessOnboarding": businessOnboarding,
     "@/lib/operationalMonitoring": {
       noteOperationalFailure() {},
@@ -62,7 +65,8 @@ function request(body, authorized = true) {
 const validApplication = {
   business_name: "Fixture Salon", owner_name: "Fixture Owner", business_email: user.email,
   phone: "2125550123", street_address: "123 Test Street", city: "Brooklyn", state: "NY", zip_code: "11201",
-  business_type: "Braiding Studio", business_setup_type: "solo_professional", years_in_operation: "1", stylist_count: "1",
+  business_type: "Braiding Studio", business_setup_type: "single_location_staffed", years_in_operation: "1", stylist_count: "1",
+  operator_type:"team",location_type:"storefront",services_offered:"Braids",price_range:"$100",insurance:"no",draft_revision:1,locale:"en",
   consent_authorized: true, consent_terms: true, consent_photos: true,
 };
 const writes = [];
@@ -89,10 +93,10 @@ for (const value of missingPlans) {
   assert.equal(writes.length, before, "An unselected application must never reach persistence");
 }
 for (const [value, expected] of choices) {
-  const result = await application(request({ ...validApplication, selected_plan: value }));
+  const result = await application(request({ ...validApplication, selected_plan: value,operator_type:plans.isSoloPlan(expected)?"solo":"team",business_setup_type:plans.isSoloPlan(expected)?"solo_professional":"single_location_staffed" }));
   assert.equal(result.status, 200);
   assert.equal((await result.json()).application.selected_plan, expected);
-  assert.equal(writes.at(-1).name, "submit_salon_application_atomic");
+  assert.equal(writes.at(-1).name, "submit_master_business_application");
   assert.equal(writes.at(-1).values.p_application_values.selected_plan, expected);
   assert.equal(writes.at(-1).values.p_salon_values.subscription_tier, expected);
 }
@@ -104,7 +108,8 @@ for (const value of [undefined, null, "", " ", "invented", "Solo", {}, ["solo_pr
   assert.equal(writes.length, before);
 }
 for (const option of businessOnboarding.BUSINESS_SETUP_OPTIONS) {
-  const result = await application(request({ ...validApplication, selected_plan: "Premium", business_setup_type: option.value }));
+  const solo=["solo_professional","shared_suite_booth","mobile_on_location"].includes(option.value);
+  const result = await application(request({ ...validApplication, selected_plan:solo?"Solo":"Premium",operator_type:solo?"solo":option.value==="multi_location"?"multi":"team",location_type:option.value==="shared_suite_booth"?"chair_suite":option.value==="mobile_on_location"?"mobile":"storefront",location_count:"2",host_business_name:"Fixture host",travel_radius_miles:"10",travel_fee:"0",business_setup_type: option.value }));
   assert.equal(result.status, 200);
   assert.equal(writes.at(-1).values.p_application_values.business_setup_type, option.value);
 }
@@ -205,7 +210,7 @@ for (const [metadata, path] of [
   [{ selected_plan: "Starter" }, "/business/apply"],
   [{ selected_plan: "Starter", application_plan_explicit: false }, "/business/apply"],
   [{ selected_plan: "garbage", application_plan_explicit: true }, "/business/apply"],
-  ...choices.map(([, plan]) => [{ selected_plan: plan, application_plan_explicit: true }, `/business/apply?plan=${plan.toLowerCase()}`]),
+  ...choices.map(([, plan]) => [{ selected_plan: plan, application_plan_explicit: true }, `/business/apply?plan=${plans.SUBSCRIPTION_PLANS[plan].key}`]),
 ]) {
   destinationMetadata = metadata;
   const response = await destination(request({}));

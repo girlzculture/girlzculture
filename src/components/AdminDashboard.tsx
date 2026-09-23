@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { getSessionForScope } from "@/lib/supabase";
 import AdminContentManager from "@/components/AdminContentManager";
+import BusinessWaitlistDemand from "@/components/admin/BusinessWaitlistDemand";
 import AdminSupportInbox from "@/components/AdminSupportInbox";
 import RoleLogoutButton, { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
 import AdminSalonsManager from "@/components/admin/AdminSalonsManager";
@@ -304,7 +305,7 @@ function AdminSectionView({ section, isSuperAdmin, recordId, returnTo, data, ove
     case "reviews": return <ReviewsLanding {...props} />;
     case "finance": return <AdminFinanceDashboard />;
     case "marketing": return <Marketing {...props} />;
-    case "support": return <div className="space-y-5"><AdminSupportInbox initialTickets={safeData.tickets} initialAssignees={safeData.admins} mode="support" /><Panel title="Booking messages"><p className="text-sm leading-6 text-ink/65">Booking conversations remain attached to their booking record so customer support does not have to manage a second full inbox on this landing page.</p><Link href="/admin/bookings" className="mt-4 inline-flex rounded-lg border border-magenta px-4 py-2 text-xs font-bold text-magenta">Open booking queue</Link></Panel></div>;
+    case "support": return <div className="space-y-5"><BusinessWaitlistDemand/><AdminSupportInbox initialTickets={safeData.tickets} initialAssignees={safeData.admins} mode="support" /><Panel title="Booking messages"><p className="text-sm leading-6 text-ink/65">Booking conversations remain attached to their booking record so customer support does not have to manage a second full inbox on this landing page.</p><Link href="/admin/bookings" className="mt-4 inline-flex rounded-lg border border-magenta px-4 py-2 text-xs font-bold text-magenta">Open booking queue</Link></Panel></div>;
     case "complaints": return <AdminSupportInbox initialTickets={safeData.tickets} initialComplaints={safeData.complaints} initialAssignees={safeData.admins} mode="complaints" />;
     case "subscriptions": return <Subscriptions {...props} />;
     case "engine": return <AdminEngineLanding />;

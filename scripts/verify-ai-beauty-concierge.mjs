@@ -1,3 +1,4 @@
+import {loadNodeTypescript} from '../tests/helpers/load-node-typescript.mjs';
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -20,7 +21,7 @@ const compiledModule = { exports: {} };
 const sandbox = {
   module: compiledModule,
   exports: compiledModule.exports,
-  require: () => ({}),
+  require: name => name==='@/lib/searchTimeWindow'?loadNodeTypescript(process.cwd())('src/lib/searchTimeWindow.ts'):({}),
   process: { env: {} },
   console,
   Buffer,

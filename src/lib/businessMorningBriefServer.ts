@@ -35,11 +35,11 @@ export async function readMorningBrief(request:Request,context:Context,now=Date.
  let records:BriefAppointment[]=[];
  const appointments=await section("appointments",async()=>{
   const [bookings,stylists,styles]=await Promise.all([
-   admin.from("bookings").select("id,salon_id,appointment_datetime,blocked_until,duration_hours,status,guest_name,stylist_id,manual_service_name,style_id,payment_mode").eq("salon_id",salon.id).gte("appointment_datetime",from).lt("appointment_datetime",to).order("appointment_datetime").limit(cap+1),
+   admin.from("bookings").select("id,salon_id,appointment_datetime,blocked_until,duration_hours,status,guest_name,stylist_id,manual_service_name,style_id,payment_mode,is_demo").eq("salon_id",salon.id).gte("appointment_datetime",from).lt("appointment_datetime",to).order("appointment_datetime").limit(cap+1),
    admin.from("stylists").select("id,salon_id,name").eq("salon_id",salon.id).limit(cap+1),
    admin.from("styles").select("id,salon_id,name").eq("salon_id",salon.id).limit(cap+1),
   ]);
-  records=bounded<BriefAppointment>(bookings,salon.id).filter(row=>row.payment_mode!=="test");
+  records=bounded<BriefAppointment>(bookings,salon.id).filter(row=>(row.payment_mode!=="test"||row.is_demo===true));
   const people=bounded<Row>(stylists,salon.id),services=bounded<Row>(styles,salon.id);
   return {...morningSchedule(records,now),items:records.map(row=>({id:row.id,at:row.appointment_datetime,client:row.guest_name,service:row.manual_service_name||String(services.find(s=>s.id===row.style_id)?.name||"")||null,professional:String(people.find(p=>p.id===row.stylist_id)?.name||"")||null,status:row.status}))};
  });

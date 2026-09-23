@@ -35,6 +35,7 @@ const purposes: Record<AssistantTool, string> = {
   prepare_manual_cancellation: "Prepare cancellation of an existing business-added appointment, with a stated reason.",
   prepare_business_hours: "Prepare all seven days of opening hours using known values; ask about missing days.",
   prepare_service_edit: "Prepare edits to an existing draft service using its verified business service ID.",
+  prepare_professional_archive: "Owner-only removal from bookable professionals. Resolve the own professional ID with get_professionals first. Prepares an archive and disables linked staff access after explicit confirmation; preserves booking and finance history. Upcoming appointments must be reassigned first. Does not delete records, cancel appointments, contact clients or issue payments.",
   prepare_professional_draft: "Prepare a new or existing draft professional record.",
   prepare_product_draft: "Prepare a new or existing draft product record.",
   prepare_promotion_draft: "Prepare a promotion draft. Does not activate a paid campaign.",

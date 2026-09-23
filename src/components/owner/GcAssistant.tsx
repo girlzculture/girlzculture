@@ -49,7 +49,7 @@ export function GcAssistantAppearanceLauncher() {
 }
 const destinations: Record<string, [string, string]> = {
   overview: ["Overview", "/salon/dashboard"], photos: ["Photos", "/salon/dashboard/photos"], professionals: ["Stylists", "/salon/dashboard/stylists"], products: ["Products", "/salon/dashboard/products"], availability: ["Availability & Calendar", "/salon/dashboard/availability"], messages: ["Messages", "/salon/dashboard/messages"], reviews: ["Reviews", "/salon/dashboard/reviews"], earnings: ["Finances", "/salon/dashboard/earnings"], promotions: ["Promotions", "/salon/dashboard/promotions"], settings: ["Settings", "/salon/dashboard/settings"],
-  profile: ["My Page", "/salon/dashboard/my-page"], services: ["Styles & Pricing", "/salon/dashboard/styles"], imports: ["Import a spreadsheet", "/salon/dashboard/styles"], policies: ["Your Business Policies", "/salon/dashboard/my-page/business-policies"], bookings: ["Bookings", "/salon/dashboard/bookings"], subscription: ["Subscription", "/salon/dashboard/subscription"], support: ["Help", "/help"], security: ["Security & sign out", "/salon/dashboard/settings/security"],
+  profile: ["My Page", "/salon/dashboard/my-page"], services: ["Services & Pricing", "/salon/dashboard/styles"], imports: ["Import a spreadsheet", "/salon/dashboard/styles"], policies: ["Your Business Policies", "/salon/dashboard/my-page/business-policies"], bookings: ["Bookings", "/salon/dashboard/bookings"], subscription: ["Subscription", "/salon/dashboard/subscription"], support: ["Help", "/help"], security: ["Security & sign out", "/salon/dashboard/settings/security"],
 };
 const fieldNames: Record<string, string> = {
   amount_cents: "Received amount", occurred_at: "Received at", method: "Payment method", client_name: "Client name (optional)",
@@ -100,12 +100,14 @@ const errors: Record<string, string> = {
   ASSISTANT_SERVICE_CLARIFICATION_REQUIRED: "Which service is this appointment for?", ASSISTANT_DURATION_CLARIFICATION_REQUIRED: "How many minutes will this appointment take?", ASSISTANT_PROFESSIONAL_CLARIFICATION_REQUIRED: "Which professional should take this appointment?", ASSISTANT_AVAILABILITY_CONFLICT: "That time is unavailable. Choose another time.", ASSISTANT_DRAFT_REQUIRED: "Choose a draft record. Published records remain in their existing editing workflow.", ASSISTANT_CUSTOMER_PARTICIPANT_REQUIRED: "This appointment has no customer participant in Girlz Culture. Use your existing contact channel.",
 
   ASSISTANT_ACCESS_DENIED: "You do not have permission for this action.", AUTH_REQUIRED: "Sign in to use GC Assistant.",
+  ASSISTANT_PROFESSIONAL_BOOKINGS_REMAIN: "Reassign this professional’s upcoming appointments before removing them.",
   ASSISTANT_PLAN_REQUIRED: "Open Subscription to review your business access.", ASSISTANT_PREVIEW_STALE: "This information changed. Ask for a new preview before confirming.",
   ASSISTANT_PREVIEW_EXPIRED: "This preview expired. Ask for a new preview.", ASSISTANT_DEPOSIT_PLATFORM_RULE: "Deposit rates are managed separately in Finances. Remove the custom deposit amount to prepare this service.",
   ASSISTANT_RECORD_NOT_FOUND: "Choose a record from your business and try again.", ASSISTANT_RANGE_CONFLICT: "That time overlaps an existing block. Review Availability before trying again.",
   ASSISTANT_BUDGET_LIMIT: "GC Assistant has reached its protected usage allowance. Your dashboard data is safe; contact Girlz Culture support to review access.",
   ASSISTANT_RATE_LIMIT: "Too many requests were sent at once. Wait a moment, then try again.",
   ASSISTANT_COST_CONFIGURATION_REQUIRED: "GC Assistant needs its approved AI cost settings before free-form chat can run. The dashboard quick actions still work.",
+  ASSISTANT_LANGUAGE_SAVE_FAILED: "Your response language could not be saved. Retry this message; no business change was made.",
   ASSISTANT_UNAVAILABLE: "GC Assistant could not reach its AI service. The dashboard and read-only quick actions are still available.",
   PLATFORM_POLICY_CONFLICT: "These preferences conflict with platform protections. Review the payment and policy rules.",
 };
@@ -147,8 +149,8 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
   const [appearanceNotice, setAppearanceNotice] = useState("");
   const [appearanceReference, setAppearanceReference] = useState("");
   const quickActions = assistantPageActions(assistantPageFromPath(pathname), business);
-  // Active preference is actor-scoped; persistence requires explicit save and
-  // resume. A display-language change resets its default, not the account UI.
+  // The server resolves the account response preference independently of the
+  // display language. Saving it does not opt the owner into conversation memory.
   const responseLanguage = useRef<{ display: string; response: string } | null>(null);
   const bindBusiness = useCallback((next: AssistantBusinessContext) => {
     if (actor.current && actor.current !== next.userId) return;
@@ -347,7 +349,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
         <header className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
             <Avatar value={avatar}/>
-            <div className="min-w-0"><h2 id="gc-assistant-title" className="truncate font-serif text-lg font-bold text-text-primary" data-no-translate>GC Assistant</h2><p className="text-xs text-text-secondary">{t("Your business co-pilot.")}</p></div>
+            <div className="min-w-0"><h2 id="gc-assistant-title" className="truncate font-serif text-lg font-bold text-text-primary" data-no-translate>GC Assistant</h2><p className="text-xs text-text-secondary">{t("Your AI business assistant.")}</p></div>
           </div>
           <button onClick={() => dialog.current?.close()} className="grid h-10 w-10 place-items-center rounded-full text-text-primary transition hover:bg-subtle" aria-label={t("Close GC Assistant")}><X aria-hidden size={20}/></button>
         </header>
@@ -409,6 +411,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
                 {turn.request?.tool === "get_outstanding_balances" ? <AssistantBalances value={turn.request.result} onNavigate={() => { if (!desktop) dialog.current?.close(); }}/> : null}
                 {turn.request?.risk_class && turn.request.risk_class >= 3 && !turn.request.confirmed_at ? <section className="ml-0 rounded-2xl border border-border bg-white p-4 shadow-[0_6px_20px_rgba(13,17,20,.05)] sm:ml-11">
                   <h3 className="text-base font-bold text-text-primary">{t("Review this draft")}</h3>
+                  {turn.request.tool === "prepare_professional_archive" ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This removes the professional from booking and disables their staff access. Booking and finance history are preserved.")}</p> : null}
                   {turn.request.tool === "prepare_manual_service_sale" ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This records payment you already received in Finances. Girlz Culture will not charge the client, send a receipt or create an appointment.")}</p> : null}
                   {turn.request.tool === "prepare_service" ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This service will be saved as a draft. Deposits follow platform rules.")}</p> : null}
                   {turn.request.tool === "prepare_business_profile_update" && ["tiktok_url", "instagram_url"].includes(String(turn.request.arguments.field)) ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This social link will be submitted for platform review.")}</p> : null}
@@ -416,7 +419,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
                   {Object.keys(turn.request.before_summary).length ? <details className="mt-3 rounded-xl border border-border px-3"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-text-primary">{t("Current information")}</summary><div className="border-t border-border py-3"><Facts value={turn.request.before_summary} timeZone={String(turn.request.execution_payload.time_zone || turn.request.arguments.time_zone || "America/New_York")}/></div></details> : null}
                   {turn.request.tool === "prepare_business_policy_update" ? <label className="mt-4 flex gap-3 text-sm font-medium leading-5 text-text-primary"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-teal" checked={Boolean(reviewed[turn.id])} onChange={event => setReviewed({ ...reviewed, [turn.id]: event.target.checked })}/>{t("I reviewed this policy in its original language and understand that platform rules and legal rights take precedence.")}</label> : null}
                   {/* Keep foreground and background changes immediate so an enabled action stays readable throughout the state change. */}
-                  <button disabled={busy || (turn.request.tool === "prepare_business_policy_update" && !reviewed[turn.id])} onClick={() => void confirm(turn)} className="mt-4 min-h-11 rounded-full bg-primary-hover px-5 text-sm font-bold text-white shadow-sm transition-shadow hover:bg-primary-hover gc-disabled-control">{turn.request.tool === "prepare_booking_reschedule_proposal" ? <span data-no-translate>{rescheduleAssistantCopy(turnLocale).confirm}</span> : t(turn.request.tool === "prepare_manual_service_sale" ? "Record received payment" : turn.request.risk_class === 4 ? "Confirm this public action" : "Confirm this change")}</button>
+                  <button disabled={busy || (turn.request.tool === "prepare_business_policy_update" && !reviewed[turn.id])} onClick={() => void confirm(turn)} className="mt-4 min-h-11 rounded-full bg-primary-hover px-5 text-sm font-bold text-white shadow-sm transition-shadow hover:bg-primary-hover gc-disabled-control">{turn.request.tool === "prepare_booking_reschedule_proposal" ? <span data-no-translate>{rescheduleAssistantCopy(turnLocale).confirm}</span> : t(turn.request.tool === "prepare_manual_service_sale" ? "Record received payment" : turn.request.tool === "prepare_professional_archive" ? "Confirm this change" : turn.request.risk_class === 4 ? "Confirm this public action" : "Confirm this change")}</button>
                 </section> : null}
 
                 {turn.notice ? <p role="status" className="ml-11 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-text-success">{turn.request?.tool === "prepare_booking_reschedule_proposal" ? <span data-no-translate>{rescheduleAssistantCopy(turnLocale)[String((turn.request.result as Row)?.status).toLowerCase() === "accepted" ? "accepted" : String((turn.request.result as Row)?.status).toLowerCase() === "pending" ? "pending" : "closed"]}</span> : t(turn.notice)}</p> : null}

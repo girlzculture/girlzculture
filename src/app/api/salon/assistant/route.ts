@@ -6,6 +6,7 @@ import { executeAssistantTool, confirmAssistantTool } from "@/lib/gcAssistantSer
 import { deliverAssistantReschedule } from "@/lib/assistantBookingReschedule";
 import { planOwnerRequest } from "@/lib/gcAssistantPlanningServer";
 import { isAssistantPage } from "@/lib/assistantPageContext";
+import { assistantResponseLanguage, persistAssistantLanguage } from "@/lib/assistantLanguagePreference";
 import { isAssistantLanguage } from "@/lib/assistantLanguage";
 import { PolicyInputError } from "@/lib/businessPolicyCore";
 import { capturePlatformError, safeFailure } from "@/lib/platformErrors";
@@ -60,8 +61,11 @@ async function POSTHandler(request: Request) {
       if (!Array.isArray(body.previous_request_ids) || body.previous_request_ids.length > 6 || typeof body.text !== "string") throw new AssistantError("ASSISTANT_INVALID_INPUT");
       body.previous_request_ids.forEach(validId);
       if (body.conversation !== undefined) assertSchema(body.conversation, { type: "array", maxItems: 6, items: { type: "object", additionalProperties: false, required: ["role", "text"], properties: { role: { type: "string", enum: ["user", "assistant"] }, text: { type: "string", maxLength: 2400 } } } });
-      const planned = await planOwnerRequest({ context, admin, salonId: context.salon.id, userId: context.user.id, locale: body.locale, text: body.text, timeZone: String(context.salon.time_zone), previousRequestIds: body.previous_request_ids, conversation: body.conversation, page: body.page });
-      const responseLocale = isAssistantLanguage(planned.response_locale) ? planned.response_locale : body.locale;
+      const preferredLocale = assistantResponseLanguage(context.user.user_metadata, body.locale);
+      audit.locale = preferredLocale;
+      const planned = await planOwnerRequest({ context, admin, salonId: context.salon.id, userId: context.user.id, locale: preferredLocale, text: body.text, timeZone: String(context.salon.time_zone), previousRequestIds: body.previous_request_ids, conversation: body.conversation, page: body.page });
+      const responseLocale = isAssistantLanguage(planned.response_locale) ? planned.response_locale : preferredLocale;
+      await persistAssistantLanguage(context, preferredLocale, responseLocale, planned.language_switch != null);
       if (!planned.plan) return Response.json(planned, { headers });
       noteTool(planned.plan.tool, planned.plan.args);
       const executed = await executeAssistantTool(context, { requestId: body.request_id, locale: responseLocale, tool: planned.plan.tool, args: planned.plan.args });
@@ -84,7 +88,7 @@ async function POSTHandler(request: Request) {
     }
     if (body.action !== "tool") throw new AssistantError("ASSISTANT_INVALID_INPUT");
     noteTool(body.tool, body.args);
-    return Response.json(await executeAssistantTool(context, { requestId: body.request_id, locale: body.locale, tool: body.tool, args: body.args }), { headers });
+    return Response.json(await executeAssistantTool(context, { requestId: body.request_id, locale: assistantResponseLanguage(context.user.user_metadata, body.locale), tool: body.tool, args: body.args }), { headers });
   } catch (error) {
     if (error instanceof RateLimitError) return Response.json({ code: "ASSISTANT_RATE_LIMIT" }, { status: 429, headers: { ...headers, "Retry-After": String(error.retryAfter) } });
     if (error instanceof AssistantError || error instanceof PolicyInputError) {

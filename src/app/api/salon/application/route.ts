@@ -7,6 +7,7 @@ import { getSupabaseAdmin, sendEmail } from "@/lib/supabaseAdmin";
 import { normalizeUsState, normalizeUsZip } from "@/lib/usStates";
 import { parseBusinessSetup } from "@/lib/businessOnboarding";
 import { parseApplicationPlan } from "@/lib/plans";
+import { INITIAL_APPLICATION_FIELDS, applicationProgressInput, applicationSetup, validateApplicationDetails, ApplicationProgressError } from "@/lib/applicationProgress";
 import {
   cleanEmail,
   cleanText,
@@ -104,7 +105,7 @@ async function POSTHandler(request: Request) {
       "state",
       "zip_code",
       "business_type",
-      "years_in_operation",
+      ...(body.operator_type === "solo" ? ["years_in_operation"] : []),
       "stylist_count",
     ];
     const missing = required.find(
@@ -143,8 +144,10 @@ async function POSTHandler(request: Request) {
         { error: "Please choose a plan before submitting your application." },
         { status: 400 },
       );
-    const businessSetup = parseBusinessSetup(body.business_setup_type);
-    if (!businessSetup) return Response.json(
+    const progress = applicationProgressInput({fields:Object.fromEntries(Object.keys(INITIAL_APPLICATION_FIELDS).map(key=>[key,typeof body[key]==="string"?body[key]:INITIAL_APPLICATION_FIELDS[key as keyof typeof INITIAL_APPLICATION_FIELDS]])),documents:Array.isArray(body.document_urls)?body.document_urls:[],plan:selectedPlan,locale:body.locale||"en",step:6,entry_mode:body.entry_mode||"form",revision:body.draft_revision});
+    const details = validateApplicationDetails(progress.fields, selectedPlan);
+    const businessSetup = parseBusinessSetup(applicationSetup(progress.fields));
+    if (!businessSetup || parseBusinessSetup(body.business_setup_type)!==businessSetup) return Response.json(
       { error: "Please choose your business setup before submitting your application." },
       { status: 400 },
     );
@@ -162,14 +165,14 @@ async function POSTHandler(request: Request) {
       30,
     );
     const businessType = cleanText(body.business_type, 80);
-    if (!businessTypes.includes(businessType))
+    if (businessType === "Other" || !businessTypes.includes(businessType))
       throw new Error("Choose an approved business type.");
-    const yearsInOperation = Math.round(Number(body.years_in_operation));
+    const yearsInOperation = String(body.years_in_operation ?? "").trim() === "" ? null : Number(body.years_in_operation);
     const stylistCount = Math.round(Number(body.stylist_count));
     if (
-      !Number.isFinite(yearsInOperation) ||
+      yearsInOperation !== null && (!Number.isInteger(yearsInOperation) ||
       yearsInOperation < 0 ||
-      yearsInOperation > 150
+      yearsInOperation > 150)
     )
       throw new Error("Enter valid years in operation.");
     if (
@@ -210,6 +213,7 @@ async function POSTHandler(request: Request) {
       subscription_tier: selectedPlan,
     };
     const applicationValues = {
+      reviewed_fields: progress.fields,
       business_name: businessName,
       owner_name: ownerName,
       business_email: accountEmail,
@@ -236,8 +240,10 @@ async function POSTHandler(request: Request) {
       document_urls: applicationDocumentPaths(body.document_urls, user.id),
     };
 
-    const atomic = await admin.rpc("submit_salon_application_atomic", {
-      p_user_id: user.id,
+    const atomic = await admin.rpc("submit_master_business_application", {
+      p_actor: user.id,
+      p_revision: progress.revision,
+      p_details: details,
       p_salon_values: salonValues,
       p_application_values: applicationValues,
     });
@@ -292,6 +298,8 @@ async function POSTHandler(request: Request) {
       confirmation_email_sent: !("skipped" in receipt && receipt.skipped),
     });
   } catch (error) {
+    if(error instanceof ApplicationProgressError)return Response.json({code:error.code,error:error.message},{status:400});
+    if(error && typeof error==='object' && ['APPLICATION_DRAFT_STALE','APPLICATION_REVIEW_CHANGED'].includes(String((error as {message?:string}).message)))return Response.json({error:'Your application changed since the last save. Review the saved draft before submitting.',code:'APPLICATION_DRAFT_STALE'},{status:409});
     const record =
       error && typeof error === "object"
         ? (error as Record<string, unknown>)

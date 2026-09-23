@@ -54,6 +54,7 @@ export const ASSISTANT_TOOLS = {
   prepare_manual_cancellation: { risk: 3, permission: "bookings", schema: object({ booking_id: uuid, reason: { ...string(300), minLength: 1 } }) },
   prepare_business_hours: { risk: 3, permission: "availability", schema: object({ hours }) },
   prepare_service_edit: { risk: 3, permission: "styles", schema: object({ style_id: uuid, name: { ...string(120), minLength: 1 }, price: number(0, 100000), duration_hours: number(0.25, 24), buffer_minutes: { type: "integer", minimum: 0, maximum: 180 } }) },
+  prepare_professional_archive: { risk: 4, permission: "stylists", schema: object({ stylist_id: uuid }) },
   prepare_professional_draft: { risk: 3, permission: "stylists", schema: object({ id: nullableId, name: { ...string(120), minLength: 1 }, bio: string(500), specialties: { type: "array", items: string(80), maxItems: 20 }, years_experience: { type: ["number", "null"], minimum: 0, maximum: 70 } }) },
   prepare_product_draft: { risk: 3, permission: "products", schema: object({ id: nullableId, name: { ...string(120), minLength: 1 }, description: string(1000), price: number(0, 100000) }) },
   prepare_promotion_draft: { risk: 3, permission: "promotions", schema: object({ id: nullableId, title: { ...string(160), minLength: 1 }, description: string(1000), promotion_type: enumeration("percentage", "fixed", "descriptive"), discount_value: number(0, 100000), ...range, time_zone: string(80) }) },

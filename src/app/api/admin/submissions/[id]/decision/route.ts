@@ -164,6 +164,7 @@ async function POSTHandler(
       overridden_gate_labels: overriddenGateLabels,
     });
   } catch (error) {
+    if(error && typeof error==="object" && "message" in error && String(error.message).includes("IN_PERSON_VERIFICATION_REQUIRED"))return Response.json({code:"IN_PERSON_VERIFICATION_REQUIRED",error:"Record the completed in-person location visit before approving this independent professional."},{status:409});
     noteOperationalFailure("Application decision failed", error);
     return errorResponse(error, "Request failed");
   }

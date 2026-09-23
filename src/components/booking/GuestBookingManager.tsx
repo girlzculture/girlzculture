@@ -3,6 +3,7 @@
 import { useI18n } from "@/components/i18n/LocaleProvider";
 import BookingPriceEvidence from "@/components/booking/BookingPriceEvidence";
 import BookingAttendance from "@/components/booking/BookingAttendance";
+import BookingLocation from "@/components/booking/BookingLocation";
 import CommunicationPreferences from "@/components/booking/CommunicationPreferences";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -212,7 +213,7 @@ export default function GuestBookingManager({ token }: { token: string }) {
   return (
     <div className="mx-auto grid w-full max-w-[1180px] gap-5 lg:grid-cols-[1.35fr_.65fr]">
       <main className="space-y-5">
-        <BookingPriceEvidence booking={data.booking}/><BookingPolicyEvidence booking={data.booking}/><BookingAttendance key={String(data.booking.id)} bookingId={String(data.booking.id)} scope="customer" guestToken={token}/><CommunicationPreferences key={`communications:${data.booking.id}`} bookingId={String(data.booking.id)} guestToken={token}/>
+        <BookingPriceEvidence booking={data.booking}/><BookingPolicyEvidence booking={data.booking}/><BookingAttendance key={String(data.booking.id)} bookingId={String(data.booking.id)} scope="customer" guestToken={token}/><BookingLocation key={`location:${data.booking.id}`} bookingId={String(data.booking.id)} guestToken={token}/><CommunicationPreferences key={`communications:${data.booking.id}`} bookingId={String(data.booking.id)} guestToken={token}/>
         <section className="rounded-2xl border border-plum/10 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>

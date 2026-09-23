@@ -4,7 +4,7 @@ export function completedServiceCounts(bookings: readonly Row[], salonId: string
   const seen = new Set<string>();
   for (const booking of bookings) {
     const date = Date.parse(String(booking.appointment_datetime));
-    if (booking.salon_id !== salonId || !booking.id || seen.has(String(booking.id)) || !booking.style_id || String(booking.status).toLowerCase() !== "completed" || booking.payment_mode === "test" || !Number.isFinite(date) || date < start || date >= end) continue;
+    if (booking.salon_id !== salonId || !booking.id || seen.has(String(booking.id)) || !booking.style_id || String(booking.status).toLowerCase() !== "completed" || (booking.payment_mode === "test" && booking.is_demo !== true) || !Number.isFinite(date) || date < start || date >= end) continue;
     seen.add(String(booking.id));
     const id = String(booking.style_id);
     counts[id] = (counts[id] || 0) + 1;

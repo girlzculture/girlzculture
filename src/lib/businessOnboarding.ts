@@ -1,4 +1,4 @@
-import { parseApplicationPlan, parseApplicationPlanQuery } from "./plans";
+import { parseApplicationPlan, parseApplicationPlanQuery, SUBSCRIPTION_PLANS } from "./plans";
 
 export const BUSINESS_SETUP_OPTIONS = [
   { value: "solo_professional", label: "Solo professional — just me" },
@@ -22,7 +22,7 @@ export function businessSetupLabel(value: unknown) {
 
 export function businessOnboardingHref(path: string, suppliedPlan: unknown) {
   const plan = parseApplicationPlanQuery(suppliedPlan);
-  return plan ? `${path}?plan=${plan.toLowerCase()}` : path;
+  return plan ? `${path}?plan=${SUBSCRIPTION_PLANS[plan].key}` : path;
 }
 
 // Older signup builds wrote Starter even without a choice. Only metadata from

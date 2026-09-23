@@ -87,6 +87,8 @@ export type DiscoveryFilters = {
   date: string;
   sort: "distance" | "rating" | "price_low" | "price_high";
   promotionOnly: boolean;
+  independentOnly?: boolean;
+  travelsOnly?: boolean;
 };
 
 type Props = {
@@ -126,6 +128,8 @@ const defaultFilters: DiscoveryFilters = {
   date: "",
   sort: "distance",
   promotionOnly: false,
+  independentOnly: false,
+  travelsOnly: false,
 };
 
 function asDecisionRows(rows: PublicSalonResult[]): DecisionSalon[] {
@@ -162,6 +166,8 @@ function filtersFromUrl(params: URLSearchParams): DiscoveryFilters {
       : "",
     sort,
     promotionOnly: params.get("offers") === "true",
+    independentOnly: params.get("independent") === "true",
+    travelsOnly: params.get("travels") === "true",
   };
 }
 
@@ -180,7 +186,7 @@ function sameFilters(left: DiscoveryFilters, right: DiscoveryFilters) {
     left.maximumPrice === right.maximumPrice &&
     left.date === right.date &&
     left.sort === right.sort &&
-    left.promotionOnly === right.promotionOnly;
+    left.promotionOnly === right.promotionOnly && Boolean(left.independentOnly) === Boolean(right.independentOnly) && Boolean(left.travelsOnly) === Boolean(right.travelsOnly);
 }
 
 function storedState(): StoredState | null {
@@ -301,6 +307,8 @@ export default function SalonDiscovery({
     Boolean(filters.date),
     filters.sort !== "distance",
     filters.promotionOnly,
+    filters.independentOnly,
+    filters.travelsOnly,
   ].filter(Boolean).length;
 
   const persist = useCallback(
@@ -497,6 +505,8 @@ export default function SalonDiscovery({
               date: nextFilters.date || null,
               sort: nextFilters.sort,
               promotionOnly: nextFilters.promotionOnly,
+              independentOnly: nextFilters.independentOnly,
+              travelsOnly: nextFilters.travelsOnly,
               page: requestedPage,
               pageSize: 48,
             },
@@ -578,6 +588,8 @@ export default function SalonDiscovery({
         if (nextFilters.sort !== "distance")
           params.set("sort", nextFilters.sort);
         if (nextFilters.promotionOnly) params.set("offers", "true");
+        if (nextFilters.independentOnly) params.set("independent", "true");
+        if (nextFilters.travelsOnly) params.set("travels", "true");
         if (searchView === "map") params.set("view", "map");
         if (!options.append && options.history !== "none") {
           const method = options.history === "replace" ? "replaceState" : "pushState";
@@ -1148,6 +1160,7 @@ export default function SalonDiscovery({
                 />
                 Active offers only
               </label>
+              {([['independentOnly','Independent professional'],['travelsOnly','Travels to you']] as const).map(([key,label])=><label key={key} className="flex min-h-12 items-center gap-3 rounded-[9px] border border-plum/15 px-3 text-[12px] font-semibold text-ink"><input type="checkbox" checked={Boolean(draftFilters[key])} onChange={event=>setDraftFilters(current=>({...current,[key]:event.target.checked}))} className="h-4 w-4"/>{label}</label>)}
             </div>
 
             <div className="mt-6 grid grid-cols-2 gap-3">

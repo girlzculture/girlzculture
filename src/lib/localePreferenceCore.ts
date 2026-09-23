@@ -16,3 +16,9 @@ export function preferredLocale(input: { userId: string | null; accountLocale?: 
   if (input.userId) return normalizeLocale(input.accountLocale || input.accountCachedLocale || input.fallback || "en");
   return normalizeLocale(input.anonymousLocale || input.fallback || "en");
 }
+
+/** Only an explicit supported entry parameter can override the stored choice. */
+export function entryInterfaceLocale(value: string|null) {
+  if(!value || !/^(en|fr|es|zh|zh-cn)$/i.test(value.trim()))return null;
+  return normalizeLocale(value);
+}

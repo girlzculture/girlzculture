@@ -1,4 +1,6 @@
 import Link from "next/link";
+import BusinessLocationDetails from "@/components/public/BusinessLocationDetails";
+import type { PublicBusinessLocation } from "@/lib/publicBusinessLocation";
 import { featuredFirst } from "@/lib/businessCatalogPerformance";
 import { sortCatalogRecords } from "@/lib/catalogOrdering";
 import {
@@ -14,7 +16,6 @@ import { notFound, permanentRedirect } from "next/navigation";
 import {
   Clock3,
   MapPin,
-  Navigation,
   Package,
   Tag,
 } from "lucide-react";
@@ -43,7 +44,7 @@ import SalonTrustLabels, {
 } from "@/components/public/SalonTrustLabels";
 import { hasPlanFeature } from "@/lib/plans";
 
-type SalonRecord = {
+type SalonRecord = PublicBusinessLocation & {
   id: string;
   name?: string | null;
   is_closed_override?: boolean | null;
@@ -240,7 +241,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
     || { slug: "salon-profile", title: "Salon profile", labels: {} };
   const { data: salon, error: salonError } = await supabase
     .from("salons")
-    .select("id,name,slug,vanity_slug,instagram_url,tiktok_url,google_business_url,description,description_ai_assisted,stylist_section_fallback,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,trust_info,photo_metadata,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,accepting_bookings,subscription_tier")
+    .select("id,name,slug,vanity_slug,instagram_url,tiktok_url,google_business_url,description,description_ai_assisted,stylist_section_fallback,service_location_type,operator_type,home_address_public,public_neighborhood,offers_mobile,travel_radius_miles,travel_fee_cents,address_street,address_line2,address_city,address_state,address_zip,latitude,longitude,hours,languages,logo_url,cover_photo_url,gallery_photos,trust_info,photo_metadata,verification_status,rating_overall,review_count,is_closed_override,closed_override_date,time_zone,status,is_discoverable,accepting_bookings,subscription_tier")
     .eq("slug", slug)
     .maybeSingle<SalonRecord>();
 
@@ -336,10 +337,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
   const uploadedGallery = publicGalleryPhotos([salon.cover_photo_url, ...normalizeStringArray(salon.gallery_photos)]);
   const displayedPhotoMetadata = Object.fromEntries(uploadedGallery.filter(url => salon.photo_metadata?.[url]).map(url => [url, salon.photo_metadata![url]]));
   const locationLine = [salon.address_city, salon.address_state].filter(Boolean).join(", ") || "Location coming soon";
-  const addressLine = [salon.address_street, salon.address_line2, salon.address_city, salon.address_state, salon.address_zip].filter(Boolean).join(", ") || "Address coming soon";
-  const mapQuery = salon.latitude != null && salon.longitude != null ? `${salon.latitude},${salon.longitude}` : addressLine;
-  const mapEmbedUrl = `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&output=embed`;
-  const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`;
+
   const hours = normalizeHours(salon.hours);
   const isVerified = salon.verification_status?.toLowerCase().startsWith("verified") ?? false;
   const verifiedLabel=await getEngineText("trust.verified_label","Verified Salon",60);
@@ -442,16 +440,7 @@ export default async function SalonPage({ params, searchParams }: { params: Prom
             </div>
           </div>
 
-          <div className="border-plum/10 lg:border-l lg:pl-5">
-            <h2 className="flex items-center gap-2 text-[11px] font-semibold text-plum"><MapPin size={17} />Address</h2>
-            <p className="mt-3 text-[10px] font-medium leading-5 text-ink/75">{salon.address_street || "Address coming soon"}{salon.address_line2 ? <><br />{salon.address_line2}</> : null}<br />{[salon.address_city, salon.address_state, salon.address_zip].filter(Boolean).join(" ")}</p>
-            <p className="mt-1 text-[9px] text-ink/45">Directions available</p>
-            <a href={directionsUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-8 w-full items-center justify-center gap-2 rounded-[7px] border border-magenta/25 bg-blush/25 px-4 text-[9px] font-semibold text-magenta">Get Directions <Navigation size={12} /></a>
-          </div>
-
-          <div className="relative min-h-[190px] overflow-hidden rounded-[10px] border border-plum/10 bg-blush/35">
-            <iframe title={`${salon.name || "Salon"} location map`} src={mapEmbedUrl} loading="lazy" referrerPolicy="no-referrer-when-downgrade" className="absolute inset-0 h-full w-full border-0" />
-          </div>
+          <BusinessLocationDetails location={salon} name={salon.name || "Business"} />
         </section>
       </div>
 

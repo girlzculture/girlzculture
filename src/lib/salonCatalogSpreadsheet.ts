@@ -956,7 +956,7 @@ function addInstructionSheet(
   const values =
     kind === "services"
       ? [
-          "Girlz Culture — Salon Styles & Pricing Import",
+          "Girlz Culture — Salon Services & Pricing Import",
           "",
           "Enter one service per row on the Services sheet.",
           "Category and Service Group must exactly match the Platform Catalog reference sheet.",
@@ -965,7 +965,7 @@ function addInstructionSheet(
           "Add-ons must come from the platform catalog. Enter each as Name|Price and separate multiple add-ons with semicolons.",
           "Example: Beads|15; Hair Included|35",
           "Images, materials, size options, and length options are managed separately and are never erased by this import.",
-          "Choose the file in Styles & Pricing and click Import & Save. If any row is invalid, nothing is saved.",
+          "Choose the file in Services & Pricing and click Import & Save. If any row is invalid, nothing is saved.",
         ]
       : [
           "Girlz Culture — Salon Products Import",

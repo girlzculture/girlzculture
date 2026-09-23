@@ -5,9 +5,9 @@ import { typescriptLoader } from './helpers/load-typescript.mjs';
 for (const locale of ['wo', 'en', 'fr', 'es', 'zh-CN']) {
   for (const fallback of [false, true]) {
     test(`resolved ${locale} reaches tool, answer and ${fallback ? 'fallback' : 'response'} without replaying older private facts`, async () => {
-      const plans = [], tools = [], incidents = [];
+      const plans = [], tools = [], incidents = [], preferences = [];
       const id = '33000000-0000-4000-8000-000000000001';
-      const context = { admin: {}, user: { id: 'owner' }, salon: { id: 'business', time_zone: 'America/New_York' } };
+      const context = { admin: {auth:{admin:{updateUserById:async(user,body)=>{preferences.push({user,body});return {error:null};}}}}, user: { id: 'owner' }, salon: { id: 'business', time_zone: 'America/New_York' } };
       const load = typescriptLoader(process.cwd(), {
         '@/lib/supabaseAdmin': { requireSalonOwner: async () => context },
         '@/lib/requestSecurity': { enforceRateLimit() {}, RateLimitError: class extends Error {} },
@@ -30,6 +30,8 @@ for (const locale of ['wo', 'en', 'fr', 'es', 'zh-CN']) {
       assert.equal(response.status, 200);
       const body = await response.json();
       assert.equal(tools[0].locale, locale);
+      assert.equal(preferences.length,locale === "wo" ? 0 : 1);
+      if(preferences.length){assert.equal(preferences[0].user,"owner");assert.equal(preferences[0].body.user_metadata.gc_assistant_locale,locale);}
       assert.equal(plans[1].locale, locale);
       assert.deepEqual(Array.from(plans[1].previousRequestIds), [id]);
       assert.equal(plans[1].conversation, undefined);

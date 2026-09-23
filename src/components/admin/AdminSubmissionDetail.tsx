@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import BusinessLocationVisit from "@/components/admin/BusinessLocationVisit";
 import { BUSINESS_SETUP_OPTIONS, businessSetupLabel } from "@/lib/businessOnboarding";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RoleSessionBoundary } from "@/components/auth/RoleLogoutButton";
@@ -631,6 +632,7 @@ export default function AdminSubmissionDetail({
           </section>
 
           <aside className="space-y-4">
+            <BusinessLocationVisit key={application.id} applicationId={application.id}/>
             <section className="rounded-[14px] border border-plum/10 bg-white p-4 sm:p-5">
               <h2 className="font-serif text-xl font-semibold text-plum">Reason for this action</h2>
               <p className="mt-2 text-sm text-ink/65">

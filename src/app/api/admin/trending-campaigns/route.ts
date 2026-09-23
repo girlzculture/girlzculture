@@ -107,7 +107,7 @@ async function GETHandler(request: Request) {
     if (search.get("mode") === "salons") {
       const q = cleanText(search.get("q"), 100);
       let query = admin.from("salons")
-        .select("id,name,address_city,address_state")
+        .select("id,name,address_city,address_state").eq("is_demo",false)
         .eq("status", "Active")
         .eq("is_discoverable", true)
         .eq("geocode_status", "success")
@@ -239,7 +239,7 @@ async function POSTHandler(request: Request) {
 
     if (placementBasis === "complimentary_admin") {
       const { data: salon, error: salonError } = await admin.from("salons")
-        .select("id,status,is_discoverable,latitude,longitude,geocode_status,address_needs_review")
+        .select("id,status,is_discoverable,latitude,longitude,geocode_status,address_needs_review").eq("is_demo",false)
         .eq("id", salonId).maybeSingle();
       if (salonError) throw salonError;
       if (!salon) rejectRequest("Salon not found.");

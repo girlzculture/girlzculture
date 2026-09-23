@@ -1,3 +1,4 @@
+import {searchSlotMatches} from '@/lib/searchTimeWindow';
 import "server-only";
 import { resolveSearchPlace } from "@/lib/searchPlaceServer";
 
@@ -47,11 +48,17 @@ export type DecisionSearchFilters = {
   date?: string | null;
   sort?: "distance" | "rating" | "price_low" | "price_high";
   promotionOnly?: boolean;
+  independentOnly?: boolean;
+  travelsOnly?: boolean;
+  timePeriod?:"any"|"morning"|"afternoon"|"evening";
+  startTime?:string|null;
+  endTime?:string|null;
   page?: number | null;
   pageSize?: number | null;
 };
 
 export type DecisionSearchSalon = PublicSalonResult & {
+  deposit_amount:number|null;
   matched_service: {
     id: string;
     name: string;
@@ -113,19 +120,6 @@ type BookingRow = {
   cancelled_by: string | null;
   appointment_datetime: string;
 };
-
-function timeMatches(
-  value: string,
-  period: ParsedDecisionSearchIntent["timePeriod"],
-) {
-  if (period === "any") return true;
-  const hour = Number(value.split(":")[0]);
-  return period === "morning"
-    ? hour < 12
-    : period === "afternoon"
-      ? hour >= 12 && hour < 17
-      : hour >= 17;
-}
 
 async function catalog() {
   const admin = getSupabaseAdmin();
@@ -349,10 +343,11 @@ export async function runDecisionSearch(input: {
   const filters = input.filters || {};
   const normalizedQuery = normalize(input.query);
   const intent = parseDecisionSearchIntent(
-    normalizedQuery,
+    input.query,
     services,
     filters,
   );
+  const requiresOpening=Boolean(intent.date)||Boolean(intent.timeWindow)||intent.timePeriod!=="any";
   if (intent.rejectedExplicitServiceId) {
     const { page, pageSize } = decisionSearchPagination({
       page: filters.page,
@@ -433,6 +428,8 @@ export async function runDecisionSearch(input: {
     // nearest 50 before those checks can incorrectly return zero even when a
     // matching salon exists later in the radius-ranked set.
     limit: "all",
+    independentOnly: intent.independentOnly,
+    travelsOnly: intent.travelsOnly,
   });
   const ids = discovery.salons.map((salon) => salon.id);
   if (!ids.length) {
@@ -594,13 +591,14 @@ export async function runDecisionSearch(input: {
         Date.parse(now),
       );
 
+      const needsTime=intent.timePeriod!=="any"||Boolean(intent.timeWindow);
       const availabilityStart =
         intent.date ||
-        (intent.bestIntent ? new Date().toISOString().slice(0, 10) : null);
-      const availabilityDays = intent.date ? 1 : intent.bestIntent ? 7 : 0;
+        (intent.bestIntent||needsTime ? new Date().toISOString().slice(0, 10) : null);
+      const availabilityDays = intent.date ? 1 : intent.bestIntent||needsTime ? 7 : 0;
       const selection = await selectDecisionStyleWithOpening({
         candidates: candidateEvaluation.eligible,
-        requireOpening: Boolean(intent.date),
+        requireOpening: Boolean(intent.date)||needsTime,
         loadOpening:
           availabilityStart && availabilityDays
             ? async (candidate) => {
@@ -616,7 +614,7 @@ export async function runDecisionSearch(input: {
                     date,
                   });
                   const slot = result.slots.find((slotCandidate) =>
-                    timeMatches(slotCandidate.value, intent.timePeriod),
+                    searchSlotMatches(slotCandidate.value, intent.timePeriod,intent.timeWindow,"durationMinutes" in result?result.durationMinutes:0),
                   );
                   if (slot) {
                     return {
@@ -631,7 +629,7 @@ export async function runDecisionSearch(input: {
               }
             : undefined,
       });
-      if (intent.date && !selection.candidate) {
+      if (requiresOpening && !selection.candidate) {
         return {
           salon: null,
           passedStage: 5,
@@ -654,6 +652,7 @@ export async function runDecisionSearch(input: {
           // honest unknown/null price) is authoritative. Never borrow the
           // salon-wide minimum from a different service.
           starting_price: style ? price : salon.starting_price,
+          deposit_amount:originalPrice==null?null:bookingDepositTerms(originalPrice,depositRules.get(salon.id)||fallbackDepositRule).deposit,
           matched_service: style
             ? {
                 id: style.id,
@@ -764,7 +763,7 @@ export async function runDecisionSearch(input: {
       ? `${underBudget} at or below $${Math.round(intent.maximumPrice)}`
       : "",
     offerCount ? `${offerCount} with active offers` : "",
-    intent.date || intent.bestIntent ? `${availableCount} with a verified opening` : "",
+    requiresOpening || intent.bestIntent ? `${availableCount} with a verified opening` : "",
     intent.bestIntent
       ? `ranking used rating first, then review count and distance`
       : "",
@@ -780,7 +779,7 @@ export async function runDecisionSearch(input: {
 
   const emptyReason = salons.length
     ? null
-    : intent.date && availabilityFailureCount > 0
+    : requiresOpening && availabilityFailureCount > 0
       ? "technical_search_failure" as const
     : (intent.stableServiceId || intent.serviceGroupId || intent.categoryId) && stageCounts.service === 0
       ? "service_unavailable_nearby" as const
@@ -792,7 +791,7 @@ export async function runDecisionSearch(input: {
           ? "budget_unavailable" as const
           : intent.promotionOnly && stageCounts.promotion === 0
             ? "promotion_unavailable" as const
-            : intent.date && stageCounts.opening === 0
+            : requiresOpening && stageCounts.opening === 0
               ? "opening_unavailable" as const
               : "no_exact_match" as const;
   const emptySummary = emptyReason === "service_unavailable_nearby"

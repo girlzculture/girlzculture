@@ -13,7 +13,8 @@ import {
   ENGLISH_MESSAGES,
   intlLocale,
   localeDirection,
-  normalizeLocale,
+  interfaceLocale,
+  SUPPORTED_LOCALES,
   type AppLocale,
   type LocaleOption,
 } from "@/i18n/catalog";
@@ -21,7 +22,7 @@ import { resolveSourceTranslation, resolveInterfaceMessage, interpolateInterface
 import { DASHBOARD_SOURCE_MESSAGES } from "@/i18n/dashboard-source-catalog";
 import { getSupabaseForScope, type AuthScope } from "@/lib/supabase";
 import { usePathname } from "next/navigation";
-import { localeStorageKey, preferredLocale, localeAuthScope } from "@/lib/localePreferenceCore";
+import { localeStorageKey, preferredLocale, localeAuthScope, entryInterfaceLocale } from "@/lib/localePreferenceCore";
 
 type I18nContextValue = {
   locale: AppLocale;
@@ -71,14 +72,6 @@ const FALLBACK_LOCALES: LocaleOption[] = [
     text_direction: "ltr",
     sort_order: 3,
   },
-  {
-    locale: "wo",
-    display_name: "Wolof",
-    native_name: "Wolof",
-    intl_locale: "wo-SN",
-    text_direction: "ltr",
-    sort_order: 4,
-  },
   { locale: "zh-CN", display_name: "Chinese (Simplified)", native_name: "中文（简体）", intl_locale: "zh-CN", text_direction: "ltr", sort_order: 5 },
 ];
 export default function LocaleProvider({
@@ -92,10 +85,11 @@ export default function LocaleProvider({
   const scope: AuthScope = localeAuthScope(pathname || "/", typeof window === "undefined" ? "" : window.location.hostname);
   const actor = useRef<string | null>(null);
   const selection = useRef(0);
+  const entryApplied = useRef(false);
   const saves = useRef(Promise.resolve());
   const [preferenceError, setPreferenceError] = useState(false);
   const [locale, setLocaleState] = useState<AppLocale>(() =>
-    normalizeLocale(initialLocale),
+    interfaceLocale(initialLocale),
   );
   const [remote, setRemote] = useState<Record<string, string>>({});
   const [sourceMessages, setSourceMessages] = useState<Record<string, string>>(
@@ -124,7 +118,7 @@ export default function LocaleProvider({
   }, [scope]);
   const setLocale = useCallback(
     (next: AppLocale) => {
-      const safe = normalizeLocale(next);
+      const safe = interfaceLocale(next);
       if (!locales.some((item) => item.locale === safe)) return;
       const version = ++selection.current;
       setLocaleState(safe);
@@ -142,6 +136,8 @@ export default function LocaleProvider({
     },
     [locales, persistAccountLocale, scope],
   );
+  const entrySetter = useRef(setLocale);
+  useEffect(() => { entrySetter.current = setLocale; }, [setLocale]);
   useEffect(() => {
     let active = true; let generation = 0;
     const client = getSupabaseForScope(scope);
@@ -153,9 +149,11 @@ export default function LocaleProvider({
         const fresh = userId ? await client.auth.getUser() : null;
         if (!active || serial !== generation || version !== selection.current) return;
         actor.current = userId;
+        const entryLocale = entryInterfaceLocale(new URLSearchParams(window.location.search).get("lang"));
+        if(entryLocale && !entryApplied.current){entryApplied.current=true;entrySetter.current(entryLocale);return;}
         const accountLocale = fresh?.data.user?.user_metadata?.locale || data.session?.user.user_metadata?.locale;
         let cached: string | null = null; try { cached = localStorage.getItem(localeStorageKey(scope, userId)); } catch {}
-        setLocaleState(preferredLocale({ userId, accountLocale, accountCachedLocale: userId ? cached : null, anonymousLocale: userId ? null : cached, fallback: userId ? "en" : initialLocale }));
+        setLocaleState(interfaceLocale(preferredLocale({ userId, accountLocale, accountCachedLocale: userId ? cached : null, anonymousLocale: userId ? null : cached, fallback: userId ? "en" : initialLocale })));
         setPreferenceError(false);
       } catch {}
     }
@@ -192,7 +190,7 @@ export default function LocaleProvider({
             : {},
         );
         if (Array.isArray(body?.locales) && body.locales.length) {
-          setLocales(body.locales);
+          setLocales(body.locales.filter((item: LocaleOption) => SUPPORTED_LOCALES.some(locale => locale === item.locale)));
           document.documentElement.dir =
             body.locales.find((item: LocaleOption) => item.locale === locale)
               ?.text_direction || localeDirection(locale);

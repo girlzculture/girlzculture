@@ -60,12 +60,12 @@ async function GETHandler(
     ] = await Promise.all([
       admin
         .from("salons")
-        .select("*,market:location_markets(id,name,state_code,market_type)")
+        .select("*,market:location_markets(id,name,state_code,market_type)").eq("is_demo",false)
         .eq("id", id)
         .single(),
       admin
         .from("subscriptions")
-        .select("*")
+        .select("*").eq("is_demo",false)
         .eq("salon_id", id)
         .order("updated_at", { ascending: false })
         .limit(1)
@@ -87,7 +87,7 @@ async function GETHandler(
         .maybeSingle(),
       admin
         .from("bookings")
-        .select("id", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true }).eq("is_demo",false)
         .eq("salon_id", id)
         .gte("appointment_datetime", new Date().toISOString())
         .not("status", "in", "(Cancelled,Canceled,Completed)"),
@@ -115,31 +115,31 @@ async function GETHandler(
         .limit(500),
       admin
         .from("styles")
-        .select("*")
+        .select("*").eq("is_demo",false)
         .eq("salon_id", id)
         .order("created_at", { ascending: false })
         .limit(500),
       admin
         .from("stylists")
-        .select("*")
+        .select("*").eq("is_demo",false)
         .eq("salon_id", id)
         .order("name")
         .limit(500),
       admin
         .from("salon_products")
-        .select("*")
+        .select("*").eq("is_demo",false)
         .eq("salon_id", id)
         .order("created_at", { ascending: false })
         .limit(500),
       admin
         .from("bookings")
-        .select("*")
+        .select("*").eq("is_demo",false)
         .eq("salon_id", id)
         .order("created_at", { ascending: false })
         .limit(50),
       admin
         .from("reviews")
-        .select("*")
+        .select("*").eq("is_demo",false)
         .eq("salon_id", id)
         .order("created_at", { ascending: false })
         .limit(50),

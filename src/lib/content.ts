@@ -114,7 +114,7 @@ export const LEGAL_LINKS = [
   ["Privacy Policy", "/privacy", "privacy"],
   ["Cookie & Tracking Notice", "/cookie-notice", "cookie-notice"],
   ["Deposit & Refund Policy", "/deposit-refund-policy", "deposit-refund-policy"],
-  ["Salon Partner Agreement", "/salon-partner-agreement", "salon-partner-agreement"],
+  ["Partner Agreement", "/salon-partner-agreement", "salon-partner-agreement"],
   ["Photo & Content Consent", "/photo-content-consent", "photo-content-consent"],
   ["Message Monitoring Disclosure", "/message-monitoring-disclosure", "message-monitoring-disclosure"],
   ["Do Not Sell or Share My Information", "/do-not-sell-or-share", "do-not-sell-or-share"],

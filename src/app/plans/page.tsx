@@ -3,6 +3,7 @@ import { BadgeCheck, Check, Crown } from "lucide-react";
 import {
   PLAN_COMPARISON_ROWS,
   PLAN_ORDER,
+  PLAN_FAMILIES,
   SUBSCRIPTION_PLANS,
   type PlanComparisonValue,
 } from "@/lib/plans";
@@ -20,13 +21,15 @@ export default function PlansPage() {
     <PublicHeader />
     <section className="mx-auto w-full max-w-[1600px] px-4 py-10 sm:px-8 sm:py-12 lg:px-14">
       <div className="mx-auto max-w-3xl text-center">
-        <p className="text-xs font-bold uppercase tracking-[.18em] text-amber">Plans for salon owners</p>
+        <p className="text-xs font-bold uppercase tracking-[.18em] text-amber">Plans for businesses</p>
         <h1 className="mt-4 font-serif text-5xl font-semibold leading-none text-plum sm:text-6xl">Grow on your terms<span className="text-magenta">.</span></h1>
-        <p className="mt-5 text-base leading-7 text-ink/65">Choose a plan during your application. You will not be charged until your salon is approved and you subscribe</p>
+        <p className="mt-5 text-base leading-7 text-ink/65">Choose a plan during your application. You will not be charged until your business is approved and you subscribe</p>
       </div>
 
-      <div className="mt-12 grid gap-5 lg:grid-cols-3">
-        {PLAN_ORDER.map((name) => {
+      {PLAN_FAMILIES.map(family => <section key={family.label} className="mt-12" aria-label={family.label}>
+        <h2 className="mb-6 font-serif text-3xl text-plum">{family.label}</h2>
+        <div className={`grid gap-5 ${family.plans.length === 2 ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
+        {family.plans.map((name) => {
           const plan = SUBSCRIPTION_PLANS[name];
           const popular = name === "Growth";
           return <article key={name} className={`relative flex h-full flex-col rounded-[20px] border bg-white/80 p-7 shadow-[0_18px_55px_rgba(13,17,20,.06)] ${popular ? "border-magenta ring-2 ring-magenta/10" : "border-plum/10"}`}>
@@ -39,18 +42,19 @@ export default function PlansPage() {
             <Link href={`/business/signup?plan=${plan.key}`} className={`mt-8 flex min-h-12 items-center justify-center rounded-[9px] text-sm font-bold ${popular ? "bg-magenta text-white" : "border border-magenta text-magenta"}`}>Choose {name}</Link>
           </article>;
         })}
-      </div>
+        </div>
+      </section>)}
 
       <section className="mt-12" aria-labelledby="compare-plans-heading">
         <div className="text-center">
           <p className="text-xs font-bold uppercase tracking-[.16em] text-amber">Full comparison</p>
           <h2 id="compare-plans-heading" className="mt-3 font-serif text-4xl font-semibold text-plum">Compare every plan benefit<span className="text-magenta">.</span></h2>
-          <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 gc-text-secondary">Every salon receives the same standard marketplace visibility. Advertising benefits are separate from organic search results.</p>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 gc-text-secondary">Every business receives the same standard marketplace visibility. Advertising benefits are separate from organic search results.</p>
         </div>
-        <p className="mt-6 text-center text-[11px] font-semibold gc-text-muted md:hidden">Swipe left and right to compare all three plans.</p>
+        <p className="mt-6 text-center text-[11px] font-semibold gc-text-muted md:hidden">Swipe left and right to compare all five plans.</p>
         <div className="mt-4 overflow-x-auto rounded-[20px] border border-plum/10 bg-white/85 shadow-[0_18px_55px_rgba(13,17,20,.05)] [contain:layout_paint]" tabIndex={0} aria-label="Scrollable plan comparison">
           <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-            <caption className="sr-only">Starter, Growth, and Premium salon subscription feature comparison</caption>
+            <caption className="sr-only">Solo, Solo Pro, Starter, Growth, and Premium business subscription feature comparison</caption>
             <thead>
               <tr className="border-b border-plum/10 bg-blush/25">
                 <th scope="col" className="sticky left-0 z-20 w-[34%] min-w-64 bg-cream px-5 py-5 font-semibold text-plum">Feature</th>
@@ -72,7 +76,7 @@ export default function PlansPage() {
 
       <div className="mt-10 rounded-[18px] bg-plum p-7 text-center text-white">
         <h2 className="font-serif text-3xl">No payment at application</h2>
-        <p className="mt-2 text-sm gc-text-on-dark-muted">Apply first. After approval, activate your selected plan securely through subscriptions</p>
+        <p className="mt-2 text-sm gc-text-on-dark-muted">Apply first. Application and approval are available. New-plan billing activation is not yet verified; no charge is made by applying.</p>
       </div>
     </section>
     <PublicFooter />

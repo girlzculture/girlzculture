@@ -1,3 +1,4 @@
+import { prepareProfessionalArchive } from "@/lib/assistantProfessionalArchive";
 import { readAssistantServiceCalculation } from "@/lib/assistantServiceCalculation";
 import { readAssistantBookingPrice } from "@/lib/assistantBookingPriceRead";
 import "server-only";
@@ -158,6 +159,7 @@ export async function readAssistantData(context: Context, tool: AssistantTool, a
 }
 
 async function prepare(context: Context, tool: AssistantTool, args: Row) {
+  if (tool === "prepare_professional_archive") return prepareProfessionalArchive(context, args);
   if (tool === "prepare_booking_reschedule_proposal") return prepareAssistantBookingReschedule(context, args);
   if (tool === "prepare_manual_service_sale") return prepareManualSale(context, args);
   const { admin, salon } = context;

@@ -145,6 +145,7 @@ function fixture(options = {}) {
         limit(n) { filters.push(['limit', n]); return query; },
         update(value) { mutation = value; return query; },
         maybeSingle() { return query; },
+        abortSignal() {return query;},
         then(resolve, reject) { return Promise.resolve().then(() => {
           calls.push({ table, filters });
           if (table === 'ai_automation_features') return { data: { is_enabled: options.enabled !== false, provider_key: 'openai', model_key: options.model || 'fixture-model', timeout_ms: 20000 } };
@@ -154,6 +155,7 @@ function fixture(options = {}) {
             const requested = filters.find(row => row[0] === 'in' && row[1] === 'id')[2];
             return { data: history.filter(row => requested.includes(row.id)) };
           }
+          if (table === 'engine_settings') return {data:options.agentSettings||[]};
           if (table === 'master_styles') return { data: options.catalog || [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', name: 'Knotless Braids' }] };
           if (table === 'bookings') {
             assert.ok(filters.some(row => row[0] === 'eq' && row[1] === 'salon_id' && row[2] === 'business-A'));
@@ -1072,3 +1074,12 @@ test('actual contribution projection retains measured dates values counts and ac
   const out=JSON.parse(f.requests[0].messages[1].content).previous[0].result.service_contribution;assert.deepEqual(out.period,period);assert.equal(out.as_of,value.as_of);assert.equal(out.recommendation_count,1);assert.equal(out.recommendations[0].service_name,'Own reviewed service');assert.equal(out.recommendations[0].contribution_cents,5700);assert.equal(out.recommendations[0].completed_count,2);assert.equal(out.recommendations[0].previous_count,3);assert.equal(out.recommendations[0].href,'/salon/dashboard/services/'+service);assert.doesNotMatch(JSON.stringify(out),/PRIVATE_COST_REVIEW|allocations|customer/);
  }
 });
+
+ test('published business-agent behavior reaches both phases without adding tools or changing tenant scope',async()=>{
+  for(const answerOnly of [false,true]){
+   const f=fixture({answerOnly,agentSettings:[{setting_key:'agents.business.instructions',published_value:'Use a short friendly tone.'}],...(answerOnly?{output:{reply:'Aucun avis publié.'},history:[{tool:'get_reviews',permission:'reviews',arguments:{},result:{reviews:[],total:0}}],historyRead:{reviews:[],total:0}}:{})});
+   await f.run();assert.match(f.requests[0].messages[0].content,/Use a short friendly tone/);
+   const config=f.calls.find(c=>c.table==='engine_settings');assert.ok(config.filters.some(f=>f[0]==='eq'&&f[1]==='status'&&f[2]==='Published'));
+   assert.deepEqual(Array.from(config.filters.find(f=>f[0]==='in')[2]),['agents.business.instructions','agents.business.tool_guidance','agents.business.routing']);
+  }
+ });

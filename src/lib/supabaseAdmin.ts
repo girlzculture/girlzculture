@@ -1,3 +1,4 @@
+import {isSampleEmail,isSamplePhone} from '@/lib/demoWorkspace';
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { formatInTimeZone } from "@/lib/dateTime";
 import { sendPushToUsers } from "@/lib/webPushServer";
@@ -223,11 +224,21 @@ export async function requireSalonOwner(request: Request) {
   if (!teamMember?.salon || !isActiveSalonTeamMembership(teamMember.status)) {
     throw new Error("Forbidden: this active salon-team identity is not linked to an active team membership.");
   }
+  const solo = await admin.rpc("salon_is_solo", { target_salon_id: teamMember.salon.id });
+  if (solo.error) throw solo.error;
+  if (solo.data) throw new Error("Forbidden: this business plan does not include staff access.");
   return { admin, user, salon: teamMember.salon, teamMember, isOwner: false };
+}
+
+export async function assertBusinessTeamAccess(context: Awaited<ReturnType<typeof requireSalonOwner>>) {
+  const result = await context.admin.rpc("salon_is_solo", { target_salon_id: context.salon.id });
+  if (result.error) throw result.error;
+  if (result.data) throw new Error("Forbidden: team features require a business team plan.");
 }
 
 export async function requireSalonPermission(request: Request, permission: string) {
   const context = await requireSalonOwner(request);
+  if (["stylists", "team", "team_payouts"].includes(permission)) await assertBusinessTeamAccess(context);
   if (!context.isOwner && !(context.teamMember?.permissions as Record<string, boolean> | undefined)?.[permission]) throw new Error("Forbidden: this salon role does not have access to this section.");
   return context;
 }
@@ -255,6 +266,7 @@ export async function sendEmail(
   category: TransactionalEmailCategory = "account",
   options: { fromName?: string; replyTo?: string; idempotencyKey?: string; signal?: AbortSignal } = {},
 ) {
+  if (isSampleEmail(to)) return {skipped:true,reason:"sample_data"};
   if (!process.env.RESEND_API_KEY || !to) return { skipped: true };
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -279,6 +291,7 @@ export async function sendEmail(
 }
 
 export async function sendSms(to: string, body: string) {
+  if(isSamplePhone(to))return {skipped:true,reason:"sample_data"};
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
   const from = process.env.TWILIO_PHONE_NUMBER;

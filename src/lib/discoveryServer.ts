@@ -23,6 +23,9 @@ export type PublicSalonResult = {
   services: Array<{ id: string; name: string }>;
   distance_miles: number;
   total_count: number;
+  independent_professional?: boolean;
+  travels_to_you?: boolean;
+  travel_radius_miles?: number | null;
 };
 
 export type DiscoveryQuery = {
@@ -38,6 +41,8 @@ export type DiscoveryQuery = {
   /** `"all"` invokes the database's explicit no-cap server contract. */
   limit?: number | "all";
   offset?: number;
+  independentOnly?: boolean;
+  travelsOnly?: boolean;
 };
 
 export async function discoverNearbySalons(query: DiscoveryQuery) {
@@ -56,7 +61,7 @@ export async function discoverNearbySalons(query: DiscoveryQuery) {
     if (resolution.error) throw resolution.error;
     if (resolution.data) resolvedStyle = String(resolution.data);
   }
-  const { data, error } = await supabase.rpc("discover_nearby_salons_ranked", {
+  const { data, error } = await supabase.rpc("discover_nearby_salons_ranked_for_businesses", {
     origin_latitude: query.origin.lat,
     origin_longitude: query.origin.lng,
     radius_miles: normalizeRadius(query.radius),
@@ -68,6 +73,8 @@ export async function discoverNearbySalons(query: DiscoveryQuery) {
     sort_mode: query.sort || "distance",
     result_limit: limit,
     result_offset: offset,
+    independent_only: query.independentOnly === true,
+    travels_only: query.travelsOnly === true,
   });
   if (error) throw error;
   const salons = canonicalDiscoveryResults(

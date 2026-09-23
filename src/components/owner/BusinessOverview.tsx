@@ -16,7 +16,7 @@ export default function BusinessOverview({salon,bookings,reviews,styles,stylists
  const timeZone=String(salon.time_zone||"America/New_York"),data=businessOverview(bookings,period,timeZone,now);
  const allowed=(key:string)=>access===null||Boolean(access[key]);
  const bookingAccess=allowed("bookings"),completion=profileCompletion(salon,styles.length,stylists.length);
- const checks:[string,boolean,string][]=[["Business information",Boolean(salon.name&&salon.phone),"my-page"],["Description",Boolean(salon.description),"my-page/description"],["Location",Boolean(salon.address_street),"my-page/address"],["Cover photo",Boolean(salon.cover_photo_url),"photos/cover"],["Styles & Pricing",styles.length>0,"styles"],["Stylists",stylists.length>0,"stylists"]];
+ const checks:[string,boolean,string][]=[["Business information",Boolean(salon.name&&salon.phone),"my-page"],["Description",Boolean(salon.description),"my-page/description"],["Location",Boolean(salon.address_street),"my-page/address"],["Cover photo",Boolean(salon.cover_photo_url),"photos/cover"],["Services & Pricing",styles.length>0,"styles"],["Stylists",stylists.length>0,"stylists"]];
  const summary=[
   ["Appointments",bookingAccess?number(data.appointments):"—",CalendarDays],
   ["Identified clients",bookingAccess?number(data.identified_clients):"—",UsersRound],

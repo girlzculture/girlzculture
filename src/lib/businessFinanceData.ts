@@ -2,6 +2,7 @@ import { assertOperatingBooksScope, moneyCents, type OperatingBooks, type Operat
 
 type Row = Record<string, unknown>;
 export type BusinessFinanceData = {
+  is_demo?: boolean;
   scope: { kind: "business" | "own"; stylist_id: string | null };
   sales: Row[]; bookings: Row[]; receipts: Row[]; expenses: Row[];
   arrangements: Row[]; obligations: Row[]; compensation_payments: Row[]; stylists: Row[];
@@ -16,7 +17,7 @@ const source = (value: unknown): OperatingSale["source"] => ({ walkin: "walk_in"
  * every returned row before transforming, including tables omitted from totals. */
 export function operatingBooksFromData(salonId: string, data: BusinessFinanceData) {
   for (const [key, rows] of Object.entries(data)) {
-    if (key === "scope") continue;
+    if (key === "scope" || key === "is_demo") continue;
     if (!Array.isArray(rows)) throw Error("FINANCE_INVALID_RECORD");
     for (const row of rows) {
       if (!row || row.salon_id !== salonId) throw Error("FINANCE_ACCESS_DENIED");
@@ -35,7 +36,7 @@ export function operatingBooksFromData(salonId: string, data: BusinessFinanceDat
   const excludedTestBookings = new Set<string>();
   let unverifiedDeposits = 0, unverifiedRefunds = 0;
   for (const booking of data.bookings) {
-    if (booking.payment_mode === "test") { excludedTestBookings.add(String(booking.id)); continue; }
+    if (booking.payment_mode === "test" && !(data.is_demo === true && booking.is_demo === true)) { excludedTestBookings.add(String(booking.id)); continue; }
     const manual = booking.booking_origin === "business_added";
     if (booking.estimated_total === null || booking.estimated_total === undefined || booking.estimated_total === "") throw Error("FINANCE_INCOMPLETE_RECORDS");
     const agreed = numberCents(booking.estimated_total);
@@ -50,18 +51,18 @@ export function operatingBooksFromData(salonId: string, data: BusinessFinanceDat
       list_cents: original, discount_cents: original - agreed, agreed_cents: agreed, cost_cents: null, quantity: 1,
       compensation: booking.operating_compensation as OperatingSale["compensation"],
     });
-    const verified = !manual && booking.payment_mode === "live" && stamp(booking.payment_verified_at) && booking.verified_charge === true && ["paid", "succeeded", "refunded", "partiallyrefunded", "refundpending"].includes(normalized(booking.deposit_status));
+    const verified = data.is_demo !== true && !manual && booking.payment_mode === "live" && stamp(booking.payment_verified_at) && booking.verified_charge === true && ["paid", "succeeded", "refunded", "partiallyrefunded", "refundpending"].includes(normalized(booking.deposit_status));
     if (verified && numberCents(booking.deposit_amount) > 0) {
       books.payments.push({ id: `deposit:${booking.id}`, salon_id: salonId, sale_id: id, occurred_at: String(booking.payment_verified_at), stage: "deposit", method: "card", amount_cents: numberCents(booking.deposit_amount), original_payment_id: null });
       if (normalized(booking.refund_status) === "succeeded" && stamp(booking.refund_completed_at) && booking.verified_refund === true && numberCents(booking.refund_amount) > 0) {
         books.payments.push({ id: `refund:${booking.id}`, salon_id: salonId, sale_id: id, occurred_at: String(booking.refund_completed_at), stage: "refund", method: "card", amount_cents: numberCents(booking.refund_amount), original_payment_id: `deposit:${booking.id}` });
       } else if (numberCents(booking.refund_amount) > 0) unverifiedRefunds++;
-    } else if (numberCents(booking.deposit_amount) > 0) unverifiedDeposits++;
+    } else if (data.is_demo !== true && numberCents(booking.deposit_amount) > 0) unverifiedDeposits++;
   }
   const excludedTestOrders = new Set<string>();
   let unverifiedOrders = 0;
   for (const order of data.product_orders || []) {
-    if (order.payment_mode === "test") { excludedTestOrders.add(String(order.id)); continue; }
+    if (order.payment_mode === "test" && !(data.is_demo === true && order.is_demo === true)) { excludedTestOrders.add(String(order.id)); continue; }
     if (String(order.currency).toLowerCase() !== "usd") throw Error("FINANCE_UNSUPPORTED_CURRENCY");
     const id = `order:${order.id}`;
     const total = numberCents(order.total_amount), tax = numberCents(order.tax_amount), shipping = numberCents(order.shipping_amount);
@@ -77,11 +78,11 @@ export function operatingBooksFromData(salonId: string, data: BusinessFinanceDat
       stylist_id: null, client_id: order.customer_id ? String(order.customer_id) : null, client_name: order.guest_name ? String(order.guest_name) : null,
       list_cents: list, discount_cents: discount, agreed_cents: list-discount, tax_cents: tax, shipping_cents: shipping, cost_cents: null,
       quantity: items.reduce((sum,item) => sum + Number(item.quantity), 0) || 1, compensation: { kind:"none",version:null } });
-    const verified = order.payment_mode === "live" && order.verified_charge === true && stamp(order.paid_at) && ["paid","depositpaid","partiallyrefunded","refunded","refundpending","disputed"].includes(normalized(order.payment_status));
+    const verified = data.is_demo !== true && order.payment_mode === "live" && order.verified_charge === true && stamp(order.paid_at) && ["paid","depositpaid","partiallyrefunded","refunded","refundpending","disputed"].includes(normalized(order.payment_status));
     const paid = order.reservation_status ? numberCents(order.deposit_amount) : total;
     if (verified && paid > 0) {
       books.payments.push({id:`order-payment:${order.id}`,salon_id:salonId,sale_id:id,occurred_at:String(order.paid_at),stage:order.reservation_status?"deposit":"full",method:"card",amount_cents:paid,original_payment_id:null});
-    } else if (paid > 0) unverifiedOrders++;
+    } else if (data.is_demo !== true && paid > 0) unverifiedOrders++;
   }
   for (const refund of data.product_refunds || []) {
     if (excludedTestOrders.has(String(refund.order_id))) continue;
@@ -100,5 +101,5 @@ export function operatingBooksFromData(salonId: string, data: BusinessFinanceDat
     });
   }
   assertOperatingBooksScope(salonId, books);
-  return { books, evidence: { excluded_test_bookings: excludedTestBookings.size, excluded_test_orders: excludedTestOrders.size, unverified_deposit_records: unverifiedDeposits, unverified_product_payments: unverifiedOrders, unverified_refund_records: unverifiedRefunds, online_product_orders_included: true, provider_bank_settlement_verified: false } };
+  return { books, evidence: { sample_data: data.is_demo === true, excluded_test_bookings: excludedTestBookings.size, excluded_test_orders: excludedTestOrders.size, unverified_deposit_records: unverifiedDeposits, unverified_product_payments: unverifiedOrders, unverified_refund_records: unverifiedRefunds, online_product_orders_included: true, provider_bank_settlement_verified: false } };
 }

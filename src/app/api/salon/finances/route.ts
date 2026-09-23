@@ -1,4 +1,4 @@
-import { requireSalonOwner } from "@/lib/supabaseAdmin";
+import { requireSalonOwner, assertBusinessTeamAccess } from "@/lib/supabaseAdmin";
 import { enforceRateLimit } from "@/lib/requestSecurity";
 import { readBusinessFinances } from "@/lib/businessFinanceServer";
 import { validateFinancePeriod } from "@/lib/businessFinanceCore";
@@ -38,6 +38,7 @@ async function handle(request: Request) {
     for (const [key, value] of Object.entries(body.payload)) {
       if ((key.endsWith("_cents") || key === "quantity") && value !== null && (!Number.isSafeInteger(value) || Number(value) < 0)) throw Error("FINANCE_INVALID_AMOUNT");
     }
+    if (["arrangement", "obligation", "compensation_payment"].includes(body.action)) await assertBusinessTeamAccess(context);
     const result = await context.admin.rpc("record_business_finance", { p_salon: context.salon.id, p_user: context.user.id, p_request: body.request_id, p_action: body.action, p_payload: body.payload });
     if (result.error) throw result.error;
     return Response.json(result.data, { headers });

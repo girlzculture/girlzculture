@@ -34,7 +34,7 @@ export function validateBusinessWaitlistContact(body: Record<string, unknown>) {
 /** Resolve the stable ID from current published content; never trust a client title or mode. */
 export function validateBusinessWaitlistSubmission(body: Record<string, unknown>, content: BusinessSignupContent | null) {
   const category = content?.categories.find(item => item.id === body.categoryId);
-  if (!category || !category.visible || category.mode !== "waitlist") {
+  if (!category || category.id === "other" || !category.visible || category.mode !== "waitlist") {
     throw new BusinessWaitlistValidationError("This business type is not accepting waitlist requests. Please choose another business type.");
   }
   const contact = validateBusinessWaitlistContact(body);

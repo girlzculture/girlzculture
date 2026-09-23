@@ -19,6 +19,19 @@ test('unverified provider deposits and test activity are explicitly excluded fro
   }
   const data=empty();data.bookings=[{...booking(),payment_mode:'test'}];const result=summarize(data);assert.equal(result.books.sales.length,0);assert.equal(result.evidence.excluded_test_bookings,1);
 });
+
+test('private demo books include only protected sample records and explicitly recorded sample receipts',()=>{
+ const data=empty();data.is_demo=true;
+ data.bookings=[{...booking(),is_demo:true,payment_mode:'test',verified_charge:false,payment_verified_at:null}];
+ data.receipts=[{id:'sample-payment',salon_id:'A',booking_id:'booking-A',stage:'full',method:'other',amount_cents:8000,occurred_at:at}];
+ const result=summarize(data);
+ assert.equal(result.summary.cash_received_cents,8000);assert.equal(result.summary.completed_sales_cents,8000);
+ assert.equal(result.evidence.sample_data,true);assert.equal(result.evidence.provider_bank_settlement_verified,false);
+ assert.equal(result.books.payments.length,1);assert.match(result.books.payments[0].id,/^receipt:/);
+ data.is_demo=false;assert.equal(summarize(data).books.sales.length,0);
+ data.is_demo=true;data.bookings[0].is_demo=false;assert.equal(summarize(data).books.sales.length,0);
+ data.bookings[0].salon_id='B';assert.throws(()=>summarize(data),/FINANCE_ACCESS_DENIED/);
+});
 test('business-added appointment deposits are not invented provider receipts',()=>{
   const data=empty();data.bookings=[{...booking(),booking_origin:'business_added',source:'Phone'}];const result=summarize(data);assert.equal(result.books.sales[0].source,'phone');assert.equal(result.summary.cash_received_cents,0);assert.equal(result.evidence.unverified_deposit_records,1);
 });

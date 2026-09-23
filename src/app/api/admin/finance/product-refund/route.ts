@@ -43,7 +43,7 @@ async function POSTHandler(request: Request) {
       );
     const { data: order, error: orderError } = await admin
       .from("product_orders")
-      .select("*")
+      .select("*").eq("is_demo",false)
       .eq("id", orderId)
       .single();
     if (orderError) throw orderError;
@@ -54,7 +54,7 @@ async function POSTHandler(request: Request) {
       );
     const prior = await admin
       .from("product_order_refunds")
-      .select("amount,status")
+      .select("amount,status").eq("is_demo",false)
       .eq("order_id", orderId)
       .in("status", ["Pending", "Succeeded"]);
     if (prior.error) throw prior.error;

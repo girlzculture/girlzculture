@@ -1,4 +1,6 @@
 "use client";
+import BusinessLocationControls from "@/components/owner/BusinessLocationControls";
+import { isSoloPlan } from "@/lib/plans";
 
 import BookingChangeProposal from "./BookingChangeProposal";
 import ReviewsWorkspace from "./ReviewsWorkspace";
@@ -762,11 +764,14 @@ export default function OwnerDashboardApp({
     return (
       <OwnerDashboardShell
         section={section}
-        salonName={salon.name || "Your Salon"}
+        salonName={salon.name || "Your Business"}
+      sampleBusiness={salon.is_demo===true}
+      businessType={typeof salon.business_type === "string" ? salon.business_type : undefined}
         salonSlug={salon.slug || ""}
         avatar={salon.logo_url || null}
         notifications={notifications}
         access={teamPermissions}
+        independent={isSoloPlan(storedPlan)}
       >
         <div className="rounded-[18px] border border-plum/10 bg-white p-10 text-center">
           <LockKeyhole className="mx-auto text-magenta" />
@@ -834,11 +839,14 @@ export default function OwnerDashboardApp({
   return (
     <OwnerDashboardShell
       section={section}
-      salonName={salon.name || "Your Salon"}
+      salonName={salon.name || "Your Business"}
+      sampleBusiness={salon.is_demo===true}
+      businessType={typeof salon.business_type === "string" ? salon.business_type : undefined}
       salonSlug={salon.slug || ""}
       avatar={salon.logo_url || null}
       notifications={notifications}
       access={teamPermissions}
+        independent={isSoloPlan(storedPlan)}
     >
       {lifecycleStatus === "suspended" ? (
         <div
@@ -972,13 +980,14 @@ function DashboardContent({
   if (section === "my-page") return <BusinessProfileWorkspace c={c} focus={c.focusedRecordId}><MyPage c={c} focus={c.focusedRecordId || "business"} /></BusinessProfileWorkspace>;
   if (section === "photos") return <Photos c={c} focus={c.focusedRecordId} />;
   if (section === "styles") return <StructuredStylesEditor c={c} recordId={c.focusedRecordId} />;
+  if (section === "stylists" && isSoloPlan(c.plan)) return <div role="status" className="rounded-xl border p-6">Your independent plan has one calendar. Team management becomes available with a business team plan.</div>;
   if (section === "stylists") return <><StructuredStylistsEditor c={c} recordId={c.focusedRecordId} />{!c.focusedRecordId && c.stylists.length === 0 ? <StylistSectionFallbackEditor gallery={Array.isArray(c.salon.gallery_photos) ? c.salon.gallery_photos : []} products={c.products} promotions={c.promotions} initial={c.salon.stylist_section_fallback} onSave={c.updateSalon} onNotice={c.setNotice} /> : null}</>;
   if (section === "products") return <TruthfulProducts c={c} recordId={c.focusedRecordId} />;
   if (section === "availability") return <Availability c={c} recordId={c.focusedRecordId} />;
   if (section === "bookings") return <Bookings c={c} recordId={c.focusedRecordId || c.initialBookingId} />;
   if (section === "messages") return <>{c.isOwner && (!c.focusedRecordId || c.focusedRecordId === "campaigns") ? <CustomerCampaignNavigation campaigns={c.focusedRecordId === "campaigns"}/> : null}{c.focusedRecordId === "campaigns" ? c.isOwner ? <BusinessCustomerCampaigns businessId={String(c.salon.id)}/> : <AccessPaused isOwner={false}/> : <BookingInbox scope="salon" initialBookingId={c.focusedRecordId} focused={Boolean(c.focusedRecordId)} />}</>;
   if (section === "reviews") return <Reviews c={c} recordId={c.focusedRecordId} />;
-  if (section === "earnings") return <BusinessFinances key={JSON.stringify([c.salon.id,c.isOwner,c.access])} salonId={String(c.salon.id)} timeZone={String(c.salon.time_zone || "America/New_York")} isOwner={c.isOwner} access={c.access} paymentEvidence={c.isOwner || c.access?.earnings ? <Earnings c={c} recordId={c.focusedRecordId} /> : null}/>;
+  if (section === "earnings") return <BusinessFinances independent={isSoloPlan(c.plan)} key={JSON.stringify([c.salon.id,c.isOwner,c.access])} salonId={String(c.salon.id)} timeZone={String(c.salon.time_zone || "America/New_York")} isOwner={c.isOwner} access={c.access} paymentEvidence={c.isOwner || c.access?.earnings ? <Earnings c={c} recordId={c.focusedRecordId} /> : null}/>;
   if (section === "promotions")
     return (
       <>
@@ -1667,7 +1676,7 @@ function BusinessProfileWorkspace({ c, focus, children }: { c: Ctx; focus: strin
     ["Description", Boolean(c.salon.description), "my-page/description"],
     ["Location", Boolean(c.salon.address_street), "my-page/address"],
     ["Cover photo", Boolean(c.salon.cover_photo_url), "photos/cover"],
-    ["Styles & Pricing", c.styles.length > 0, "styles"],
+    ["Services & Pricing", c.styles.length > 0, "styles"],
     ["Stylists", c.stylists.length > 0, "stylists"],
   ];
   return <div className="space-y-5">
@@ -1700,6 +1709,7 @@ function BusinessProfileWorkspace({ c, focus, children }: { c: Ctx; focus: strin
 }
 
 function MyPage({ c, focus }: { c: Ctx; focus: string }) {
+  if (focus === "address" && c.salon.service_location_type) return c.isOwner ? <BusinessLocationControls key={c.salon.id}/> : <Panel><Empty text="Owner-only access"/></Panel>;
   if (focus === "business-policies") return <BusinessPolicies />;
   if (focus === "policies") {
     return (
@@ -1936,7 +1946,7 @@ function Styles({ c }: { c: Ctx }) {
   return (
     <>
       <Title
-        title="Styles & Pricing"
+        title="Services & Pricing"
         subtitle="Manage your signature styles, pricing, options, and inclusions."
         action={
           <button
@@ -3803,7 +3813,7 @@ function SettingsWorkspace({ c, focus = "" }: { c: Ctx; focus?: string }) {
   const knownFocus = ["account", "notifications", "marketplace", "team", "integrations", "security"].includes(focus) || focus.startsWith("member-");
   const active = knownFocus ? focus : canEditAccount ? "account" : "notifications";
   const tabs = [...(canEditAccount ? [["account", "Account details"]] : []), ["notifications", "Notifications"],
-    ...(c.isOwner ? [["marketplace", "Marketplace status"], ["team", "Team & permissions"], ["integrations", "Google Business Profile"]] : []),
+    ...(c.isOwner ? [["marketplace", "Marketplace status"], ...(!isSoloPlan(c.plan) ? [["team", "Team & permissions"]] : []), ["integrations", "Google Business Profile"]] : []),
     ["security", "Security & sign out"]];
   const ownerOnly = ["team", "marketplace", "integrations"].includes(active) || active.startsWith("member-");
   return <>
@@ -3834,6 +3844,7 @@ function SettingsSectionHeader({ title, subtitle, status, fallbackHref }: { titl
 
 function SettingsContent({ c, focus }: { c: Ctx; focus: string }) {
   if(focus === "integrations") return <><SettingsSectionHeader title="Google Business Profile" subtitle="Review Google integration availability and manage this business connection."/>{c.isOwner&&c.salon.id?<GoogleBusinessProfileSettings key={c.salon.id} businessId={c.salon.id} photos={Array.isArray(c.salon.gallery_photos)?c.salon.gallery_photos:[]}/>:<p>{c.translateSource("Owner-only access")}</p>}</>;
+  if (isSoloPlan(c.plan) && (focus === "team" || focus.startsWith("member-"))) return <p role="status">Team accounts require a business team plan.</p>;
   if (focus === "team") return <><SettingsSectionHeader title="Team & permissions" subtitle="Choose one team member to manage without losing the settings context. Subscription and billing always remain owner-only." status={c.isOwner ? "Owner access" : "Read only"}/><TeamUserManager scope="salon" /></>;
   if (focus.startsWith("member-")) return <><SettingsSectionHeader title={focus === "member-new" ? "Add team member" : "Manage team member"} subtitle="Save identity, role, status, and dashboard permissions together." fallbackHref="/salon/dashboard/settings/team" status="Owner-only access"/><TeamUserManager scope="salon" initialUserId={focus.slice("member-".length)} showBackLink={false}/></>;
   if (focus === "marketplace") return <><SettingsSectionHeader title="Marketplace status" subtitle="Manage publication and booking availability without changing the salon record."/><PublicationControls c={c}/></>;

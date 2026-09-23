@@ -144,6 +144,8 @@ async function POSTHandler(request: Request) {
       ? (sort as DecisionSearchFilters["sort"])
       : undefined,
     promotionOnly: rawFilters.promotionOnly === true,
+    independentOnly: rawFilters.independentOnly === true,
+    travelsOnly: rawFilters.travelsOnly === true,
     page: optionalNumber(rawFilters.page),
     pageSize: optionalNumber(rawFilters.pageSize),
   };

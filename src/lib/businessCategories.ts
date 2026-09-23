@@ -9,11 +9,15 @@ export const BUSINESS_CATEGORIES = [
   { slug: "other", name: "Other", photo: "other", live: false },
 ] as const;
 
+// Keep the retired stable identity only for old CMS snapshots and records.
+export const ACTIVE_BUSINESS_CATEGORIES = BUSINESS_CATEGORIES.filter(category => category.slug !== "other");
+export const categoryOpeningMessage = (name: string) => `We're opening access to more beauty and wellness businesses in your area soon. Join the waitlist and we'll reach out when onboarding opens for ${name} businesses in your area.`;
+
 export type BusinessCategory = (typeof BUSINESS_CATEGORIES)[number];
 export type WaitlistCategory = Extract<BusinessCategory, { live: false }>;
 
 export function waitlistCategory(value: unknown): WaitlistCategory | undefined {
-  return BUSINESS_CATEGORIES.find((category): category is WaitlistCategory => !category.live && category.slug === value);
+  return BUSINESS_CATEGORIES.find((category): category is WaitlistCategory => !category.live && category.slug !== "other" && category.slug === value);
 }
 
 export function businessCategoryHref(category: BusinessCategory, liveHref: string) {

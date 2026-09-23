@@ -3,7 +3,7 @@ import { AssistantError, stableJson } from "@/lib/gcAssistantCore";
 import { operatingBooksFromData, type BusinessFinanceData } from "@/lib/businessFinanceData";
 import { moneyCents, summarizeOperatingBooks } from "@/lib/businessFinanceCore";
 import { priceReadScope, unchangedPriceScope, priceObject, priceUnavailable, priceDenied, type PriceReadContext } from "@/lib/assistantPriceReadScope";
-const fields = "id,salon_id,stylist_id,public_reference,appointment_datetime,status,booking_origin,payment_mode,estimated_total,subtotal_before_promotion,deposit_amount,deposit_percentage,original_deposit_amount,deposit_rule_snapshot,discount_amount,promotion_discount_amount,promotion_snapshot,balance_due";
+const fields = "id,salon_id,is_demo,stylist_id,public_reference,appointment_datetime,status,booking_origin,payment_mode,estimated_total,subtotal_before_promotion,deposit_amount,deposit_percentage,original_deposit_amount,deposit_rule_snapshot,discount_amount,promotion_discount_amount,promotion_snapshot,balance_due";
 const stamp = (value: unknown) => typeof value === "string" && Number.isFinite(Date.parse(value));
 /** Existing contract facts never consult today's catalog, offers or rule. */
 export async function readAssistantBookingPrice(context: PriceReadContext, args: Record<string, unknown>) {
@@ -33,13 +33,14 @@ export async function readAssistantBookingPrice(context: PriceReadContext, args:
   for (const key of ["estimated_total", "subtotal_before_promotion", "deposit_amount", "status", "appointment_datetime", "payment_mode"]) if (String(row[key]) !== String(canonical[key])) throw priceUnavailable();
   if (stableJson(await booking()) !== stableJson(row)) throw priceUnavailable();
   unchangedPriceScope(before, await priceReadScope(context, permissions, true));
+  const sample = context.salon.is_demo === true && data.is_demo === true && row.is_demo === true && canonical.is_demo === true;
   const now = new Date(), parts = new Intl.DateTimeFormat("en-CA", { timeZone: before.time_zone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
   const day = ["year", "month", "day"].map(type => parts.find(part => part.type === type)?.value).join("-");
-  const base = { booking_id: row.id, public_reference: typeof row.public_reference === "string" ? row.public_reference.slice(0, 100) : null, status: row.status, appointment_datetime: row.appointment_datetime, currency: "USD", as_of: now.toISOString(), as_of_day: day, time_zone: before.time_zone,
+  const base = { sample_data: sample, booking_id: row.id, public_reference: typeof row.public_reference === "string" ? row.public_reference.slice(0, 100) : null, status: row.status, appointment_datetime: row.appointment_datetime, currency: "USD", as_of: now.toISOString(), as_of_day: day, time_zone: before.time_zone,
     scope: restricted ? "own_stylist_only" : "authenticated_business_only", scope_stylist_id: restricted, href: `/salon/dashboard/earnings?${new URLSearchParams({ finance: "transactions", finance_record: `booking:${row.id}` })}`,
-    definition: "Original saved booking terms, never recalculated from today's menu, promotion or deposit rule. Original remaining balance is not today's unpaid amount. Current recorded position uses verified payments through the business reporting day; refunds do not reopen discharged debt. Pending/future amounts are not claimed overdue. No collection, payment or notification was performed." };
+    definition: (sample ? "FICTIONAL SAMPLE DATA. Recorded demo receipts are simulated, never provider charges or bank settlement. " : "") + "Original saved booking terms, never recalculated from today's menu, promotion or deposit rule. Original remaining balance is not today's unpaid amount. Current recorded position uses verified payments through the business reporting day; refunds do not reopen discharged debt. Pending/future amounts are not claimed overdue. No collection, payment or notification was performed." };
   const unavailable = (reason: string) => ({ ...base, available: false, reason, original: null, current: null });
-  if (row.payment_mode === "test") return unavailable("test_payment_excluded");
+  if (row.payment_mode === "test" && !sample) return unavailable("test_payment_excluded");
   let subtotal: number, agreed: number, deposit: number, discount: number, businessDiscount: number, balance: number;
   const terms = priceObject(row.deposit_rule_snapshot), offer = priceObject(row.promotion_snapshot);
   try {
@@ -55,7 +56,7 @@ export async function readAssistantBookingPrice(context: PriceReadContext, args:
   const books = { sales: [sale], payments: all.books.payments.filter(payment => payment.sale_id === id), expenses: [], obligations: [], compensation_payments: [] };
   // Scope was checked for the entire protected response before selecting this
   // booking. Verification uncertainty here is specific to its own evidence.
-  const hasDeposit = deposit === 0 || books.payments.some(payment => payment.id === `deposit:${row.id}`);
+  const hasDeposit = deposit === 0 || books.payments.some(payment => (sample ? payment.stage === "deposit" && payment.amount_cents === deposit : payment.id === `deposit:${row.id}`));
   const refundClaim = Number(canonical.refund_amount || 0) > 0;
   const hasRefund = !refundClaim || books.payments.some(payment => payment.id === `refund:${row.id}`);
   const futurePayment = books.payments.some(payment => Date.parse(payment.occurred_at) > now.getTime());

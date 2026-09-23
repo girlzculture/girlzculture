@@ -1,3 +1,4 @@
+import {parseSearchTimeWindow,validateSearchTimeWindow,type SearchTimeWindow} from '@/lib/searchTimeWindow';
 import {
   boundedSearchNumber,
   decisionSearchRadius,
@@ -7,6 +8,16 @@ import {
   type DecisionCatalogService,
 } from "@/lib/decisionSearchEnrichmentCore";
 
+/** Shared public-search flags, including explicit removal in conversational follow-ups. */
+export function publicBusinessFilters(text:string){
+ const value=text.normalize('NFKC').toLocaleLowerCase();
+ const independent=/\b(independent|solo|indépendant(?:e)?s?|independiente(?:s)?)\b|独立专业|独立从业/.test(value);
+ const travels=/\b(travels to (?:you|me)|mobile professional|at my home|a domicilio)\b|à domicile|上门服务/.test(value);
+ return {independent,travels,
+  clearIndependent:/all business(?:es)?|any business|include teams|toutes les entreprises|avec (?:une |des )?équipes|todos los negocios|incluye equipos|所有商家|包括团队/.test(value),
+  clearTravels:/not just mobile|(?:include|show) (?:storefronts|fixed locations)|(?:include|show) all locations|pas seulement à domicile|inclure les établissements|no solo a domicilio|incluir locales|不限上门|包括门店/.test(value)};
+}
+
 export type DecisionIntentFilters = {
   serviceId?: string | null;
   radiusMiles?: number | null;
@@ -15,6 +26,11 @@ export type DecisionIntentFilters = {
   date?: string | null;
   sort?: "distance" | "rating" | "price_low" | "price_high";
   promotionOnly?: boolean;
+  independentOnly?: boolean;
+  travelsOnly?: boolean;
+  timePeriod?:"any"|"morning"|"afternoon"|"evening";
+  startTime?:string|null;
+  endTime?:string|null;
 };
 
 export type DecisionIntentCatalogService = DecisionCatalogService & {
@@ -59,8 +75,11 @@ export type ParsedDecisionSearchIntent = {
   maximumPrice: number | null;
   date: string | null;
   timePeriod: "any" | "morning" | "afternoon" | "evening";
+  timeWindow:SearchTimeWindow|null;
   sort: "distance" | "rating" | "price_low" | "price_high";
   promotionOnly: boolean;
+  independentOnly: boolean;
+  travelsOnly: boolean;
   bestIntent: boolean;
   affordableIntent: boolean;
 };
@@ -223,7 +242,7 @@ function broadCatalogMatch(
 }
 
 function residualSemanticPhrase(query: string) {
-  const residual = ` ${query} `
+  const residual = ` ${query} `.replace(/\b(?:independent professionals?|solo professionals?|travels to (?:you|me)|mobile professionals?|at my home)\b/g, " ")
     .replace(/\b(?:salons?|hair salon|beauty salon|near me|nearby)\b/g, " ")
     .replace(
       /\b(?:affordable|cheap|budget|lowest price|low cost|best|best rated|highest rated|top rated|highly rated|reliable)\b/g,
@@ -304,8 +323,11 @@ export function parseDecisionSearchIntent(
     minimumRating,
     maximumPrice,
     date: requestedDate(query, filters.date, now),
-    timePeriod: requestedTimePeriod(query),
+    timePeriod: filters.timePeriod||requestedTimePeriod(query),
+    timeWindow:validateSearchTimeWindow(filters.startTime,filters.endTime)||parseSearchTimeWindow(rawQuery),
     sort,
+    independentOnly: filters.independentOnly === true || publicBusinessFilters(rawQuery).independent,
+    travelsOnly: filters.travelsOnly === true || publicBusinessFilters(rawQuery).travels,
     promotionOnly:
       filters.promotionOnly === true ||
       /\b(discount|deal|promotion|promo|offer|sale)\b/.test(query),
