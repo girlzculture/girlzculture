@@ -8,6 +8,7 @@ import { generateTranslationDraft } from "@/lib/aiAutomationServer";
 import { translationProviderFailure } from "@/lib/translationProviderErrors";
 import { capturePlatformError, safeFailure } from "@/lib/platformErrors";
 import { canGenerateTranslationDraft } from "@/lib/localizationCore";
+import { publishedKnowledgeTranslationSources } from "@/lib/publishedKnowledgeServer";
 
 function impactForKey(key:string){
   if(/login|signup|password|identity|security/.test(key))return"security";
@@ -34,6 +35,7 @@ const VALID_STATUSES = new Set(["Missing", "Draft", "Reviewed", "Published"]);
 async function GETHandler(request: Request) {
   try {
     const { admin } = await requireAdminPermission(request, "content");
+    const definitions = {...SOURCE_DEFINITIONS, ...await publishedKnowledgeTranslationSources({admin})};
     const requestedLocale=normalizeLocale(new URL(request.url).searchParams.get("locale")||"en");
     const [
       { data: locales, error: localeError },
@@ -71,7 +73,7 @@ async function GETHandler(request: Request) {
     );
     const localeCodes = (locales || []).some(row=>row.locale===requestedLocale)?[requestedLocale]:[String((locales||[]).find(row=>row.is_default)?.locale||"en")];
     const entries = localeCodes.flatMap((locale) =>
-      Object.entries(SOURCE_DEFINITIONS).map(
+      Object.entries(definitions).map(
         ([key, definition]) =>
           index.get(`${key}:${locale}`) || {
             id: "",
@@ -191,6 +193,11 @@ async function PATCHHandler(request: Request) {
         });
       return Response.json({ locale: data });
     }
+    let knowledgeDefinitions: Awaited<ReturnType<typeof publishedKnowledgeTranslationSources>> | undefined;
+    const currentKnowledgeDefinitions = async () => knowledgeDefinitions ||= await publishedKnowledgeTranslationSources({admin});
+    const knowledgeRequested = cleanText(body.translation_key, 180).startsWith("knowledge.")
+      || (action === "bulk_import" && Array.isArray(body.entries) && body.entries.some((row: Record<string, unknown> | null) => cleanText(row?.translation_key, 180).startsWith("knowledge.")));
+    const definitions = knowledgeRequested ? {...SOURCE_DEFINITIONS, ...await currentKnowledgeDefinitions()} : SOURCE_DEFINITIONS;
     if (action === "bulk_import") {
       const raw = Array.isArray(body.entries) ? body.entries.slice(0, 501) : [];
       if (!raw.length || raw.length > 500)
@@ -207,16 +214,16 @@ async function PATCHHandler(request: Request) {
         const key = cleanText(row.translation_key, 180);
         const locale = normalizeLocale(row.locale);
         const text = cleanText(row.translated_text, 12000);
-        if (!(key in SOURCE_DEFINITIONS) || !locales.has(locale) || !text)
+        if (!(key in definitions) || !locales.has(locale) || !text)
           throw new Error(`Invalid import entry for ${key || "unknown key"}.`);
         return {
           translation_key: key,
           locale,
           namespace: key.split(".")[0],
-          source_text: SOURCE_DEFINITIONS[key].source,
+          source_text: definitions[key].source,
           translated_text: text,
           status: "Draft",
-          impact_level: SOURCE_DEFINITIONS[key].impact,
+          impact_level: definitions[key].impact,
           machine_generated: row.machine_generated === true,
           updated_by: user.id,
         };
@@ -239,7 +246,7 @@ async function PATCHHandler(request: Request) {
     if (action === "generate_draft") {
       const key = cleanText(body.translation_key, 180);
       const locale = normalizeLocale(body.locale);
-      const definition = SOURCE_DEFINITIONS[key];
+      const definition = definitions[key];
       if (!definition || locale === "en")
         throw new Error("Choose non-English interface text to translate.");
       if (!canGenerateTranslationDraft(definition.impact))
@@ -373,18 +380,20 @@ async function PATCHHandler(request: Request) {
         .select("locale")
         .eq("locale", locale)
         .maybeSingle();
-      if (!(key in SOURCE_DEFINITIONS) || !localeRecord)
+      if (!(key in definitions) || !localeRecord)
         throw new Error("Choose a valid translation entry.");
       existing = {
         translation_key: key,
         locale,
-        source_text: SOURCE_DEFINITIONS[key].source,
+        source_text: definitions[key].source,
         translated_text: "",
-        impact_level: SOURCE_DEFINITIONS[key].impact,
+        impact_level: definitions[key].impact,
         namespace: key.split(".")[0],
         version: 0,
       };
     }
+    if (String(existing.translation_key).startsWith("knowledge.") && (await currentKnowledgeDefinitions())[String(existing.translation_key)]?.source !== existing.source_text)
+      throw new Error("The published Help source changed. Reload before saving its translation.");
     let status = "Draft";
     const update: Record<string, unknown> = {
       translated_text: text,

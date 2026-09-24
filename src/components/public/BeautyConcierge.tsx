@@ -58,7 +58,7 @@ export default function BeautyConcierge() {
   }, []);
 
   async function search(event: FormEvent) {
-    event.preventDefault(); if (inFlight.current || prompt.trim().length < 3) return;
+    event.preventDefault(); if (inFlight.current || prompt.trim().length < (helpMode ? 2 : 3)) return;
     if(prompt.length > (helpMode ? 240 : 600)) {setMessage("Keep your question within the displayed character limit."); setSearchState("error"); return;}
     const captured: CustomerRequest = {index: turns.length, question: prompt.trim(), language: locale, help: helpMode, intent, latitude: location.location?.lat, longitude: location.location?.lng};
     setTurns(previous => [...previous, {question: captured.question, answer: "", language: captured.language, pending: true}]);
@@ -78,7 +78,8 @@ export default function BeautyConcierge() {
         const body = await readApiResponse(response, "Published help could not be searched.");
         if (started !== generation.current) return;
         if (!response.ok) throw new Error(body.error || "Published help could not be searched.");
-        const matches = (Array.isArray(body.matches) ? body.matches : []) as { question: string; answer: string; href: string; title: string; language?: string }[];
+        const matches = ((Array.isArray(body.matches) ? body.matches : []) as { question: string; answer: string; href: string; title: string; language?: string }[])
+          .filter(match => (match.language || "en") === captured.language);
         updateTurn({pending:false,language:matches.length ? matches[0].language||"en" : captured.language,answer:matches.length ? matches.slice(0,2).map(match => `${match.question}: ${match.answer}`).join("\n\n") : gciaText("I couldn't find that in the published Help center. Try a more specific question or contact support.",captured.language)});
         setSources(matches.slice(0,2)); pendingRequest.current.delete(captured.index); return;
       }
@@ -129,7 +130,7 @@ export default function BeautyConcierge() {
     {sources.length ? <div className="my-3 flex flex-wrap gap-3 text-sm">{sources.map((source,index) => <Link key={index} href={source.href} className="font-semibold text-text-link underline">Read {source.title}</Link>)}</div> : null}
     <form onSubmit={search} className="mt-4 rounded-2xl border border-border bg-white p-3">
       <label><span className="sr-only">Describe your beauty appointment</span><textarea value={prompt} onChange={event => setPrompt(event.target.value)} maxLength={helpMode ? 240 : 600} rows={2} placeholder={SEARCH_PLACEHOLDER} onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} className="min-h-16 w-full resize-y border-0 bg-white px-2 py-2 text-base text-text-primary outline-none"/></label>
-      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs">Only current Girlz Culture records and published help.</p><div className="flex items-center gap-2"><AssistantDictation key={dictationSession} disabled={busy} sessionKey={dictationSession} value={prompt} onChange={setPrompt} maxLength={helpMode ? 240 : 600}/><button disabled={busy || prompt.trim().length < 3} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary-hover px-4 text-sm font-bold text-white gc-disabled-control">{busy ? <LoaderCircle className="animate-spin" size={17}/> : null}{helpMode ? "Ask GC Assistant" : "Find real matches"}</button></div></div>
+      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs">Only current Girlz Culture records and published help.</p><div className="flex items-center gap-2"><AssistantDictation key={dictationSession} disabled={busy} sessionKey={dictationSession} value={prompt} onChange={setPrompt} maxLength={helpMode ? 240 : 600}/><button disabled={busy || prompt.trim().length < (helpMode ? 2 : 3)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary-hover px-4 text-sm font-bold text-white gc-disabled-control">{busy ? <LoaderCircle className="animate-spin" size={17}/> : null}{helpMode ? "Ask GC Assistant" : "Find real matches"}</button></div></div>
     </form>
     {searchState !== "idle" ? <ConciergeResultHeader state={searchState} configuration={configuration} message={message} count={results.length}/> : null}
     {intent && (intent.style || intent.radius_miles || intent.maximum_price || intent.minimum_rating || intent.date) ? <div role="group" className="mt-3 flex flex-wrap gap-2" aria-label="Interpreted search details">{intent.style ? <Chip>{intent.style}</Chip> : null}{intent.radius_miles ? <Chip>Within {intent.radius_miles} mi</Chip> : null}{intent.maximum_price !== null ? <Chip>Up to ${intent.maximum_price}</Chip> : null}{intent.minimum_rating !== null ? <Chip>{intent.minimum_rating}+ stars</Chip> : null}{intent.date ? <Chip>{intent.date} · {intent.time_period}</Chip> : null}{intent.promotion_only ? <Chip>Offers only</Chip> : null}<span className="self-center text-[11px] gc-text-secondary">{mode === "openai" ? "AI interpreted; database verified" : "Standard search fallback"}</span></div> : null}
