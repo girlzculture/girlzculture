@@ -122,12 +122,12 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }
     nav = page.getByRole('navigation', { name: 'Mobile navigation', exact: true });
     await nav.getByText('For Businesses', { exact: true }).click();
   } else await nav.getByRole('button', { name: 'For Businesses', exact: true }).click();
-  const pricing = nav.getByRole('link', { name: 'Pricing', exact: true });
+  const pricing = nav.getByRole('link', { name: 'Pricing & Plans', exact: true });
   await expect(pricing).toBeVisible();
   await expect(pricing).toHaveAttribute('href', '/plans');
   await pricing.click();
   await expect(page).toHaveURL('/plans');
-  for (const name of ['Starter', 'Growth', 'Premium']) await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+  for (const name of ['Solo', 'Solo Pro', 'Starter', 'Growth', 'Premium']) await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
   await page.goto('/site-access');
   await page.reload();
   expect((await context.cookies()).some(cookie=>cookie.name==='gc_site_access')).toBe(true);

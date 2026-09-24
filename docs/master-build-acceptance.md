@@ -317,3 +317,15 @@ Required run 35931222669 caught a WebKit 768px policy-consent failure. The full-
 ## Expanded full-suite distribution
 
 At `9e9e738`, all eight required shards finished: **1,716 passed, five existing skips, one failure; 1,722 total**. The sole failure was the policy-consent interaction corrected above. Separately, release run 35931222779's old three-shard job reached its one-hour limit after test 507; GitHub recorded the execution-time limit explicitly. The release workflow now reuses the same eight-shard runner (measured maximum 38.9 minutes), one worker, isolated build/app/fixture/log paths, zero retries and complete project collection. Its final job reconciles all eight reports against fresh collection, requiring exactly-once execution and no unsuccessful cases. No timeout was increased, test removed or failure suppressed. The extended migration/workflow contract passes **32/32**, and final-completion invariants pass.
+
+## 24 September — complete browser evidence and remaining contract corrections
+
+At `435d1f5`, all eight shards passed in both required and release workflows. Release reconciliation reports **1,717 passed, five existing skips, zero failed; 1,722 tests accounted for exactly once**. The longest jobs completed in 42m49s (required) and 41m54s (release); workers, retries, projects and timeout limits are unchanged. Full and production dependency audits reported zero vulnerabilities. The release workflow also passed the complete clean migration chain, TypeScript, lint and build.
+
+The subsequent gates found outdated expectations, not an application assertion failure in those 1,722 tests:
+
+- Four opacity exceptions referred to classes already removed from the application/profile pages. Removing only those obsolete entries makes the design-system source, fixture and contrast checks pass without enlarging any allowance.
+- The prelaunch navigation test still searched for “Pricing,” although Master Build section 7.2 explicitly specifies “Pricing & Plans.” It now requires that exact label and the same destination, geometry, session retention and no-banner behavior; it additionally checks both Solo headings alongside all three team plans.
+- The authoritative-submission source check expected the previous direct RPC call. It now follows the reviewed wrapper into the same canonical atomic submission function, explicitly checking the authenticated actor, reviewed revision, advisory lock and submitted-draft binding. Existing lifecycle/subscription/history assertions remain.
+
+The focused source-gate run passed its other 34 commands. The corrected authoritative-submission check passed separately. The full focused prelaunch suite then passed **32/32 Chromium/WebKit cases**, including all ten corrected navigation/session cases. Hosted acceptance, protected merge/migration and actual demo provisioning remain outstanding; these results are not a live release claim.

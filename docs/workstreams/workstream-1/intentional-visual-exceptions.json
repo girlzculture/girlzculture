@@ -228,13 +228,6 @@
     },
     {
       "file": "src/app/salon/[slug]/page.tsx",
-      "token": "text-ink/45",
-      "maxOccurrences": 1,
-      "classification": "legacy-metadata-migration-budget",
-      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
-    },
-    {
-      "file": "src/app/salon/[slug]/page.tsx",
       "token": "text-ink/55",
       "maxOccurrences": 7,
       "classification": "legacy-metadata-migration-budget",
@@ -1910,27 +1903,6 @@
       "file": "src/components/ReviewForm.tsx",
       "token": "text-ink/65",
       "maxOccurrences": 1,
-      "classification": "legacy-metadata-migration-budget",
-      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
-    },
-    {
-      "file": "src/components/SalonApplication.tsx",
-      "token": "text-ink/50",
-      "maxOccurrences": 1,
-      "classification": "legacy-metadata-migration-budget",
-      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
-    },
-    {
-      "file": "src/components/SalonApplication.tsx",
-      "token": "text-ink/55",
-      "maxOccurrences": 3,
-      "classification": "legacy-metadata-migration-budget",
-      "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
-    },
-    {
-      "file": "src/components/SalonApplication.tsx",
-      "token": "text-ink/65",
-      "maxOccurrences": 2,
       "classification": "legacy-metadata-migration-budget",
       "reason": "Exact per-file ratcheting ceiling for reviewed legacy supplementary metadata; important-context rules still override this ceiling."
     },
