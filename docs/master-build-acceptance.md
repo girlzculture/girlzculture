@@ -296,3 +296,24 @@ The first combined checks on `4514f4b` failed; their evidence is retained in [re
 - The completed shard-failure reproductions now pass **37/37 Chromium/WebKit cases**: stored unsupported-language fallback, unchanged review/confirmation/persistence, all three booking recipients, mobile/desktop Assistant state, and exact updated navigation. Current lint remains **0 errors, 17 warnings**. Eight remaining static final-release gates passed.
 
 - Additional final focuses: **2/2 WebKit offline lifecycle cases** and **5 browser cases passed, one existing desktop exclusion** for the mobile-only navigation test. The excluded test is still exercised on iPhone, Android and landscape projects. No new skips/retries were introduced.
+
+## 23 September — owner localization gate correction
+
+The owner-localization job on `9e9e738` exposed stale inventory plus missing translations for new plan/settings/catalog-recovery copy. Twenty-nine source messages now have French, Spanish and Simplified Chinese translations. Existing photo-upload and reminder dictionaries moved unchanged into the i18n catalog boundary; their four-language behavior tests remain active. Reviewed technical contexts retain exact file/context hashes, so a new user-facing use still fails the gate.
+
+- Owner inventory: **3,033/3,033 covered** in each of en/fr/es/zh-CN; Wolof gaps remain measured and explicitly deferred.
+- Focused coverage/photo/reminder units: **18 passed, zero failed/skipped**. TypeScript, focused lint and fresh build passed.
+- Focused photo-upload/reminder/plan browser checks: **24 passed, zero failed/skipped**, Chromium and WebKit.
+- The Netlify preview for `9e9e738` completed compilation and failed at upload with provider HTTP 500; no production deployment was attempted.
+- Read-only compatibility comparison found all **21 existing affected production RPC signatures** preserved in the complete 216-migration local database. This alone does not certify old-UI support for new Solo/mobile/demo workflows.
+## Private demonstration sign-in verification
+
+Provisioning review found that mandatory owner MFA otherwise targets the demo's fictional phone/email. The correction retains the password/MFA ceremony and sends only security codes to a private recipient configured through trusted Auth Admin metadata, after verifying ownership of the sample business. It does not enable sample customer notifications or alter genuine-owner delivery. Eight focused regressions pass: successful MFA, one-time consumption, missing/fictional delivery, tenant binding, role restriction, untrusted metadata, unavailable delivery, cooldown, identity/device binding and wrong-code rejection. Hosted sign-in remains pending protected provisioning; automated success is not live acceptance.
+
+## Tablet policy-consent regression
+
+Required run 35931222669 caught a WebKit 768px policy-consent failure. The full-policy link inherited smooth scrolling and returned focus while the page was still moving; the next checkbox click could miss. The new regression reproduced a 127.8px unsettled scroll at focus before the correction. The link now completes its scroll before focus, preserving the existing checkbox, guest input, exact policy revision, confirmation and immutable booking-evidence assertions. All six Chromium/WebKit phone/tablet/desktop cases pass, zero retries/skips; the fresh acceptance build and changed-file lint pass. Original CI trace and local failing reproduction are retained.
+
+## Expanded full-suite distribution
+
+At `9e9e738`, all eight required shards finished: **1,716 passed, five existing skips, one failure; 1,722 total**. The sole failure was the policy-consent interaction corrected above. Separately, release run 35931222779's old three-shard job reached its one-hour limit after test 507; GitHub recorded the execution-time limit explicitly. The release workflow now reuses the same eight-shard runner (measured maximum 38.9 minutes), one worker, isolated build/app/fixture/log paths, zero retries and complete project collection. Its final job reconciles all eight reports against fresh collection, requiring exactly-once execution and no unsuccessful cases. No timeout was increased, test removed or failure suppressed. The extended migration/workflow contract passes **32/32**, and final-completion invariants pass.

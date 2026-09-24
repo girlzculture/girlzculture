@@ -358,7 +358,10 @@ export default function SalonBookingWizard({ salon, styles, stylists,depositPerc
       const details = policy?.querySelector<HTMLDetailsElement>("details");
       if (details) {
         details.open = true;
-        policy?.scrollIntoView({ block: "start" });
+        // Finish the movement before focusing the disclosure or accepting the
+        // next consent click. Inherited smooth scrolling can move a checkbox
+        // between pointer down/up in WebKit.
+        policy?.scrollIntoView({ block: "start", behavior: "instant" });
         details.querySelector("summary")?.focus({ preventScroll: true });
       }
     }}>{t("Read the full business policy")}</a>{fieldErrors.business_consent ? <p role="alert" className="text-sm gc-text-danger">{t(fieldErrors.business_consent)}</p> : null}</div> : null}<ReviewPanel {...{ style, stylists, stylistId, date, time, slots, total, subtotal, promotionDiscount: promotionPrice.eligible ? promotionPrice.discount : 0, salonPromotion, deposit, depositPercentage, originalDeposit, promoDiscount, promoCode, setPromoCode, promoMessage, applyPromo, protectionApplies:terms.own_business_protection_applies, balance, guest, setGuest, consent, setConsent, clientNotes, setClientNotes, clientNotesMaxLength, cancellationGraceMinutes, genericDurationAdjustmentMinutes, fieldErrors, setFieldErrors }} />{productCart?.items.length ? <CombinedProductSummary cart={productCart} /> : null}<PromoField {...{ promoCode, setPromoCode:changePromoCode, setPromoDiscount, setPromoMessage, promoMessage, applyPromo, promoDiscount, originalDeposit, deposit }} /></div>,

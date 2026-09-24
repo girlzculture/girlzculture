@@ -54,6 +54,10 @@
         {
           "file": "src/components/BookingInbox.tsx",
           "context": "0c30861da197950138278e4909d40e5729034ac77b3458600a443ded2af90a54"
+        },
+        {
+          "file": "src/components/booking/BookingLocation.tsx",
+          "context": "d696431ab0c7cb3dafef0c660057ef50622e5f4c8267d421c4d0eb663a2130a7"
         }
       ]
     },
@@ -174,6 +178,10 @@
         {
           "file": "src/components/owner/BusinessMarketing.tsx",
           "context": "8c1b7197bdea41c6854faee58ad38fbefd120b755eeee70c33c8c5b66241785b"
+        },
+        {
+          "file": "src/components/owner/BusinessBookingReport.tsx",
+          "context": "042e772cc4c11faea42fcca58653fb2bbc9ec784be835aa9ee9749bee1c8bbc5"
         }
       ]
     },
@@ -276,6 +284,10 @@
         {
           "file": "src/lib/gcAssistantPresentation.ts",
           "context": "15ea244eac19fe2420da5eb506bc71b2c6ce573653d4e4051a4c6806e2ca2012"
+        },
+        {
+          "file": "src/components/owner/BusinessGoogleHelp.tsx",
+          "context": "394a4a360483c59b83f6ca5956ae7c71c70d75eed8421850cabc4c1dc9ac4218"
         }
       ]
     },
@@ -676,6 +688,14 @@
         {
           "file": "src/components/owner/BusinessServiceContribution.tsx",
           "context": "54c191930c30e1fdbc3526cbb1efba0cfaa14ca593e20af00445338473a6a672"
+        },
+        {
+          "file": "src/components/booking/BookingLocation.tsx",
+          "context": "739a26bf0120744eb68df2b78964dc3c14c891c03679ed2c9be13e16aa5eb281"
+        },
+        {
+          "file": "src/lib/gcAssistantCore.ts",
+          "context": "a0350bfa5debd516a872e842c6896276f98e77e523571853f80fc74dd176e1b6"
         }
       ]
     },
@@ -1042,6 +1062,10 @@
         {
           "file": "src/components/owner/BusinessServiceCapacity.tsx",
           "context": "5e74a8148500cb138afb9e1c23a06947c56dd2ddae37e6f35711a0401d0460b0"
+        },
+        {
+          "file": "src/lib/businessFinanceReport.ts",
+          "context": "c240830909940128113896eddadb19d87511fa991e81b462d3a1d0dcc1346254"
         }
       ]
     },
@@ -1239,6 +1263,10 @@
         },
         {
           "file": "src/components/owner/AssistantReschedulePreview.tsx",
+          "context": "da6d94b5ce75628852ed7d88f89c6cc5b5eda402f5b61f5688d42b3a15c64d1f"
+        },
+        {
+          "file": "src/components/owner/AssistantFinancePreview.tsx",
           "context": "da6d94b5ce75628852ed7d88f89c6cc5b5eda402f5b61f5688d42b3a15c64d1f"
         }
       ]
@@ -2010,6 +2038,10 @@
         {
           "file": "src/components/owner/BusinessPhotoLibrary.tsx",
           "context": "9b1fb731b1f63f9c16fb02c2ec39478c8db700fa23e4d258c07dd653eb0dbf59"
+        },
+        {
+          "file": "src/components/owner/AssistantPhotoUpload.tsx",
+          "context": "e2122c043a5a7c24585b2e93f118c0f53d7b57de8855c4fab9de45aaf931abe5"
         }
       ]
     },
@@ -2510,6 +2542,74 @@
         {
           "file": "src/components/owner/BusinessPriceContext.tsx",
           "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/booking/BookedMobileLocation.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/booking/BookingLocation.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/booking/BusinessWaitlistOpenings.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/AssistantCatalogPreview.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/AssistantControlsPreview.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/AssistantFinancePreview.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/AssistantMarketingPreview.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/AssistantOperationPreview.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/AssistantPhotoUpload.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/AssistantTeamPreview.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/AssistantWaitlistPreview.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessAdvertising.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessBookingReport.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessGoogleHelp.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessGrowthControls.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessLocationControls.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
+        },
+        {
+          "file": "src/components/owner/BusinessRebookingControls.tsx",
+          "context": "c5e39c2214a9d1b0a5cb007b7821f7ed2fc2d44fa546249ac2529e7d78e1bf77"
         }
       ]
     },
@@ -2640,6 +2740,22 @@
         {
           "file": "src/lib/businessReusableReplies.ts",
           "context": "08ef39bc1e56d1a533a48256f8542e154b5db31663be966b133c2b30676def8e"
+        },
+        {
+          "file": "src/components/owner/AssistantMarketingPreview.tsx",
+          "context": "bf789fbb987c9b861b825103627b4c06ece72069289ceb97936fdffb4ebd9ffd"
+        },
+        {
+          "file": "src/lib/assistantOperations.ts",
+          "context": "89758a527c84a22833df769357dde43329f1a23595a3f6b256d4cfe03d88235d"
+        },
+        {
+          "file": "src/lib/assistantOperations.ts",
+          "context": "2b76b2de5c76db3f91aa12796df8715e7fb344df4b529c24f73a53b3c1d5ea5e"
+        },
+        {
+          "file": "src/lib/businessFinanceReport.ts",
+          "context": "e3e94ad29f1babd7f43f055ca2d70823b3fd4f5459c252aeca673c604eb08009"
         }
       ]
     },
@@ -2746,6 +2862,10 @@
         {
           "file": "src/components/owner/BusinessCustomerCampaigns.tsx",
           "context": "b21fcc0fed3f2af6f99ebe231a63a9cabbbf0e1cef2fc8984207bff020291354"
+        },
+        {
+          "file": "src/components/owner/AssistantCatalogPreview.tsx",
+          "context": "1a397506c4f64db260a2d406d8bb92a7568f81b95326a6fda60877279b9a3cc0"
         }
       ]
     },
@@ -2954,6 +3074,10 @@
         {
           "file": "src/lib/promotionDateTime.ts",
           "context": "74040026640b756062982c083e665cf5c1d1048667dd491b40b81bbd49220bc4"
+        },
+        {
+          "file": "src/lib/businessFinanceReport.ts",
+          "context": "5c6161ae8f8bc747df3d6139c81b1ee20c50b29dd127813149fab579b1b94836"
         }
       ]
     },
@@ -3434,6 +3558,10 @@
         {
           "file": "src/components/owner/BusinessPriceContext.tsx",
           "context": "60ad23e5bba98fef73c99c84717ac037dba2380fc3a4d7e2e571421126c3947d"
+        },
+        {
+          "file": "src/components/owner/BusinessGoogleHelp.tsx",
+          "context": "9e02af8e33cd499a35ff81fd0a5db703a015dc4f97abb0aeaeae50ece1d5ae46"
         }
       ]
     },
@@ -3980,6 +4108,210 @@
         {
           "file": "src/lib/businessPriceContext.ts",
           "context": "e2a2bf7603d82d8183a578db855ecf26ce20be4dc430e0dc61c239ec8aedde4c"
+        }
+      ]
+    },
+    {
+      "source": "[{value0}]",
+      "reason": "Canonical JSON serialization delimiters used for binding reviewed tool arguments; not rendered prose.",
+      "contexts": [
+        {
+          "file": "src/lib/gcAssistantCore.ts",
+          "context": "b86fafb28bc7beed882cd0cf33e45b42e57d613bb2ed74357c9e57dabcc14de2"
+        }
+      ]
+    },
+    {
+      "source": "{{value0}}",
+      "reason": "Canonical JSON object delimiters used for binding reviewed tool arguments; not rendered prose.",
+      "contexts": [
+        {
+          "file": "src/lib/gcAssistantCore.ts",
+          "context": "73939f6109edc99efca5e4e55a45652ec9650b08fb4daf21593b24d54e24321c"
+        }
+      ]
+    },
+    {
+      "source": "{count}",
+      "reason": "Interpolation token replaced by the actual numeric count in a separately localized Assistant message.",
+      "contexts": [
+        {
+          "file": "src/lib/gcAssistantPresentation.ts",
+          "context": "20227dccfcc19046689202edd4f7289ba1effbb93b21f6bf7980f8bba84106c3"
+        },
+        {
+          "file": "src/lib/gcAssistantPresentation.ts",
+          "context": "8b7fdb7354c970ef9bfa45bdbf95da094001b26935ccd9acbf2686a102ea1f82"
+        }
+      ]
+    },
+    {
+      "source": "{value0}: {value1}.",
+      "reason": "Punctuation joining an explicitly localized Assistant label and the authoritative numeric record count.",
+      "contexts": [
+        {
+          "file": "src/lib/gcAssistantPresentation.ts",
+          "context": "52cc6f0c8f8b25d203a87e08859e1eb49a46606c7b24bbefd712df42ec9261ac"
+        },
+        {
+          "file": "src/lib/gcAssistantPresentation.ts",
+          "context": "6dfdad01fdd9753e6b313f9c8942560a320931cb238d1ac26f9135bbdb816abf"
+        }
+      ]
+    },
+    {
+      "source": "{value0}T00:00:00Z",
+      "reason": "ISO date construction passed to date validation; not displayed as prose.",
+      "contexts": [
+        {
+          "file": "src/lib/gcAssistantCore.ts",
+          "context": "2518f850bdce73ad627206e5fdf09d033756b955faf3707719c2c76eb9f7d3a5"
+        }
+      ]
+    },
+    {
+      "source": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "reason": "JSON schema UUID validation expression, never rendered as a user-facing label.",
+      "contexts": [
+        {
+          "file": "src/lib/assistantCatalog.ts",
+          "context": "8380da65970f1f9ed250365207da745767d18504ae22b269c6ae2a090e451158"
+        },
+        {
+          "file": "src/lib/assistantControls.ts",
+          "context": "698ad690bcd734e226fbc84ce1e07478967fbb212e98c4bbe9a53c9658e603da"
+        },
+        {
+          "file": "src/lib/assistantOperations.ts",
+          "context": "8380da65970f1f9ed250365207da745767d18504ae22b269c6ae2a090e451158"
+        },
+        {
+          "file": "src/lib/gcAssistantCore.ts",
+          "context": "8ccded785146bd59886665d37545cf127b7080d73c44b12d359abbe71bc8c397"
+        }
+      ]
+    },
+    {
+      "source": "^\\d{4}-\\d{2}-\\d{2}$",
+      "reason": "JSON schema date validation expression, never rendered as a user-facing label.",
+      "contexts": [
+        {
+          "file": "src/lib/assistantTeam.ts",
+          "context": "b189fffcda022e563d05ffd74962dde5fbb26a853a38fa9a327a61797c6354a0"
+        },
+        {
+          "file": "src/lib/gcAssistantCore.ts",
+          "context": "a900e502011d908634afbefacd8ef817e86a24ba02f0a438554b5486f0b5a877"
+        }
+      ]
+    },
+    {
+      "source": "^\\d{4}-\\d{2}-\\d{2}T",
+      "reason": "JSON schema timestamp validation expression, never rendered as a user-facing label.",
+      "contexts": [
+        {
+          "file": "src/lib/gcAssistantCore.ts",
+          "context": "6c2e41af03cfcd44126fabfab01c9ef41168c68c3a935a4af449fb309a3c3536"
+        }
+      ]
+    },
+    {
+      "source": "advertising:{value0}",
+      "reason": "React record identity key used to reset the scoped component on tenant changes; not displayed.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "b08cec1135a15bf6a03c0358b890dd275b398452b8c532a1feb715abbde18ad8"
+        }
+      ]
+    },
+    {
+      "source": "customerPromotions",
+      "reason": "Plan entitlement object property used to compare enforced limits; visible labels are translated.",
+      "contexts": [
+        {
+          "file": "src/lib/plans.ts",
+          "context": "bd58c91fec8c0698fd6c0a7af08c5540ba328041c337202b48460af921bb5741"
+        }
+      ]
+    },
+    {
+      "source": "growth:{value0}",
+      "reason": "React record identity key used to reset the scoped component on tenant changes; not displayed.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "8e0d221dbfbdabc4e24ec4f4c31bd10fa474edb7f8605842bd1338d06821381f"
+        }
+      ]
+    },
+    {
+      "source": "help:{value0}",
+      "reason": "React record identity key used to reset the scoped component on tenant changes; not displayed.",
+      "contexts": [
+        {
+          "file": "src/components/owner/GoogleBusinessProfileSettings.tsx",
+          "context": "666de4915f48742a6a848cf53e753e6f28bb5ba5d67ba6dfdb43ffb8f839789e"
+        }
+      ]
+    },
+    {
+      "source": "location:{value0}:{value1}",
+      "reason": "React identity key scoped to the booking and customer/owner context; not displayed.",
+      "contexts": [
+        {
+          "file": "src/components/BookingInbox.tsx",
+          "context": "3832cea8b9589a516b8db49e97f94faa841e8b3de813a08f26cf2dc33bbfd3b0"
+        }
+      ]
+    },
+    {
+      "source": "productListings",
+      "reason": "Plan entitlement object property used to compare enforced limits; visible labels are translated.",
+      "contexts": [
+        {
+          "file": "src/lib/plans.ts",
+          "context": "bd58c91fec8c0698fd6c0a7af08c5540ba328041c337202b48460af921bb5741"
+        }
+      ]
+    },
+    {
+      "source": "rebooking:{value0}",
+      "reason": "React record identity key used to reset the scoped component on tenant changes; not displayed.",
+      "contexts": [
+        {
+          "file": "src/components/owner/OwnerDashboardApp.tsx",
+          "context": "f5c851d7057ae5a688c5f2996cfe4f0f0a235ae858b31988c4d4d784a02a6613"
+        }
+      ]
+    },
+    {
+      "source": "solo pro",
+      "reason": "Lowercase parser alias for the proper product name Solo Pro, not a UI label.",
+      "contexts": [
+        {
+          "file": "src/lib/plans.ts",
+          "context": "3c66f99ac5376c7caac68069b4419b94142a13d61b9ae4b9a61e3b667fb5573e"
+        }
+      ]
+    },
+    {
+      "source": "T00:00:00Z",
+      "reason": "ISO date-construction suffix; rendered dates use the current locale formatter.",
+      "contexts": [
+        {
+          "file": "src/components/owner/AssistantTeamPreview.tsx",
+          "context": "07beb6222fcf9662b1df61cbc3c9891acc30e56d8126e21db5769583d8ccef28"
+        }
+      ]
+    },
+    {
+      "source": "www.{value0}",
+      "reason": "Host allowlist comparison that validates an owned media URL; not interface text.",
+      "contexts": [
+        {
+          "file": "src/lib/gcAssistantCore.ts",
+          "context": "c952b5195b4ed96b0fc208b7fc36da4148bd2ac15df1b01d5db01cdca9499f9f"
         }
       ]
     }

@@ -333,6 +333,14 @@
     {
       "source": "· USD",
       "reason": "ISO currency code identifying the recorded currency; numeric amounts are locale formatted."
+    },
+    {
+      "source": "Solo",
+      "reason": "Founder-approved subscription product name, preserved identically across languages; descriptions and entitlements are translated."
+    },
+    {
+      "source": "Solo Pro",
+      "reason": "Founder-approved subscription product name, preserved identically across languages; descriptions and entitlements are translated."
     }
   ]
 }

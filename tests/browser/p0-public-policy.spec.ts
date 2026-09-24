@@ -263,8 +263,21 @@ for (const width of [390, 768, 1440]) test(`P0 public policy survives review, re
     await page.getByPlaceholder('name@example.com', { exact: true }).filter({ visible: true }).fill('fixture@example.test');
     await page.getByPlaceholder('+1 (555) 123-4567', { exact: true }).filter({ visible: true }).fill('3055550123');
     await review.locator('summary').click();
+    // Reopening the policy must finish its scroll before handing focus back.
+    // Otherwise the ongoing animation moves the consent control during the
+    // next pointer activation (the tablet WebKit CI regression).
+    await review.evaluate(policy => {
+      policy.querySelector('summary')!.addEventListener('focus', () => {
+        const root = document.scrollingElement!;
+        const expected = Math.max(0, Math.min(root.scrollHeight - innerHeight, scrollY + policy.getBoundingClientRect().top));
+        (policy as HTMLElement).dataset.focusScrollError = String(Math.abs(scrollY - expected));
+      }, { once: true });
+    });
     await page.getByRole('link', { name: 'Read the full business policy', exact: true }).filter({ visible: true }).click();
     await expect(review.locator('details')).toHaveAttribute('open', '');
+    const focusScrollError = await review.getAttribute('data-focus-scroll-error');
+    expect(focusScrollError).not.toBeNull();
+    expect(Number(focusScrollError)).toBeLessThanOrEqual(2);
     await expect(page.getByPlaceholder('Full Name', { exact: true }).filter({ visible: true })).toHaveValue('Fixture Customer');
     await expect(page.getByPlaceholder('name@example.com', { exact: true }).filter({ visible: true })).toHaveValue('fixture@example.test');
     const agreements = page.getByRole('checkbox').filter({ visible: true });

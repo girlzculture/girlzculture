@@ -1044,7 +1044,7 @@ function AccessPaused({ isOwner }: { isOwner: boolean }) {
         Business access is paused
       </h1>
       <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-ink/65">
-        This business’s subscription is not active. Please contact the salon owner;
+        This business’s subscription is not active. Please contact the business owner;
         only the owner can manage billing.
       </p>
       {isOwner ? (

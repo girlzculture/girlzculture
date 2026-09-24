@@ -104,6 +104,20 @@ export async function requiresMfa(user: User, role: LoginScope) {
 export async function createMfaChallenge(user: User, role: LoginScope, request: Request) {
   const admin = getSupabaseAdmin();
   const email = user.email?.trim().toLowerCase() || "";
+  // Sample contact details must never receive external delivery. This separate
+  // security recipient is set through the Auth Admin API, not user_metadata or
+  // a business form, and applies only to a registered sample business owner.
+  const demo = user.app_metadata?.gc_demo === true;
+  let securityEmail = email;
+  if (demo) {
+    const configured = user.app_metadata?.gc_demo_security_email;
+    if (role !== "salon" || typeof configured !== "string") throw new Error("Private demo sign-in delivery is not configured. Contact support.");
+    securityEmail = cleanEmail(configured);
+    if (securityEmail.endsWith(".invalid") || securityEmail.endsWith(".test")) throw new Error("Private demo sign-in delivery is not configured. Contact support.");
+    const { data: demoBusiness, error: demoError } = await admin.from("salons").select("id").eq("user_id", user.id).eq("is_demo", true).maybeSingle();
+    if (demoError) throw demoError;
+    if (!demoBusiness) throw new Error("Private demo sign-in delivery is not configured. Contact support.");
+  }
   const policy = adminMfaPolicy();
   const { data: recent, error: recentError } = await admin.from("auth_mfa_challenges").select("created_at").eq("user_id", user.id).eq("role_scope", role).is("used_at", null).order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (recentError) throw recentError;
@@ -124,7 +138,7 @@ export async function createMfaChallenge(user: User, role: LoginScope, request: 
   const salon = salonResult.data;
   const teamMember = teamMemberResult.data;
   const adminUser = adminUserResult.data;
-  const requestedChannel = role === "salon" ? "sms" : security?.preferred_channel || "email";
+  const requestedChannel = demo ? "email" : role === "salon" ? "sms" : security?.preferred_channel || "email";
   const phone = String(security?.verified_phone || salon?.phone || teamMember?.phone || adminUser?.phone || user.phone || "");
   const id = randomUUID();
   const code = String(randomInt(100000, 1000000));
@@ -134,7 +148,7 @@ export async function createMfaChallenge(user: User, role: LoginScope, request: 
     if (result?.skipped) channel = "email";
   }
   if (channel === "email") {
-    const result = await sendEmail(email, "Your Girlz Culture verification code", `<h1>Verify your sign-in</h1><p>Your one-time code is <strong style="font-size:24px;letter-spacing:4px">${code}</strong>.</p><p>It expires in ${policy.challengeMinutes} minutes. If you did not try to sign in, reset your password.</p>`, "security") as { skipped?: boolean };
+    const result = await sendEmail(securityEmail, "Your Girlz Culture verification code", `<h1>Verify your sign-in</h1><p>Your one-time code is <strong style="font-size:24px;letter-spacing:4px">${code}</strong>.</p><p>It expires in ${policy.challengeMinutes} minutes. If you did not try to sign in, reset your password.</p>`, "security") as { skipped?: boolean };
     if (result?.skipped) throw new Error("Two-factor delivery is not configured. Add RESEND_API_KEY and EMAIL_FROM_SECURITY to the server environment.");
   }
   const { error: expirationError } = await admin.from("auth_mfa_challenges").update({ used_at: new Date().toISOString() }).eq("user_id", user.id).eq("role_scope", role).is("used_at", null);
@@ -142,7 +156,7 @@ export async function createMfaChallenge(user: User, role: LoginScope, request: 
   const { error } = await admin.from("auth_mfa_challenges").insert({ id, user_id: user.id, role_scope: role, email_normalized: email, channel, code_hash: hashCode(id, code), max_attempts: policy.maxAttempts, request_fingerprint: requestFingerprint(request), policy_version: `v2:${policy.mode}`, expires_at: new Date(Date.now() + policy.challengeMinutes * 60_000).toISOString() });
   if (error) throw error;
   if (role === "admin") await recordAdminSecurityEvent("mfa_challenge_created", user.id, "Succeeded", { channel, policy: policy.mode });
-  const destination = channel === "sms" ? phone.replace(/.(?=.{4})/g, "*") : email.replace(/^(.{1,2}).*(@.*)$/, "$1***$2");
+  const destination = channel === "sms" ? phone.replace(/.(?=.{4})/g, "*") : securityEmail.replace(/^(.{1,2}).*(@.*)$/, "$1***$2");
   return { challengeId: id, channel, destination };
 }
 
