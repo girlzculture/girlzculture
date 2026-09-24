@@ -226,16 +226,18 @@ jobs:
       - name: Download all exact-run browser results
         uses: actions/download-artifact@v5
         with:
-          pattern: browser-shard-*-results
-          path: playwright-shards
-          merge-multiple: true
+          pattern: browser-shard-*-${{ github.run_id }}-*
+          path: browser-artifacts
+          merge-multiple: false
+      - name: Select the latest attempt of every exact-run shard
+        run: node scripts/collect-browser-shard-results.mjs browser-shard
       - name: Exercise responsive and affected browser workflows
         # Gate on complete, nonduplicated, exact-commit results from every job.
         run: node scripts/verify-browser-shard-results.mjs
       - name: Upload full browser totals
         uses: actions/upload-artifact@v5
         with:
-          name: browser-totals
+          name: browser-totals-${{ github.run_id }}-${{ github.run_attempt }}
           path: playwright-shards/totals.json
       - name: Upload browser failure report
         if: ${{ failure() }}
@@ -278,7 +280,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: browser-shard-${{ matrix.shard }}-results
+          name: browser-shard-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             playwright-shards/shard-*.json
             playwright-shards/shard-*.log
@@ -288,7 +290,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v5
         with:
-          name: browser-shard-${{ matrix.shard }}-failures
+          name: browser-failures-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: playwright-shards/shard-*-results
           if-no-files-found: warn
           retention-days: 7

@@ -142,6 +142,8 @@ const result = await runShard(shard);
 await writeFile(path.join(outputRoot, `shard-${shard}-summary.json`), JSON.stringify({
   ...result, shardCount, workers, elapsedMs: Date.now() - started,
   commit: process.env.GITHUB_SHA || null,
+  runId: process.env.GITHUB_RUN_ID || null,
+  runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT || 1),
 }));
 process.stdout.write(`Browser shard ${shard}/${shardCount} exited ${result.code}; log ${result.logPath}\n`);
 if (result.code !== 0) process.exitCode = result.code;

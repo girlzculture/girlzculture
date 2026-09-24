@@ -171,9 +171,12 @@ jobs:
       - name: Download every release browser shard
         uses: actions/download-artifact@v5
         with:
-          pattern: p0-browser-shard-*-${{ github.run_id }}-${{ github.run_attempt }}
-          merge-multiple: true
-          path: .
+          pattern: p0-browser-shard-*-${{ github.run_id }}-*
+          merge-multiple: false
+          path: browser-artifacts
+
+      - name: Select the latest attempt of every exact-run shard
+        run: node scripts/collect-browser-shard-results.mjs p0-browser-shard
 
       - name: Require complete exactly-once release browser coverage
         run: node scripts/verify-browser-shard-results.mjs
