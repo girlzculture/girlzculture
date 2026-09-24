@@ -12,6 +12,8 @@ These procedures never convert an existing business or customer into sample data
 
 The seed contains fourteen reporting months, 28 fictional client cards, six services, four professionals, historical and upcoming bookings, cancellations, no-shows, walk-ins, one real rescheduling revision, blocks, waitlist requests, messages, four retail products, inventory, promotions, private reviews, simulated subscriptions and a reconciled internal finance ledger. Dates are anchored to the seed date. The exact booking count varies with the day of the current month; the checker validates the calculation.
 
+Fictional services use the existing custom-service path with active Engine-managed service groups and categories. They do not depend on exact public master-style names, and provisioning never restores withdrawn styles or modifies the platform catalog. The historical Protective Styles group remains a braiding fallback; current specific groups take precedence. Team specialties still use eligible managed hair-service names. If a required active group is unavailable, the entire seed rolls back with `DEMO_SERVICE_GROUP_REQUIRED`; resolve the configuration before retrying, without disabling catalog validation.
+
 ## Demonstration boundaries
 
 - All sample records carry immutable tenant classification. They are excluded from discovery, public reviews and platform metrics. Names and banners identify invented data.

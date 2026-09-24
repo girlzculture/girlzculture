@@ -1,3 +1,6 @@
+begin;
+
+-- Preserve the applied demo migration. Correct only its private seed procedure.
 -- Installed only by the protected migration; invocation is a separate, explicit admin action.
 create or replace function public.seed_private_demo(p_salon uuid,p_owner uuid,p_anchor date)
 returns jsonb language plpgsql security definer set search_path=pg_catalog,public,auth,gc_private as $$
@@ -196,3 +199,6 @@ begin
 end;$$;
 revoke all on function public.seed_private_demo(uuid,uuid,date) from public,anon,authenticated;
 grant execute on function public.seed_private_demo(uuid,uuid,date) to service_role;
+
+update public.engine_settings set published_value='"20260924050655"',draft_value='"20260924050655"',updated_at=now() where setting_key='integrations.expected_migration';
+commit;
