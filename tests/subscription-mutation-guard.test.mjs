@@ -124,13 +124,23 @@ test('lifecycle cancellation verifies release and cancellation before its single
 test('lifecycle refuses stale reactivation readback without clearing the saved cancellation',async()=>{
  const f=lifecycleFixture({initiallyCancelled:true,staleResponse:true});const response=await f.request('reactivate');assert.equal(response.status,409);assert.equal(f.actual.cancel_at_period_end,true);assert.equal(f.writes.length,0);assert.equal(f.isHeld(),true);
 });
-test('actual subscription action preserves the protected reference for the existing toast helper',async()=>{
+function subscriptionAction(sandbox){
  const raw=readFileSync('src/components/owner/OwnerDashboardApp.tsx','utf8'),source=ts.createSourceFile('OwnerDashboardApp.tsx',raw,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let action;
  const visit=node=>{if(ts.isFunctionDeclaration(node)&&node.name?.text==='action'&&node.parameters.length===3)action=node;ts.forEachChild(node,visit);};visit(source);assert.ok(action);
  const compiled=ts.transpileModule(`export ${action.getText(source)}`,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
- const reference='17800000-0000-4000-8000-000000000091',message='The earlier subscription update has an uncertain result. Billing support must reconcile it before another change; no further change was sent.';let notice='';const sandbox={exports:{},supabase:{auth:{getSession:async()=>({data:{session:{access_token:'fixture-only'}}})}},fetch:async()=>Response.json({error:message,request_id:reference},{status:409}),setBusy:()=>{},c:{setNotice:value=>{notice=value;}}};
- runInNewContext(compiled,sandbox);await sandbox.exports.action('/api/stripe/subscription/lifecycle','reactivate',{action:'reactivate'});
+ const context={exports:{},...sandbox};runInNewContext(compiled,context);return context.exports.action;
+}
+
+test('actual subscription action preserves the protected reference for the existing toast helper',async()=>{
+ const reference='17800000-0000-4000-8000-000000000091',message='The earlier subscription update has an uncertain result. Billing support must reconcile it before another change; no further change was sent.';let notice='';const action=subscriptionAction({sample:false,supabase:{auth:{getSession:async()=>({data:{session:{access_token:'fixture-only'}}})}},fetch:async()=>Response.json({error:message,request_id:reference},{status:409}),setBusy:()=>{},c:{setNotice:value=>{notice=value;}}});
+ await action('/api/stripe/subscription/lifecycle','reactivate',{action:'reactivate'});
  const helpers=loadNodeTypescript(process.cwd())('src/lib/actionToastCore.ts');assert.equal(helpers.actionToastReference(notice),reference);assert.equal(helpers.actionToastMessage(notice),message);assert.equal(helpers.actionToastIsError(notice),true);
+});
+
+test('actual sample subscription action stops before session lookup, request or UI mutation',async()=>{
+ const calls=[];const action=subscriptionAction({sample:true,supabase:{auth:{getSession:async()=>{calls.push('session');return{data:{session:null}};}}},fetch:async()=>{calls.push('request');return Response.json({});},setBusy:()=>calls.push('busy'),c:{setNotice:()=>calls.push('notice')}});
+ for(const [path,key,payload] of [['/api/stripe/subscription/lifecycle','reactivate',{action:'reactivate'}],['/api/stripe/subscription/change','Growth',{plan:'Growth'}]])await action(path,key,payload);
+ assert.deepEqual(calls,[]);
 });
 test('new lifecycle and scheduled-payment interface messages resolve in every supported locale with placeholders intact',()=>{
  const load=typescriptLoader(process.cwd()),{SUBSCRIPTION_PAYMENT_SOURCE_MESSAGES:messages}=load('src/components/owner/subscriptionPaymentMessages.ts'),{DASHBOARD_SOURCE_MESSAGES:catalogs}=load('src/i18n/dashboard-source-catalog.ts'),{resolveSourceTranslation}=load('src/lib/localizationCore.ts');
