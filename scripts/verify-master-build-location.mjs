@@ -3,9 +3,8 @@ import {randomUUID} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {readFileSync,readdirSync} from 'node:fs';
 import {loadNodeTypescript} from '../tests/helpers/load-node-typescript.mjs';
-const source=new URL(process.env.CLEAN_DATABASE_URL||'');
-assert.ok(['127.0.0.1','localhost','[::1]'].includes(source.hostname));
-assert.match(source.pathname,/^\/girlzculture_[a-z_0-9]+(?:release|clean)$/);
+import {localVerificationDatabase} from './lib/local-verification-database.mjs';
+const source=localVerificationDatabase(process.env.CLEAN_DATABASE_URL||'');
 const psql=process.env.PSQL_BIN||'psql', clone='girlzculture_master_location_'+randomUUID().replaceAll('-','');
 const control=new URL(source);control.pathname='/postgres';const target=new URL(source);target.pathname='/'+clone;
 function execute(url,sql){return spawnSync(psql,[url.toString(),'-X','-qAt','-v','ON_ERROR_STOP=1'],{input:sql,encoding:'utf8'});}

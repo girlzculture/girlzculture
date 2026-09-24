@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
+import { localVerificationDatabase } from './lib/local-verification-database.mjs';
 
 // Run only on a disposable local database. Never seed genuine tenants.
-const source = new URL(process.env.CLEAN_DATABASE_URL || '');
-assert.ok(['127.0.0.1','localhost','[::1]'].includes(source.hostname));
-assert.match(source.pathname,/^\/girlzculture_[a-z_]+(?:release|clean)$/);
+const source = localVerificationDatabase(process.env.CLEAN_DATABASE_URL || '');
 const psql=process.env.PSQL_BIN || 'psql';
 const clone=`girlzculture_master_plan_${randomUUID().replaceAll('-','')}`;
 const control=new URL(source); control.pathname='/postgres';
