@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {loadNodeTypescript} from './helpers/load-node-typescript.mjs';
 
 function fixture(){
- let body='Deposits are shown before booking.';
+ let body='Deposits are shown before booking.';let cmsUnavailable=false;
  const writes=[];const stored=[];
- const admin={rpc:async(_name,{p_slug})=>({data:p_slug==='help'?{slug:p_slug,title:'Help',sections:[{title:'Deposit',body}]}:null}),from(table){
+ const admin={rpc:async(_name,{p_slug})=>{if(cmsUnavailable)throw Error('CMS unavailable');return {data:p_slug==='help'?{slug:p_slug,title:'Help',sections:[{title:'Deposit',body}]}:null};},from(table){
   const filters=[];let write;
   const result=()=>{let data=table==='supported_locales'?[{locale:'en',is_default:true},{locale:'fr'}]:table==='translation_entries'?stored:[];
    data=data.filter(row=>filters.every(([key,value])=>row[key]===value));return {data:write?[write]:data};};
@@ -19,7 +19,7 @@ function fixture(){
   '@/lib/translationProviderErrors':{translationProviderFailure:()=>null},
   '@/lib/platformErrors':{},'next/cache':{revalidatePath(){}},
  });
- return {route:load('src/app/api/admin/engine/translations/route.ts'),writes,stored,setBody(value){body=value;}};
+ return {route:load('src/app/api/admin/engine/translations/route.ts'),writes,stored,setBody(value){body=value;},unavailableCms(){cmsUnavailable=true;}};
 }
 const request=body=>new Request('https://fixture.invalid/api/admin/engine/translations',{method:'PATCH',body:JSON.stringify(body)});
 
@@ -54,4 +54,12 @@ test('Engine retains human review for provider-generated Help translations and d
  assert.equal(result.status,400);assert.match((await result.json()).error,/reviewed by a person/);assert.equal(f.writes.length,0);
  const invalid=await f.route.PATCH(request({action:'save_draft',translation_key:'knowledge.foreign-business',locale:'fr',translated_text:'Private text'}));
  assert.equal(invalid.status,400);assert.equal(f.writes.length,0);
+});
+
+test('ordinary interface translation saves do not depend on published Help availability',async()=>{
+ const f=fixture();const response=await f.route.GET(new Request('https://fixture.invalid/api/admin/engine/translations?locale=fr'));
+ const entry=(await response.json()).entries.find(row=>!row.translation_key.startsWith('knowledge.')&&row.impact_level==='standard');
+ assert.ok(entry);f.unavailableCms();
+ const result=await f.route.PATCH(request({action:'save_draft',translation_key:entry.translation_key,locale:'fr',translated_text:'Brouillon de test',version:0}));
+ assert.equal(result.status,200);assert.equal(f.writes[0].row.status,'Draft');assert.equal(f.writes[0].row.source_text,entry.source_text);
 });

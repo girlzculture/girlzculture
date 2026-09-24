@@ -193,7 +193,11 @@ async function PATCHHandler(request: Request) {
         });
       return Response.json({ locale: data });
     }
-    const definitions = {...SOURCE_DEFINITIONS, ...await publishedKnowledgeTranslationSources({admin})};
+    let knowledgeDefinitions: Awaited<ReturnType<typeof publishedKnowledgeTranslationSources>> | undefined;
+    const currentKnowledgeDefinitions = async () => knowledgeDefinitions ||= await publishedKnowledgeTranslationSources({admin});
+    const knowledgeRequested = cleanText(body.translation_key, 180).startsWith("knowledge.")
+      || (action === "bulk_import" && Array.isArray(body.entries) && body.entries.some((row: Record<string, unknown> | null) => cleanText(row?.translation_key, 180).startsWith("knowledge.")));
+    const definitions = knowledgeRequested ? {...SOURCE_DEFINITIONS, ...await currentKnowledgeDefinitions()} : SOURCE_DEFINITIONS;
     if (action === "bulk_import") {
       const raw = Array.isArray(body.entries) ? body.entries.slice(0, 501) : [];
       if (!raw.length || raw.length > 500)
@@ -388,7 +392,7 @@ async function PATCHHandler(request: Request) {
         version: 0,
       };
     }
-    if (String(existing.translation_key).startsWith("knowledge.") && definitions[String(existing.translation_key)]?.source !== existing.source_text)
+    if (String(existing.translation_key).startsWith("knowledge.") && (await currentKnowledgeDefinitions())[String(existing.translation_key)]?.source !== existing.source_text)
       throw new Error("The published Help source changed. Reload before saving its translation.");
     let status = "Draft";
     const update: Record<string, unknown> = {
