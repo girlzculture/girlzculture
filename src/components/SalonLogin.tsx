@@ -54,7 +54,7 @@ export default function SalonLogin() {
     finally { setLoading(false); }
   }
 
-  return <form onSubmit={submit} aria-busy={!ready || loading}><fieldset disabled={!ready} className="space-y-4">
+  return <form onSubmit={submit} aria-busy={!ready || loading}><fieldset disabled={!ready} className="min-w-0 space-y-4">
     {challenge ? <MfaCodeField challenge={challenge} code={code} setCode={setCode} reset={() => { setChallenge(null); setCode(""); setPassword(""); }} /> : <>
       <label className="block text-sm font-semibold">Email<input type="email" pattern={EMAIL_PATTERN} value={email} onChange={(event) => setEmail(event.target.value)} required className="mt-2 w-full rounded-md border border-ink/15 bg-white px-3 py-3" /></label>
       <div className="block text-sm font-semibold"><label htmlFor="salon-password">Password</label><span className="mt-2 flex w-full rounded-md border border-ink/15 bg-white px-3 py-1.5"><PasswordInput id="salon-password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required inputClassName="bg-transparent py-1.5 outline-none" /></span></div>
