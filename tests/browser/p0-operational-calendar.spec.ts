@@ -28,6 +28,16 @@ for (const viewport of [
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     const fixture = await p0OwnerFixture(page, { populated: true, locale: 'en' });
     await page.setViewportSize(viewport);
+    // Exercise the CI failure boundary: this font can be requested only after
+    // the owner form renders, after navigation has already completed.
+    let releaseFont: (() => void) | undefined;
+    if (viewport.width === 390) {
+      const fontGate = new Promise<void>(resolve => { releaseFont = resolve; });
+      await page.route('**/fonts/montserrat/Montserrat-Medium.woff2', async route => {
+        await fontGate;
+        await route.fulfill({ path: 'public/fonts/montserrat/Montserrat-Medium.woff2', contentType: 'font/woff2' });
+      });
+    }
     const posts: unknown[] = [];
     async function waitForScroll(top: number) {
       try {
@@ -52,7 +62,7 @@ for (const viewport of [
       }
     });
     try {
-      await page.goto('/salon/dashboard/bookings/new');
+      await page.goto('/salon/dashboard/bookings/new', { waitUntil: 'domcontentloaded' });
       await page.getByLabel('Customer name', { exact: true }).fill('Sheila');
       await page.getByRole('combobox', { name: 'Service', exact: true }).selectOption(fixture.ids.service);
       await page.getByRole('combobox', { name: 'Professional', exact: true }).selectOption(fixture.ids.professional);
@@ -66,6 +76,14 @@ for (const viewport of [
       await expect(review).toBeEnabled();
       expect(await review.evaluate(button => (button as HTMLButtonElement).form!.checkValidity())).toBe(true);
       await expect(page.locator('html')).toHaveCSS('scroll-behavior', 'auto');
+      if (releaseFont) {
+        expect(await page.evaluate(() => document.fonts.status)).toBe('loading');
+        releaseFont();
+      }
+      // A late font swap anchored the page 23px away from the measured target
+      // in CI. Await actual font/layout readiness before measuring the native
+      // wheel baseline; keep the exact 64px movement and pointer checks below.
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
       await review.scrollIntoViewIfNeeded();
       const centered = await review.evaluate(button => {
         const rect = button.getBoundingClientRect();
@@ -95,6 +113,7 @@ for (const viewport of [
       expect(posts).toHaveLength(1);
       expect(posts[0]).toMatchObject({ action: 'tool', tool: 'prepare_manual_appointment', args: { guest_name: 'Sheila', style_id: fixture.ids.service, stylist_id: fixture.ids.professional, date: '2030-09-24', time: '13:00' } });
     } finally {
+      releaseFont?.();
       // Diagnostics must not replace the original failure after timeout closes
       // the page. Playwright still retains its trace and screenshot.
       const events = page.isClosed() ? 'page closed before diagnostic collection' : await page.evaluate(() => (window as unknown as { calendarPointerEvents: unknown[] }).calendarPointerEvents).catch(() => 'page closed during diagnostic collection');
