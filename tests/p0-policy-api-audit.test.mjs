@@ -24,6 +24,9 @@ test('policy load includes the current own-business revision beyond thirty newer
   const body = await response.json();
   assert.equal(body.revisions.find(row => row.id === body.current)?.policy.business_policy_text, 'Retained published terms');
   assert.equal(body.public_policy_path, '/studio-a#business-policies');
+  context.salon.is_demo=true;
+  const sampleBody=await (await GET(new Request('http://localhost/api/salon/policies'))).json();
+  assert.equal(sampleBody.public_policy_path,'/salon/dashboard/demo-page#business-policies');
   assert.doesNotMatch(JSON.stringify(body), /PRIVATE B/);
   context.salon.business_policy_revision_id = 'foreign';
   const foreign = await GET(new Request('http://localhost/api/salon/policies'));

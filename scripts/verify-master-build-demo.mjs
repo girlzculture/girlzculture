@@ -11,7 +11,7 @@ assert.ok(['127.0.0.1','localhost','[::1]'].includes(source.hostname));
 assert.match(source.pathname,/^\/girlzculture_(?:[a-z_0-9]+)?(?:release|clean)$/);
 // Git may check out CRLF on Windows; compare the exact SQL with only line endings normalized.
 for(const name of ['seed-private-demo.sql','check-private-demo.sql','reset-private-demo.sql']){
- const migration=name==='seed-private-demo.sql'?'20260924050655_private_demo_catalog_resilience.sql':'20260923064718_master_build_demo_workspace.sql';
+ const migration=name==='seed-private-demo.sql'?'20260924125427_private_demo_history_readback.sql':'20260923064718_master_build_demo_workspace.sql';
  assert.ok(readFileSync('supabase/migrations/'+migration,'utf8').replaceAll('\r\n','\n').includes(readFileSync('supabase/demo/'+name,'utf8').replaceAll('\r\n','\n')),'Reviewed migration and canonical demo procedure diverged: '+name);
 }
 const psql=process.env.PSQL_BIN||'psql',clone='girlzculture_master_demo_'+randomUUID().replaceAll('-','');
@@ -68,6 +68,31 @@ try{
  equal(run(`select count(*) from public.styles s join public.service_groups g on g.id=s.service_group_id join public.service_categories c on c.id=g.category_id where s.salon_id='${sid}' and s.master_style_id is null and s.category_id=c.id and g.is_active and g.archived_at is null and c.is_active and c.archived_at is null;`),'6','all six fictional services retain active canonical group/category references');
  equal(run(`select count(*) from public.stylists t where salon_id='${sid}' and jsonb_array_length(specialties)>0 and not exists(select 1 from jsonb_array_elements_text(t.specialties) s(name) where not exists(select 1 from public.master_styles m join public.service_groups g on g.id=m.service_group_id where m.name=s.name and m.is_active and m.archived_at is null and g.name in ('Braids','Protective Styles','Locs','Cornrows','Twists')));`),'4','fictional hair-team specialties retain managed validation and exclude unrelated services');
  equal(seeded.bookings,expectedBookings,'fourteen months of connected bookings');
+ const firstUpcoming=run(`select gc_private.demo_record_id('${sid}','upcoming',0);`);
+ const sampleClient=run(`select customer_id from public.bookings where id='${firstUpcoming}';`);
+ const card=JSON.parse(run(`select public.read_business_client_card('${sid}','${demo}','${firstUpcoming}');`));
+ equal(card.visit_count,Number(run(`select count(*) from public.bookings where salon_id='${sid}' and customer_id='${sampleClient}';`)),'private demo client history includes every simulated visit');
+ equal(card.preferences,'Sample preference: comfortable tension and a natural finish.','existing sample client preferences retained');
+ equal(card.spend.completed_agreed_cents,Number(run(`select coalesce(sum(round(estimated_total*100)),0) from public.bookings where salon_id='${sid}' and customer_id='${sampleClient}' and status='Completed';`)),'client completed totals match sample bookings');
+ equal(card.spend.recorded_payment_cents,Number(run(`select coalesce(sum(case when r.stage='refund' then -r.amount_cents else r.amount_cents end),0) from public.business_finance_receipts r join public.bookings b on b.id=r.booking_id and b.salon_id=r.salon_id where b.salon_id='${sid}' and b.customer_id='${sampleClient}';`)),'sample receipts are counted once without duplicate provider deposits');
+ denied(`select public.read_business_client_card('${sid}','${real}','${firstUpcoming}');`,/CLIENT_ACCESS_DENIED/);
+ denied(`select public.read_business_client_card('${realSid}','${demo}','${firstUpcoming}');`,/CLIENT_ACCESS_DENIED/);
+
+ equal(run(`select count(*) from public.billing_events where salon_id='${sid}' and amount_collected=19900 and extract(day from event_date at time zone 'America/New_York')=1 and extract(hour from event_date at time zone 'America/New_York')=12;`),'14','sample Premium history uses cents and local monthly dates');
+ // Representative upgrade: previously seeded owner, untouched identity and
+ // booking graph, plus a real-business event which must never be rewritten.
+ const billingMigration=readFileSync('supabase/migrations/20260924125427_private_demo_history_readback.sql','utf8');
+ const realBilling=randomUUID();
+ const bookingGraph=run(`select md5(jsonb_agg(to_jsonb(b) order by id)::text) from public.bookings b where salon_id='${sid}';`);
+ run(`update public.billing_events set amount_collected=199,event_date=date_trunc('month',event_date at time zone 'America/New_York') at time zone 'UTC' where salon_id='${sid}' and event_type='sample_subscription';
+ insert into public.billing_events(id,salon_id,stripe_event_id,event_date,event_type,new_plan,amount_collected,payment_status,metadata)values('${realBilling}','${realSid}','fixture:${realBilling}',now(),'sample_subscription','Premium',199,'Simulated','{"sample":true,"provider_charge":false}');`);
+ run(billingMigration);
+ equal(run(`select count(*) from public.billing_events where salon_id='${sid}' and amount_collected=19900 and extract(day from event_date at time zone 'America/New_York')=1;`),'14','existing sample billing corrected in place');
+ equal(run(`select amount_collected from public.billing_events where id='${realBilling}';`),'199','real business billing never changed');
+ equal(run(`select md5(jsonb_agg(to_jsonb(b) order by id)::text) from public.bookings b where salon_id='${sid}';`),bookingGraph,'billing correction preserves every booking');
+ run(billingMigration);
+ equal(run(`select sum(amount_collected) from public.billing_events where salon_id='${sid}';`),'278600','billing correction is idempotent');
+ run(`delete from public.billing_events where id='${realBilling}';`);
  equal(run(`select count(distinct date_trunc('month',appointment_datetime)) from public.bookings where salon_id='${sid}' and appointment_datetime<date_trunc('month',current_date)+interval '1 month';`),'14','fourteen reporting periods');
  equal(JSON.parse(run(`select public.seed_private_demo('${sid}','${demo}',current_date);`)).already_seeded,true,'seed is idempotent and preserves edits');
  equal(run('select row_to_json(m) from public.platform_admin_overview_metrics() m;'),before,'populated sample never enters global totals');

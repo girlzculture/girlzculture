@@ -38,6 +38,30 @@ test('mixed business, own-staff scope, missing metadata and concurrent status/pr
 test('unverified paid/refunded provider labels never become zero actual receipts',()=>{
  for(const patch of [{verified_charge:false},{payment_mode:null},{refund_status:'Succeeded',refund_amount:10,refund_completed_at:'2026-03-10T12:00:00Z',verified_refund:false}])assert.throws(()=>summarize(data([booking(10,patch)])),/INVALID_EVIDENCE/);
 });
+
+test('private demo outcomes reconcile simulated receipts without requiring or claiming provider charges',()=>{
+ const value=data([booking(10,{is_demo:true,payment_mode:'test',verified_charge:false,refund_status:'Succeeded',refund_amount:8,refund_completed_at:'2026-03-10T12:00:00Z',verified_refund:false})]);
+ value.is_demo=true;
+ value.receipts=[
+  {id:id(40),salon_id:salon,booking_id:id(10),occurred_at:'2026-03-01T12:00:00Z',stage:'deposit',method:'other',amount_cents:1800,original_payment_id:null},
+  {id:id(41),salon_id:salon,booking_id:id(10),occurred_at:'2026-03-10T12:00:00Z',stage:'refund',method:'other',amount_cents:800,original_payment_id:id(40)},
+ ];
+ const result=summarize(value,value.bookings).categories.cancelled;
+ assert.equal(result.verified_platform_receipts_cents,0);
+ assert.equal(result.verified_platform_refunds_cents,0);
+ assert.equal(result.business_recorded_receipts_cents,1800);
+ assert.equal(result.business_recorded_refunds_cents,800);
+ assert.equal(result.net_recorded_receipts_cents,1000);
+ for (const index of [0,1]) {
+  const incomplete={...value,receipts:index===0?[]:value.receipts.filter((_,i)=>i!==index)};
+  assert.throws(()=>summarize(incomplete,incomplete.bookings),/INVALID_EVIDENCE/);
+ }
+ // A demo label must never excuse missing verification of a live payment.
+ value.bookings[0].payment_mode='live';
+ assert.throws(()=>summarize(value,value.bookings),/INVALID_EVIDENCE/);
+ value.is_demo=false;
+ assert.throws(()=>summarize(value,value.bookings),/INVALID_EVIDENCE/);
+});
 function serverFixture({permissions={earnings:true,bookings:true},owner=true,revoked=false,count=1}={}){
  const value=data(Array.from({length:count},(_,i)=>booking(100+i))),calls=[];let authorization=0;
  const admin={rpc:async(name,args)=>{calls.push({name,args});if(name==='p0_actor_has_permission'){assert.equal(args.p_user,actor);authorization++;return {data:!(revoked&&authorization>2)};}assert.equal(name,'read_business_finance');return {data:value};},from(table){assert.equal(table,'bookings');const filters={};const q={select(columns){assert.doesNotMatch(columns,/guest|customer|stripe|email|phone/);return q;},eq(k,v){filters[k]=v;return q;},in(k,v){filters[k]=v;return q;},limit(n){assert.equal(n,101);return q;},abortSignal(signal){assert.ok(signal instanceof AbortSignal);assert.equal(filters.salon_id,salon);assert.ok(filters.id.length<=100);calls.push({chunk:filters.id.length});return Promise.resolve({data:value.bookings.filter(row=>filters.id.includes(row.id))});}};return q;}};

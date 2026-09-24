@@ -1060,6 +1060,8 @@ function AccessPaused({ isOwner }: { isOwner: boolean }) {
 }
 function SubscriptionV2({ c }: { c: Ctx }) {
   const [busy, setBusy] = useState("");
+  const sample = c.salon.is_demo === true;
+  const billingEvents = [...c.billingEvents].sort((a, b) => Date.parse(String(b.event_date)) - Date.parse(String(a.event_date)) || String(a.id).localeCompare(String(b.id)));
   const [upgradePreview, setUpgradePreview] = useState<null | {
     path: string;
     key: string;
@@ -1090,6 +1092,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
     key: string,
     payload: Record<string, unknown> = {},
   ) {
+    if (sample) return;
     setBusy(key);
     try {
       const {
@@ -1443,6 +1446,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
               </ul>
               <button
                 disabled={
+                  sample ||
                   Boolean(busy) ||
                   current ||
                   isScheduled ||
@@ -1471,7 +1475,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
                         : "Opening checkout…"
                       : label}
               </button>
-              {changing ? (
+              {changing && !sample ? (
                 <p className="mt-2 text-[10px] leading-4 text-ink/55">
                   {upgrading
                     ? "Activates only after Stripe successfully collects the actual prorated invoice."
@@ -1482,7 +1486,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
           );
         })}
       </div>
-      {c.access === null ? <BusinessAdvertising key={`advertising:${c.salon.id}`} businessId={String(c.salon.id)} /> : null}
+      {!sample && c.access === null ? <BusinessAdvertising key={`advertising:${c.salon.id}`} businessId={String(c.salon.id)} /> : null}
       {c.subscription?.stripe_customer_id && c.access === null ? <SubscriptionPaymentMethod key={String(c.salon.id)} disabled={Boolean(busy)} /> : null}
       {c.subscription?.stripe_customer_id ? (
         <div className="mt-5 flex flex-wrap gap-3">
@@ -1503,24 +1507,23 @@ function SubscriptionV2({ c }: { c: Ctx }) {
           ) : null}
         </div>
       ) : null}
-      <Panel className="mt-5 min-w-0" role="region" aria-label="Stripe billing history" tabIndex={0}>
+      <Panel className="mt-5 min-w-0" role="region" aria-label={sample ? "Private demonstration — sample data" : "Stripe billing history"} tabIndex={0}>
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2 className="font-serif text-xl text-plum">
-              Stripe billing history
+              {sample ? "Private demonstration — sample data" : "Stripe billing history"}
             </h2>
             <p className="mt-1 text-[10px] text-ink/55">
-              Confirmed invoice, renewal, plan-change, refund, and credit events
-              received through the signed Stripe webhook.
+              {sample ? "Fictional clients, bookings and financial records. Payments, invitations and external notifications are disabled." : "Confirmed invoice, renewal, plan-change, refund, and credit events received through the signed Stripe webhook."}
             </p>
           </div>
           <span className="text-[9px] font-bold uppercase gc-text-secondary">
             Test mode
           </span>
         </div>
-        {c.billingEvents.length ? <>
+        {billingEvents.length ? <>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:hidden">
-          {c.billingEvents.map((event) => <article key={event.id} className="min-w-0 rounded-xl border border-border p-4 text-sm">
+          {billingEvents.map((event) => <article key={event.id} className="min-w-0 rounded-xl border border-border p-4 text-sm">
             <dl className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-4">
               <div className="col-span-2 min-w-0"><dt className="text-xs gc-text-secondary">Event</dt><dd className="mt-1 break-words font-semibold">{String(event.event_type || "Billing event")}</dd>{event.failure_reason ? <dd className="mt-1 break-words gc-text-danger">{String(event.failure_reason)}</dd> : null}</div>
               <div className="min-w-0"><dt className="text-xs gc-text-secondary">Date</dt><dd className="mt-1 break-words">{dateText(event.event_date, c.salon.time_zone, c.locale)}</dd></div>
@@ -1529,7 +1532,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
               <div className="min-w-0"><dt className="text-xs gc-text-secondary">Refunded</dt><dd className="mt-1 break-words">{c.formatCurrency(Number(event.amount_refunded || 0) / 100)}</dd></div>
               <div className="min-w-0"><dt className="text-xs gc-text-secondary">Credited</dt><dd className="mt-1 break-words">{c.formatCurrency(Number(event.amount_credited || 0) / 100)}</dd></div>
               <div className="min-w-0"><dt className="text-xs gc-text-secondary">Payment</dt><dd className="mt-1"><Status value={String(event.payment_status || "Not recorded")} /></dd></div>
-              <div className="col-span-2 min-w-0"><dt className="text-xs gc-text-secondary">Stripe reference</dt><dd className="mt-1 break-all" data-no-translate>{String(event.stripe_invoice_id || event.stripe_event_id || "—")}</dd></div>
+              <div className="col-span-2 min-w-0"><dt className="text-xs gc-text-secondary">{sample ? "Reference" : "Stripe reference"}</dt><dd className="mt-1 break-all" data-no-translate>{String(event.stripe_invoice_id || event.stripe_event_id || "—")}</dd></div>
             </dl>
           </article>)}
         </div>
@@ -1545,7 +1548,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
                 "Refunded",
                 "Credited",
                 "Payment",
-                "Stripe reference",
+                sample ? "Reference" : "Stripe reference",
               ].map((label) => (
                 <th key={label} scope="col" className="border-b border-plum/10 py-2 pr-3">
                   {label}
@@ -1554,7 +1557,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
             </tr>
           </thead>
           <tbody>
-            {c.billingEvents.map((event) => (
+            {billingEvents.map((event) => (
               <tr key={event.id} className="border-b border-plum/10">
                 <td className="py-3 pr-3">{dateText(event.event_date, c.salon.time_zone, c.locale)}</td>
                 <td className="pr-3">
@@ -1687,7 +1690,7 @@ function BusinessProfileWorkspace({ c, focus, children }: { c: Ctx; focus: strin
     ...(labels.team?[[labels.team,c.stylists.length>0,"stylists"] as [string,boolean,string]]:[]),
   ];
   return <div className="space-y-5">
-    <Title title="My Page" subtitle="Manage your public business profile and showcase your brand to new clients." action={<div className="flex flex-wrap gap-2">{c.isOwner ? <Link href="/salon/onboarding/import" className="flex min-h-11 items-center rounded-xl border border-border bg-white px-4 text-sm font-semibold">{onboardingText(onboardingLocale,"entry")}</Link> : null}<Link href={`/salon/${c.salon.slug}`} className="flex min-h-11 items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold"><Eye size={17}/>{c.translateSource("Preview public page")}</Link></div>}/>
+    <Title title="My Page" subtitle="Manage your public business profile and showcase your brand to new clients." action={<div className="flex flex-wrap gap-2">{c.isOwner ? <Link href="/salon/onboarding/import" className="flex min-h-11 items-center rounded-xl border border-border bg-white px-4 text-sm font-semibold">{onboardingText(onboardingLocale,"entry")}</Link> : null}<Link href={c.salon.is_demo===true?"/salon/dashboard/demo-page":`/salon/${c.salon.slug}`} className="flex min-h-11 items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold"><Eye size={17}/>{c.translateSource("Preview public page")}</Link></div>}/>
     <section className="overflow-hidden rounded-2xl border border-border bg-white">
       <div className="relative h-36 bg-gradient-to-r from-primary-hover to-primary sm:h-52">
         {c.salon.cover_photo_url ? <SafeImage src={c.salon.cover_photo_url} fallbackSrc={c.salon.cover_photo_url} alt={c.salon.name || "Business"} className="h-full w-full object-cover"/> : <div className="flex h-full items-center justify-center text-sm text-white">{c.translateSource("Add a cover photo to showcase your business.")}</div>}
@@ -3222,7 +3225,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
     }
   }
   if (recordId === "new") return <><OwnerDetailHeader title="Add an appointment" subtitle="Record appointments received by your business." fallbackHref="/salon/dashboard/bookings"/><ManualAppointmentEditor key={String(c.salon.id)} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} onSaved={row => { c.setBookings(current => [row, ...current.filter(item => item.id !== row.id)]); router.push(`/salon/dashboard/bookings/${row.id}`); }}/></>;
-  if (!recordId) return <><BookingsWorkspace bookings={c.bookings} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} canUseCalendar={!c.access || c.access.availability === true}/>{(c.isOwner || c.access?.client_history === true) && <BusinessRebookingAdvice businessId={String(c.salon.id)} accessKey={JSON.stringify([c.isOwner, c.access])} canReviewUpdates={c.isOwner && (!c.access || c.access.promotions === true)}/>}</>;
+  if (!recordId) return <><BookingsWorkspace sampleBusiness={c.salon.is_demo===true} bookings={c.bookings} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} canUseCalendar={!c.access || c.access.availability === true}/>{(c.isOwner || c.access?.client_history === true) && <BusinessRebookingAdvice businessId={String(c.salon.id)} accessKey={JSON.stringify([c.isOwner, c.access])} canReviewUpdates={c.isOwner && (!c.access || c.access.promotions === true)}/>}</>;
   if (selected && isBusinessAdded(selected)) return <><OwnerDetailHeader title="Business-added appointment" subtitle={String(selected.guest_name || "")} fallbackHref="/salon/dashboard/bookings"/><ManualAppointmentEditor key={String(selected.id)} booking={selected} styles={c.styles} stylists={c.stylists} timeZone={String(c.salon.time_zone)} onSaved={row => c.setBookings(current => current.map(item => item.id === row.id ? row : item))}/><BookingAttendance key={String(selected.id)} bookingId={String(selected.id)} scope="salon" onSaved={status=>c.setBookings(rows=>rows.map(row=>row.id===selected.id?{...row,status}:row))}/><BookingNotes bookingId={String(selected.id)}/>{(!c.access || c.access.client_history) ? <BusinessClientCard key={`${c.salon.id}:${selected.id}:${JSON.stringify(c.access)}`} bookingId={String(selected.id)} timeZone={String(c.salon.time_zone)}/> : null}</>;
   return (
     <>

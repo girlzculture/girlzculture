@@ -61,7 +61,7 @@ async function handle(request: Request) {
         }
         if (!draft || draft.published_at) return Response.json({ code: "POLICY_DRAFT_NOT_FOUND" }, { status: 404, headers });
       }
-      return Response.json({ revisions, current, public_policy_path: salon.slug ? `${salonPublicPath(String(salon.slug), salon.vanity_slug ? String(salon.vanity_slug) : null)}#business-policies` : null }, { headers });
+      return Response.json({ revisions, current, public_policy_path: salon.is_demo === true ? "/salon/dashboard/demo-page#business-policies" : salon.slug ? `${salonPublicPath(String(salon.slug), salon.vanity_slug ? String(salon.vanity_slug) : null)}#business-policies` : null }, { headers });
     }
     enforceRateLimit(request, `business-policies:${user.id}`, 20, 60_000);
     const subscription = await admin.from("subscriptions").select("status,current_period_end").eq("salon_id", salon.id).maybeSingle();

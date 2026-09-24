@@ -68,8 +68,16 @@ export function businessBookingMoney(salonId: string, books: OperatingBooks, dat
   if (!sale || sale.kind !== "service" || sale.agreed_cents !== moneyCents(row.estimated_total)) throw Error("BOOKING_MONEY_CHANGED");
   const canonicalPayments = books.payments.filter(payment => payment.sale_id === sale.id);
   const original = wanted.get(id)!;
-  if (original.booking_origin !== "business_added" && moneyCents(row.deposit_amount ?? 0) > 0 && ["paid", "succeeded", "refunded", "partiallyrefunded", "refundpending"].includes(normalized(row.deposit_status)) && !canonicalPayments.some(payment => payment.id === `deposit:${id}`)) throw Error("BOOKING_MONEY_INVALID_EVIDENCE");
-  if (normalized(row.refund_status) === "succeeded" && moneyCents(row.refund_amount ?? 0) > 0 && !canonicalPayments.some(payment => payment.id === `refund:${id}`)) throw Error("BOOKING_MONEY_INVALID_EVIDENCE");
+  // Private sample bookings have recorded simulated receipts, never provider
+  // charges. Keep every live booking subject to the existing evidence guards.
+  const simulated = data.is_demo === true && original.is_demo === true && row.payment_mode === "test";
+  if (simulated) {
+   const recorded = (stage: string) => canonicalPayments.filter(payment => payment.id.startsWith("receipt:") && payment.stage === stage).reduce((sum, payment) => sum + payment.amount_cents, 0);
+   if (["paid", "succeeded", "refunded", "partiallyrefunded", "refundpending"].includes(normalized(row.deposit_status)) && recorded("deposit") !== moneyCents(row.deposit_amount ?? 0)) throw Error("BOOKING_MONEY_INVALID_EVIDENCE");
+   if (normalized(row.refund_status) === "succeeded" && recorded("refund") !== moneyCents(row.refund_amount ?? 0)) throw Error("BOOKING_MONEY_INVALID_EVIDENCE");
+  }
+  if (!simulated && original.booking_origin !== "business_added" && moneyCents(row.deposit_amount ?? 0) > 0 && ["paid", "succeeded", "refunded", "partiallyrefunded", "refundpending"].includes(normalized(row.deposit_status)) && !canonicalPayments.some(payment => payment.id === `deposit:${id}`)) throw Error("BOOKING_MONEY_INVALID_EVIDENCE");
+  if (!simulated && normalized(row.refund_status) === "succeeded" && moneyCents(row.refund_amount ?? 0) > 0 && !canonicalPayments.some(payment => payment.id === `refund:${id}`)) throw Error("BOOKING_MONEY_INVALID_EVIDENCE");
   const status = normalized(row.status);
   if (!status) throw Error("BOOKING_MONEY_INVALID_EVIDENCE");
   const category = status === "completed" ? "completed" : status === "noshow" ? "no_show" : ["cancelled", "canceled"].includes(status) ? "cancelled" : "other";

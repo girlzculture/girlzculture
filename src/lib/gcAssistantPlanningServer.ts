@@ -14,6 +14,7 @@ import { readAssistantData } from "@/lib/gcAssistantServer";
 import { assistantServiceFacts } from "@/lib/assistantServiceRead";
 import { assistantFinanceFacts } from "@/lib/businessFinanceRankings";
 import { serviceCapacityAssistantFacts } from "@/lib/businessServiceCapacity";
+import { formatZonedDateTime, salonTimeZone } from "@/lib/dateTime";
 import { restoreAuthorizedBusinessContact } from "@/lib/assistantBusinessProfileRead";
 import { assertAssistantProposalScope } from "@/lib/assistantProfessionalScope";
 import { assistantBusinessTerminologyGuidance, type BusinessTerminologyDomain } from "@/i18n/business-terminology";
@@ -62,7 +63,7 @@ function answerFacts(tool: string, args: unknown, result: unknown) {
   return assistantServiceFacts(result, true);
 }
 
-function planningResult(tool: string, result: unknown, granted: ReadonlySet<string>) {
+function planningResult(tool: string, result: unknown, granted: ReadonlySet<string>, timeZone: string, answerOnly = false) {
   if (result === null || result === undefined) return null;
   if (["get_booking_messages", "get_reviews", "get_customers"].includes(tool) && typeof result === "object") {
     const value = result as Record<string, unknown>;
@@ -155,9 +156,14 @@ function planningResult(tool: string, result: unknown, granted: ReadonlySet<stri
     // A follow-up such as "tell Sarah" needs the IDs from the authorized read.
     // Share only selection facts; never contact details, messages or payments.
     const value = result as { bookings?: Record<string, unknown>[]; time_zone?: string; total?: number } | null;
-    return { time_zone: value?.time_zone, total: value?.total ?? null, is_excerpt: Number(value?.total ?? value?.bookings?.length ?? 0) > 12, shown_count: Math.min(12, value?.bookings?.length ?? 0), bookings: (Array.isArray(value?.bookings) ? value.bookings : []).slice(0, 30).map(row => ({
+    const zone = salonTimeZone(timeZone);
+    return { time_zone: zone, total: value?.total ?? null, is_excerpt: Number(value?.total ?? value?.bookings?.length ?? 0) > 12, shown_count: Math.min(12, value?.bookings?.length ?? 0), bookings: (Array.isArray(value?.bookings) ? value.bookings : []).slice(0, 30).map(row => ({
       id: row.id, public_reference: row.public_reference, guest_name: row.guest_name,
-      appointment_datetime: row.appointment_datetime, status: row.status, booking_origin: row.booking_origin,
+      // Convert before the model sees the answer facts. A UTC timestamp plus
+      // a separate zone label led to 14:00 UTC being reported as 14:00 New York.
+      ...(!answerOnly ? { appointment_datetime: row.appointment_datetime } : {}),
+      appointment_local_time: formatZonedDateTime(row.appointment_datetime, zone),
+      status: row.status, booking_origin: row.booking_origin,
     })) };
   }
   return ["calculate_service_selection", "get_booking_price_details", "get_outstanding_balances", "get_manual_sale_options", "get_finance_records", "get_business_media", "get_business_summary", "get_services_and_prices", "get_business_profile", "get_business_settings", "get_team_controls", "get_business_controls", "get_availability", "get_business_policies", "search_platform_knowledge", "get_professionals", "get_products", "get_plan_status", "get_profile_completion", "get_earnings_summary", "get_upcoming_appointments", "get_calendar_gaps", "get_promotions"].includes(tool) ? boundedFacts(result) : null;
@@ -404,7 +410,7 @@ export async function planOwnerRequest(input: {
   const hasDistinctAnswerHistory = conversationIds.some(id => !input.previousRequestIds.includes(id));
   const historyWasRestricted = Boolean(input.answerOnly && !hasDistinctAnswerHistory) || clientHistoryChanged || historyIds.some(id => !authorizedIds.has(id));
   const priorResults = authorizedHistory.filter(row => input.previousRequestIds.includes(row.id)).map(row => {
-    const selected = planningResult(row.tool, input.answerOnly ? answerFacts(row.tool, row.arguments, row.result) : row.result, granted as Set<string>);
+    const selected = planningResult(row.tool, input.answerOnly ? answerFacts(row.tool, row.arguments, row.result) : row.result, granted as Set<string>, input.timeZone, input.answerOnly);
     const preserveExcerpt = ["get_promotions", "get_booking_messages", "get_reviews", "get_customers"].includes(row.tool);
     const projected = retainCommunicationSelectionIds(row.tool, selected, input.answerOnly || preserveExcerpt ? boundedFacts(selected) : compactPromptFacts(selected));
     return { tool: row.tool, arguments: Object.hasOwn(ASSISTANT_TOOLS, row.tool) && ASSISTANT_TOOLS[row.tool as keyof typeof ASSISTANT_TOOLS].risk >= 3 ? null : (input.answerOnly || preserveExcerpt ? boundedFacts(row.arguments) : compactPromptFacts(row.arguments)),

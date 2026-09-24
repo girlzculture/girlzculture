@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { CSSProperties } from "react";
 import { responsiveMediaSources } from "@/lib/responsiveMedia";
+import { bundledImageSource } from "@/lib/bundledImageSource";
 
 export default function SafeImage({
   src,
@@ -23,12 +24,13 @@ export default function SafeImage({
   draggable?: boolean;
   rendition?: "responsive" | "thumbnail";
 }) {
-  const desiredSrc = src || fallbackSrc;
+  const localFallback = bundledImageSource(fallbackSrc);
+  const desiredSrc = bundledImageSource(src || fallbackSrc);
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const [failedThumbnailSrc, setFailedThumbnailSrc] = useState<string | null>(
     null,
   );
-  const baseSrc = failedSrc === desiredSrc ? fallbackSrc : desiredSrc;
+  const baseSrc = failedSrc === desiredSrc ? localFallback : desiredSrc;
   const responsiveSources = responsiveMediaSources(baseSrc);
   const useThumbnail =
     rendition === "thumbnail" &&
@@ -49,7 +51,7 @@ export default function SafeImage({
       onError={() => {
         if (useThumbnail) {
           setFailedThumbnailSrc(baseSrc);
-        } else if (baseSrc !== fallbackSrc) {
+        } else if (baseSrc !== localFallback) {
           setFailedSrc(desiredSrc);
         }
       }}
