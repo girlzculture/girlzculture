@@ -138,7 +138,8 @@ test(`P0 populated owner saves, validation, errors and message originals in ${lo
   await expect(page.locator('html')).toHaveAttribute('lang', locale);
   await expect(description).toHaveValue(original);
   await page.goto(`/salon/dashboard/messages/${fixture.ids.booking}`);
-  const composer = page.getByLabel(t('Message'), { exact: true });
+  // Chinese uses the same word for this field and the Messages navigation link.
+  const composer = page.getByRole('textbox', { name: t('Message'), exact: true });
   await expect(composer).toHaveAttribute('placeholder', t('Type a private booking message…'));
   const displayed = page.locator('article [data-no-translate]').first();
   if (locale !== 'fr') {

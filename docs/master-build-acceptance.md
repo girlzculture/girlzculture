@@ -4,13 +4,15 @@ Source: Girlz_Culture_Master_Build.pdf (all five pages), founder pasted correcti
 
 ## Baseline and release controls
 
-- Branch: `codex/master-build-current-scope`, based on `692b89be11c0599c579f90254032b56431590fe2` (PR #86 CI correction).
+- Original implementation branch: `codex/master-build-current-scope`, based on `692b89be11c0599c579f90254032b56431590fe2` (PR #86 CI correction). Current correction branch: `codex/culture-house-presentation-history`, PR #91.
 - Baseline required CI: [35815751467](https://github.com/girlzculture/girlzculture/actions/runs/35815751467), successful: **1,402 passed, 5 skipped, 0 failed; 1,407 accounted for exactly once**, eight isolated runners, one worker each, zero retries. TypeScript, lint, build, clean migration chain and focused gates passed on that commit. This does not verify the subsequent Master Build changes.
-- Master Build changes: implementation checkpoints from `c461a6c` through `4514f4b`, plus the CI corrections recorded below; pushed for review in [PR #87](https://github.com/girlzculture/girlzculture/pull/87), not released. No Master Build migration, application change or demo record has been applied to production.
+- Master Build changes from PRs #87–#90 are merged. The protected chain currently has 217 applied migrations and the existing private Culture House account has its earlier 526-booking history. PR #91 adds three reviewed pending migrations and the larger same-account history; its production application, refresh and hosted acceptance are still pending. The published fallback is unchanged.
 - Last observed published deployment: `6ab1801846433e00086f1d08`. Recheck exact source and rollback compatibility before release.
 - Required acceptance statuses: PASS (verified actual workflow), AUTOMATED ONLY (local/CI evidence), FAIL (demonstrated failure), BLOCKED (not implemented/verified or external dependency). No unchecked requirement counts as complete.
 
-## Requirement-by-requirement evidence
+## Initial requirement checkpoints
+
+The table preserves the original implementation checkpoints. Later dated verification entries below supersede their initial test statuses; neither automated evidence nor an implemented feature establishes deployed acceptance.
 
 | ID | Current requirement and detailed acceptance | Implementation / evidence | Acceptance |
 |---|---|---|---|
@@ -419,3 +421,5 @@ Required run [36040651137](https://github.com/girlzculture/girlzculture/actions/
 Local evidence: clean installation of all 220 migrations; 130 clean-schema and 137 genuine populated-upgrade account checks; 17 deposit/API/assistant/asset tests; 14 checkout tests including exact-cent 0/30/80% rules with protected travel fees; 32 production-migration contracts. The expanded record graph reconciles 3,076 bookings, 480 clients and $294,263.50 completed booking value at the September 24 anchor. Four-language owner inventory covers 3,036/3,036 UI sources; this is automated coverage, not human-reviewed legal translation. Wolof stays deferred.
 
 The optimized production build (including TypeScript) passed. The final production-server focused suite passed 38/38 in Chromium and WebKit: delayed stylesheet/hydration sign-in, full mobile navigation and identity, deposit invalid-input recovery/save/readback/refresh, and customer booking confirmation with 0%, 30% and 80% deposits. Earlier focused responsive checks passed 30/30. Logs and viewport screenshots are retained in the release evidence. Production still uses the prior dataset and locked fallback until the protected release, exact-account refresh and hosted owner verification are complete. These results must not be presented as a live deployment.
+
+PR #91 run 36052642014 reproduced a Chinese message-composer selector collision at phone/tablet/desktop sizes: the full Messages navigation link and the textarea both have the accessible name 消息. The test now selects the textbox role explicitly. Its exact placeholder, original-content preservation, failed-save recovery, successful save/readback/refresh, send, locale, accessibility and overflow assertions are unchanged. The original case failed locally before the one-line selector correction; all 24 four-language Chromium/WebKit cases passed afterward on the unchanged production build. No application change, retry, timeout increase or skipped case was used. The original Chromium/WebKit CI logs are preserved.
