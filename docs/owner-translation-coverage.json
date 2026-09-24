@@ -10,7 +10,7 @@
     "wo": "Founder explicitly deferred Wolof; not release-verified."
   },
   "scope": "All inventoried owner graph copy, including dynamic labels, error literals and templates. Only documented proper names and reviewed non-copy source contexts are excluded. Source coverage is not linguistic review or full browser workflow acceptance.",
-  "candidate_count": 3378,
+  "candidate_count": 3382,
   "excluded_code_count": 269,
   "intentional_untranslated": [
     "Girlz Culture",
@@ -101,21 +101,21 @@
   ],
   "locales": {
     "en": {
-      "source_count": 3033,
-      "covered": 3033,
+      "source_count": 3037,
+      "covered": 3037,
       "missing_count": 0,
       "missing": []
     },
     "fr": {
-      "source_count": 3033,
-      "covered": 3033,
+      "source_count": 3037,
+      "covered": 3037,
       "missing_count": 0,
       "missing": []
     },
     "wo": {
-      "source_count": 3033,
+      "source_count": 3037,
       "covered": 1668,
-      "missing_count": 1365,
+      "missing_count": 1369,
       "missing": [
         {
           "source": "{completed} completed · {cancelled} cancelled · {noShow} no-show · {other} other current states",
@@ -378,7 +378,7 @@
               "file": "src/components/owner/BusinessAdvertising.tsx",
               "line": 23,
               "kind": "literal",
-              "context": "d1641c3cfadbb1aa72ef733258c65334bc3a482321d1ff8a8c7865c4ba0ccfea"
+              "context": "6c360fb8c4d7ab4457e56951f80ceb4b10f62c6f8d2a545e1081d15843ffe8be"
             }
           ]
         },
@@ -509,7 +509,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1696,
+              "line": 1695,
               "kind": "literal",
               "context": "5f57d7fe617ef1672d186a49d2d088797119802ce266d41491668148daa7f97c"
             }
@@ -531,7 +531,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2729,
+              "line": 2728,
               "kind": "literal",
               "context": "2d879c6e2e3e46b12221e3d9b1c5e1148e2444a2a933d44b6c3e1243bc769dc0"
             }
@@ -616,7 +616,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2444,
+              "line": 2443,
               "kind": "literal",
               "context": "ede20eb75e91e3e2135f402642d57ebeab87456bd0a6cada85c39c71df895e90"
             }
@@ -680,6 +680,17 @@
               "line": 12,
               "kind": "literal",
               "context": "dc7946242e952fde411de985bb4df6389a9116b7878dc7ff22736a6818c69ad0"
+            }
+          ]
+        },
+        {
+          "source": "Advertising is unavailable for this account.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessAdvertising.tsx",
+              "line": 23,
+              "kind": "literal",
+              "context": "6c360fb8c4d7ab4457e56951f80ceb4b10f62c6f8d2a545e1081d15843ffe8be"
             }
           ]
         },
@@ -833,7 +844,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 41,
+              "line": 42,
               "kind": "localized-source",
               "context": "b8326774f0f33062126c73cab13ca59000e4b2c917113e5e00f70895760a6364"
             }
@@ -905,7 +916,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 49,
+              "line": 50,
               "kind": "localized-source",
               "context": "8cbaf73af6db7554116f12b099b75a87cec10b815f99670619faf7dfe9ebe6b0"
             },
@@ -928,13 +939,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 48,
+              "line": 49,
               "kind": "localized-source",
               "context": "2ff7ea8a5809571f69bfc7678627397aba2c97a99170068ffd3fb52ebfb7d249"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2718,
+              "line": 2717,
               "kind": "literal",
               "context": "7921fe3da94ab8fbb9eb472db903eb33c4c4f62cf5fbe9ee229200e8825a25c7"
             }
@@ -1051,7 +1062,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1710,
+              "line": 1709,
               "kind": "literal",
               "context": "6f4718b1b41ac44718d329864c96fbe8be0186809e441002bd3487019abe9f95"
             }
@@ -1180,7 +1191,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 47,
+              "line": 48,
               "kind": "localized-source",
               "context": "a6ea8b1e9cbaeb91505fe36ee7339a799c68aa0f2dbf300bbef923efbcb84b77"
             },
@@ -1253,7 +1264,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 59,
+              "line": 60,
               "kind": "localized-source",
               "context": "021234cc1d544c2047e9e63ae5a634ee5836c61b99d74fcd93a99213c1cc556d"
             }
@@ -1276,13 +1287,13 @@
             },
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 35,
+              "line": 36,
               "kind": "localized-source",
               "context": "d91b0f0f4ec416f20356810ebb746950cfa7bd28c9da881a5a0ec00112ee234e"
             },
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 43,
+              "line": 44,
               "kind": "localized-source",
               "context": "e3a866ca1c803733281b55b70ff2a3d930c151c601e7456c3d2e3e53e33e0e05"
             },
@@ -1299,7 +1310,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 35,
+              "line": 36,
               "kind": "localized-source",
               "context": "c48bec70be7273472ffd237b5a1595797eb17dc23982f17337065d97be3965b1"
             },
@@ -1368,7 +1379,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 34,
+              "line": 35,
               "kind": "literal",
               "context": "a47660da39f2911166e86aa51aac75f84b8b645cfac77f91bd9c43b92a2b7c3e"
             }
@@ -1732,6 +1743,12 @@
         {
           "source": "Automatic rebooking reminders are off.",
           "occurrences": [
+            {
+              "file": "src/components/owner/BusinessRebookingControls.tsx",
+              "line": 20,
+              "kind": "literal",
+              "context": "9406434059e47dfceb0b7ff38a9e292acca15da427c5a10909776c0f50db26a3"
+            },
             {
               "file": "src/components/owner/BusinessRebookingControls.tsx",
               "line": 20,
@@ -2162,7 +2179,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 40,
+              "line": 41,
               "kind": "localized-source",
               "context": "424abaf0567bca605ef5ef465e652456110f01ae80c8e25f687c068253314aec"
             }
@@ -2186,17 +2203,28 @@
           ]
         },
         {
+          "source": "Booking value is not money received.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BookingsWorkspace.tsx",
+              "line": 22,
+              "kind": "literal",
+              "context": "af0c832aa51b0f34b243cbe78e3325aafce754b49b041f9ee2b31f4c9bcc529a"
+            }
+          ]
+        },
+        {
           "source": "Booking views",
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 35,
+              "line": 36,
               "kind": "localized-source",
               "context": "3c2fa748df3b1b0e1ef4defc9e272b0be81ab8861663766694ec942b12045823"
             },
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 43,
+              "line": 44,
               "kind": "localized-source",
               "context": "3c2fa748df3b1b0e1ef4defc9e272b0be81ab8861663766694ec942b12045823"
             }
@@ -2207,7 +2235,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 37,
+              "line": 38,
               "kind": "localized-source",
               "context": "31990d64e4a1189263a080c426f503be50b70ab9c8123e8bec7d1bcabadd5cd1"
             }
@@ -2297,7 +2325,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1044,
+              "line": 1045,
               "kind": "jsx-text",
               "context": "e02cf9bf1fa26c956a484167227166882d4a039a8ecb341c8cc6991062f726cf"
             }
@@ -2308,7 +2336,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 731,
+              "line": 732,
               "kind": "jsx-text",
               "context": "8c4b81380ace78eae4bbe6e7b86b74493ca0e42092794acec330f3cdeb9e47d0"
             }
@@ -2319,7 +2347,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1783,
+              "line": 1782,
               "kind": "literal",
               "context": "9a145c47d3cf6c812357fb9edb331e69c0abc5b031cd39d89ee8ca3ece2e6f71"
             }
@@ -2341,7 +2369,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 243,
+              "line": 244,
               "kind": "literal",
               "context": "8ec20734d68fecbb594d9581e1ade6b3e29a62322126d5f93efe0031eeb47c54"
             }
@@ -2352,7 +2380,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 253,
+              "line": 254,
               "kind": "literal",
               "context": "4e5b1588922a8d2e2747baf85534f56b5184067c3dc383c6a7c3af2911e3d0da"
             }
@@ -2363,7 +2391,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1782,
+              "line": 1781,
               "kind": "literal",
               "context": "d9886403bd337f49a7cf9c535e253eb14eb0db28f03344d91ee4e791025c5546"
             }
@@ -2413,13 +2441,13 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1871,
+              "line": 1870,
               "kind": "jsx-attribute",
               "context": "3657ed66694f56f455c13050844dea20115cfd71aab4aa5387fe1847d1294c6b"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1907,
+              "line": 1906,
               "kind": "jsx-attribute",
               "context": "17e8d70b92016aeaff44f1397876ad1832da7c4034af44e347eabec25779d31e"
             }
@@ -2430,7 +2458,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1861,
+              "line": 1860,
               "kind": "jsx-text",
               "context": "77bdda77a9faa77143e381eba10835666781522e5a5aa3aed9b95c7b89884478"
             }
@@ -2526,7 +2554,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1683,
+              "line": 1682,
               "kind": "literal",
               "context": "f09ed99c1b512ad79032b1a9fe17af091e586136d5d08b18b663c97ad88d57d7"
             }
@@ -2565,7 +2593,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 4026,
+              "line": 4025,
               "kind": "literal",
               "context": "de167683ea6c6623011d72c42da2f30e9d6ea191682ca3c02a2ef1912dd92f92"
             }
@@ -2637,7 +2665,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1741,
+              "line": 1740,
               "kind": "jsx-text",
               "context": "5b39f3f311a656ea707cb7ef0f8ce5ed400abbeaea2261c2f08539862035238d"
             }
@@ -2670,7 +2698,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2718,
+              "line": 2717,
               "kind": "literal",
               "context": "b7be196fe8fcff9867f361c380905525dad9c76572b0c93e16db1e6c8558d202"
             }
@@ -2681,7 +2709,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2730,
+              "line": 2729,
               "kind": "literal",
               "context": "c94de22f4e83803e384df65aa2cdd01d046bf3fa77eb38c1c1b83fb798ddd2d1"
             }
@@ -2947,6 +2975,23 @@
           ]
         },
         {
+          "source": "CH-{value0}",
+          "occurrences": [
+            {
+              "file": "src/components/owner/OwnerDashboardApp.tsx",
+              "line": 1534,
+              "kind": "template",
+              "context": "27fb7e61e5c7b949ca94f1543576b74f647a57fcebd0c0c6bd70724eba755c35"
+            },
+            {
+              "file": "src/components/owner/OwnerDashboardApp.tsx",
+              "line": 1591,
+              "kind": "template",
+              "context": "27fb7e61e5c7b949ca94f1543576b74f647a57fcebd0c0c6bd70724eba755c35"
+            }
+          ]
+        },
+        {
           "source": "Change business logo",
           "occurrences": [
             {
@@ -2957,7 +3002,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1700,
+              "line": 1699,
               "kind": "literal",
               "context": "9f45daf208f1103a1cb3e9590d342c7ddb20de8c0a2d789d373a01a110ecbac9"
             }
@@ -2974,7 +3019,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1697,
+              "line": 1696,
               "kind": "literal",
               "context": "ffe15357ad13db26c57a6d74440bf016374f6118056a0203ea91497ff2056996"
             }
@@ -3007,7 +3052,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 583,
+              "line": 584,
               "kind": "literal",
               "context": "0fa8cffd68024c936e96e678244407ff6204b3177849c693886660a5aa16a134"
             }
@@ -3395,7 +3440,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1212,
+              "line": 1213,
               "kind": "jsx-attribute",
               "context": "59e201a54fb36ac7e8b6be45a71f720ede968fe88a332cf61a1cf777e8b73701"
             }
@@ -3434,7 +3479,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 57,
+              "line": 58,
               "kind": "literal",
               "context": "8e4fd6153c4bc19236257a0c2a6c27be7c8a306b76d8b0f11228603393d4ef91"
             }
@@ -3976,7 +4021,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1716,
+              "line": 1715,
               "kind": "literal",
               "context": "9adbedc5a26e28e4288b89d1221451ff65187ebaf598b739186337f3292277ea"
             },
@@ -4631,7 +4676,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 49,
+              "line": 50,
               "kind": "localized-source",
               "context": "7bc4f74ff99b0c4be159433784f296bba25325d95c219b0083bb315dc4cfb95f"
             }
@@ -4709,7 +4754,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 31,
+              "line": 32,
               "kind": "localized-source",
               "context": "a79e0d5a37567d5b754fcfb6f64194674c6c4bb5025f9c617f726b5d68d1a672"
             },
@@ -4726,7 +4771,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 46,
+              "line": 47,
               "kind": "localized-source",
               "context": "614ad36b096a8914edcde6ea3d208cbfb793536c3a4b91e33ffc979b36afbca3"
             }
@@ -4740,39 +4785,6 @@
               "line": 27,
               "kind": "localized-source",
               "context": "077e68b21d0b5945cbc8012362ca3db5c3a5284b5a84b5c89ffc7e483a5e41e2"
-            }
-          ]
-        },
-        {
-          "source": "Demo businesses cannot reserve public advertising.",
-          "occurrences": [
-            {
-              "file": "src/components/owner/BusinessAdvertising.tsx",
-              "line": 23,
-              "kind": "literal",
-              "context": "d1641c3cfadbb1aa72ef733258c65334bc3a482321d1ff8a8c7865c4ba0ccfea"
-            }
-          ]
-        },
-        {
-          "source": "Demo businesses cannot send setup requests.",
-          "occurrences": [
-            {
-              "file": "src/components/owner/BusinessGoogleHelp.tsx",
-              "line": 33,
-              "kind": "localized-source",
-              "context": "b4aef7070c660fda70bb2bed9cf283eeaf7d4235eee109229881d5bc9160f1f5"
-            }
-          ]
-        },
-        {
-          "source": "Demo reminders are never sent.",
-          "occurrences": [
-            {
-              "file": "src/components/owner/BusinessRebookingControls.tsx",
-              "line": 20,
-              "kind": "literal",
-              "context": "25fdbe5dbc94fed4ec91b12801bc405ddfbbf9be54b1bb35e085c8860efa2135"
             }
           ]
         },
@@ -4993,6 +5005,17 @@
               "line": 88,
               "kind": "literal",
               "context": "a37f0123b12deb9a2352386e274e029578590d03b506d8813e95d0252f6a876a"
+            }
+          ]
+        },
+        {
+          "source": "Due after service",
+          "occurrences": [
+            {
+              "file": "src/lib/bookingReceiptBalance.ts",
+              "line": 11,
+              "kind": "literal",
+              "context": "71a0bdc8d44b72000c79d9c92d8a9899eb85b212361bf3db7b673259b21297db"
             }
           ]
         },
@@ -5280,7 +5303,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 47,
+              "line": 48,
               "kind": "literal",
               "context": "1a1d33d319e4de1753f69cfa9fe5d731c03bf1776fd0f0d0275a05bbfb0bbe4d"
             }
@@ -5743,29 +5766,6 @@
           ]
         },
         {
-          "source": "Fictional clients, bookings and financial records. Payments, invitations and external notifications are disabled.",
-          "occurrences": [
-            {
-              "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 21,
-              "kind": "literal",
-              "context": "5da5b7be2ce072d0a7ac30533ef5d3e41cb6a85439ff3d226d494df74f9ebc67"
-            },
-            {
-              "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1517,
-              "kind": "literal",
-              "context": "d5814c04c74f12cea349c5f604cb571502a7cd07e7ab0c2195891bc12d335981"
-            },
-            {
-              "file": "src/components/owner/OwnerDashboardShell.tsx",
-              "line": 301,
-              "kind": "jsx-text",
-              "context": "2d2ba4af7b38e3d2c8c2cc6fc5ff20f1c00c67a5a2bc119aed451d8b10e8adeb"
-            }
-          ]
-        },
-        {
           "source": "Finance records could not be loaded.",
           "occurrences": [
             {
@@ -5810,7 +5810,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3547,
+              "line": 3546,
               "kind": "jsx-attribute",
               "context": "822f23f9fb31d64fff97649eaf7b3156948e86f980294eff41b2e429c0075a9f"
             },
@@ -6020,7 +6020,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 47,
+              "line": 48,
               "kind": "localized-source",
               "context": "d35ee304431890c9e23ff40665e652f0429370222c940192121f26df5386b678"
             }
@@ -6137,13 +6137,13 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3826,
+              "line": 3825,
               "kind": "literal",
               "context": "234e4d69328a60cebd0003093adb44973fd7ee58fa315fe5af5510264a80b9c4"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3856,
+              "line": 3855,
               "kind": "jsx-attribute",
               "context": "038889eb9d71b04f35d95e03e5707f852b15ace30940c0a52c34ef97889053b3"
             }
@@ -6614,7 +6614,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2341,
+              "line": 2340,
               "kind": "literal",
               "context": "43d366342c15248d8bf939154d49d914f725e832af655475411ad3b0b3333989"
             }
@@ -6636,7 +6636,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2341,
+              "line": 2340,
               "kind": "literal",
               "context": "3b7a0bbd7becd23fa1d6fa81fea380228479d9cf53568dae6469eb98a27879f2"
             }
@@ -6769,7 +6769,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1707,
+              "line": 1706,
               "kind": "literal",
               "context": "83670f8e5bc083ddfc872ef07f3d28ce39892f1b736fad06a6d2a2ffa4023094"
             }
@@ -6926,7 +6926,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3890,
+              "line": 3889,
               "kind": "literal",
               "context": "36fdb299b86c59be8f1e7d8a5b93628fef548d9499fdaf9c1fc677ee91373d63"
             }
@@ -6937,7 +6937,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3830,
+              "line": 3829,
               "kind": "jsx-attribute",
               "context": "dd9bf669ebd28e87473e05d109ba8984aaf031dd49f5fc3d4fa7fa64ebfff03c"
             }
@@ -6948,7 +6948,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1716,
+              "line": 1715,
               "kind": "literal",
               "context": "c08b1ae1441f95b9b4e7f78aa3ac5d3dac88dc502dc9a8bd917137885491741e"
             }
@@ -7175,7 +7175,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 43,
+              "line": 44,
               "kind": "localized-source",
               "context": "6fb14906bcac63d621491f767acdc895aff4e6545536eb778e2bbf7308106b1e"
             },
@@ -7292,19 +7292,19 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1683,
+              "line": 1682,
               "kind": "literal",
               "context": "ae85115295a4e5c469359b9475729a1227754a0ffac1c83ed45e51ac7787ecc8"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1687,
+              "line": 1686,
               "kind": "literal",
               "context": "e9b9ccf0745d627e7013483e1ca529d1884d403e8fb56f87acaee17817e98b28"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1707,
+              "line": 1706,
               "kind": "literal",
               "context": "f471ae2f564145b211eb648568a4660acb3a0f5b88e82532d081d1eb342ebfdf"
             }
@@ -7315,7 +7315,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1710,
+              "line": 1709,
               "kind": "literal",
               "context": "32c9906e73aa11cabf23f08333e48ede623ab8270c93571bab2d00c32182a8ec"
             }
@@ -7404,7 +7404,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 38,
+              "line": 39,
               "kind": "localized-source",
               "context": "79f30e8633ca95537f1ecb827dc76db0ee78bd2a15ceabe91f17087d4120ebca"
             }
@@ -7465,7 +7465,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1702,
+              "line": 1701,
               "kind": "literal",
               "context": "ef8f50369498e8fababb3e08f4c745e7b3e9a081af8c3595e0b03fe7bf326227"
             }
@@ -7476,7 +7476,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3860,
+              "line": 3859,
               "kind": "jsx-attribute",
               "context": "7b692dde70938445ee0a9fcddb733152be4a82e6868038bf3d242e706e56b8bb"
             }
@@ -7487,7 +7487,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1750,
+              "line": 1749,
               "kind": "jsx-attribute",
               "context": "b07860edfd7e01057022cf00a7d693d66792bd05bac304bf697c0e7a75b7300d"
             }
@@ -7498,7 +7498,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1908,
+              "line": 1907,
               "kind": "jsx-attribute",
               "context": "c7a87c6c9c0bb3d2e52e2cfaf2b08c1a0a7e07377380099deea6da36b4bc8590"
             }
@@ -7520,7 +7520,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1693,
+              "line": 1692,
               "kind": "jsx-attribute",
               "context": "73d5c743f7f88fde6d7037eb9f452d157159d34288bf35e71357f9717455f267"
             }
@@ -7542,7 +7542,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2728,
+              "line": 2727,
               "kind": "literal",
               "context": "5eb00975e5eb1fd10f4b67b309b437f4f05c48a285ec8918a0991d511db925b9"
             }
@@ -7648,7 +7648,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 55,
+              "line": 56,
               "kind": "localized-source",
               "context": "efddfcb57bb878c7ad2542390c8167397e45132c84ed2f04188929883d7e46ed"
             }
@@ -7838,6 +7838,23 @@
           ]
         },
         {
+          "source": "Monthly subscription",
+          "occurrences": [
+            {
+              "file": "src/components/owner/OwnerDashboardApp.tsx",
+              "line": 1527,
+              "kind": "literal",
+              "context": "ce461b15aab2f2e5b4537fa6627a6e23df05cbde1b83d45666e6f8b5de312d83"
+            },
+            {
+              "file": "src/components/owner/OwnerDashboardApp.tsx",
+              "line": 1563,
+              "kind": "literal",
+              "context": "ce461b15aab2f2e5b4537fa6627a6e23df05cbde1b83d45666e6f8b5de312d83"
+            }
+          ]
+        },
+        {
           "source": "Monthly totals; exact values are listed below",
           "occurrences": [
             {
@@ -7936,7 +7953,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1705,
+              "line": 1704,
               "kind": "literal",
               "context": "ae71bf8eff767e34394a75cb2e783019e4973bc50518174cb6c31fe853557b51"
             }
@@ -8024,13 +8041,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3541,
+              "line": 3540,
               "kind": "jsx-attribute",
               "context": "331b162487ee29b85d70332082e6c504183fd047d91b816afde614fb88746098"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3562,
+              "line": 3561,
               "kind": "jsx-attribute",
               "context": "331b162487ee29b85d70332082e6c504183fd047d91b816afde614fb88746098"
             }
@@ -8179,7 +8196,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 58,
+              "line": 59,
               "kind": "localized-source",
               "context": "8a32e33b0759743202cc7f52e15cc3c97914edd1bd2d29ec9bb25c85214bdc93"
             }
@@ -8665,11 +8682,22 @@
           ]
         },
         {
+          "source": "No Show",
+          "occurrences": [
+            {
+              "file": "src/lib/bookingReceiptBalance.ts",
+              "line": 10,
+              "kind": "literal",
+              "context": "e428387619c53818038c7ae98b7d093d11d5ab0140e3efc70958aef2ce3464a8"
+            }
+          ]
+        },
+        {
           "source": "No signed Stripe billing events have been received for this business yet.",
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1600,
+              "line": 1599,
               "kind": "jsx-attribute",
               "context": "52effeecd947b3c83ace2c3f2709ca4e5fffa433123dd252300701a3bd4a6ee5"
             }
@@ -9081,7 +9109,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1751,
+              "line": 1750,
               "kind": "jsx-attribute",
               "context": "e275310b61444b3a84b41880876b9c8b0e2308a84192c4ff04a7762a56e21e31"
             }
@@ -10120,7 +10148,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 59,
+              "line": 60,
               "kind": "localized-source",
               "context": "4dc4cfa04ce4ce2574b523d77bc7a3a2036d13c0cddc694735615c8bc80c1700"
             },
@@ -10198,7 +10226,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1216,
+              "line": 1217,
               "kind": "jsx-text",
               "context": "63966ca1de968261040db1db1a27d189df51626d0df2d6c095207e7a41ac83bd"
             }
@@ -10229,29 +10257,6 @@
               "line": 19,
               "kind": "literal",
               "context": "785191d8ecf1f0557411da4c76bc94e66f5854046709e38e7d4d94ae1508173b"
-            }
-          ]
-        },
-        {
-          "source": "Private demonstration — sample data",
-          "occurrences": [
-            {
-              "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1510,
-              "kind": "literal",
-              "context": "592090d9dacbd11a8fc328be5b63b3ee6232330067d6a6f759551e0b4cbec6e0"
-            },
-            {
-              "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1514,
-              "kind": "literal",
-              "context": "592090d9dacbd11a8fc328be5b63b3ee6232330067d6a6f759551e0b4cbec6e0"
-            },
-            {
-              "file": "src/components/owner/OwnerDashboardShell.tsx",
-              "line": 301,
-              "kind": "jsx-text",
-              "context": "b46e0e858c8c6e945d486942a765493e5d4d6e2c2fb5699f91262956e9f4c73e"
             }
           ]
         },
@@ -10315,7 +10320,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2340,
+              "line": 2339,
               "kind": "literal",
               "context": "25c3351a3b7228a468ddeb778bfc90f2ad122c4756d035dc73948118a0ffce13"
             },
@@ -10627,7 +10632,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 4072,
+              "line": 4071,
               "kind": "literal",
               "context": "9ca6ac106e35becf8d49a37364810e8479b6b6027f767ecb34bb894405a5ad44"
             }
@@ -11322,13 +11327,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1535,
+              "line": 1534,
               "kind": "literal",
               "context": "45eb44d7dd615c1603759ce8b53d24eb516e3236369500bd881eada7bb35c24c"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1551,
+              "line": 1550,
               "kind": "literal",
               "context": "45eb44d7dd615c1603759ce8b53d24eb516e3236369500bd881eada7bb35c24c"
             },
@@ -11523,7 +11528,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2723,
+              "line": 2722,
               "kind": "literal",
               "context": "be5df7bbebf9698c67f74089f92afd215b0cd677df2f9d4668b0d1a4aec4c8ab"
             }
@@ -11701,7 +11706,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 645,
+              "line": 646,
               "kind": "literal",
               "context": "c6c4a24b35ebeae96714f22db65826a056b2fbf3acc7f41ca9e48afe15140207"
             }
@@ -11723,7 +11728,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 661,
+              "line": 662,
               "kind": "literal",
               "context": "48c3c2f27683af623ae98fdf2ac449556bbe37735e9bd092e439806ae5ca0843"
             }
@@ -12273,7 +12278,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3856,
+              "line": 3855,
               "kind": "jsx-attribute",
               "context": "98aded13f10d3e216581f500b8ad928d1ca50b7849fa7c72c8e9b26023f7bf51"
             }
@@ -13141,7 +13146,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3861,
+              "line": 3860,
               "kind": "jsx-text",
               "context": "ebf095800d7a31e0e6f598309ac6ab593433ce3b829a212f9e453b0a97310172"
             }
@@ -13435,7 +13440,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 49,
+              "line": 50,
               "kind": "localized-source",
               "context": "59f46341f73ee4159cd75a3889d9b5d7ace964e8ecc2f0cad44ed2da5917516d"
             }
@@ -13582,13 +13587,13 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1710,
+              "line": 1709,
               "kind": "literal",
               "context": "dae6d564a837b4ddf21ab116897069858cc60a8c420290e165dceb8cb1aab31e"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1959,
+              "line": 1958,
               "kind": "jsx-attribute",
               "context": "385a3d1fa2ecad9e94a6351a3f165a89e428e478d8138b52318cb63f459bf43c"
             },
@@ -13667,7 +13672,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2695,
+              "line": 2694,
               "kind": "literal",
               "context": "1651361794111d19f788e741bb8d8eaa267b707543889a728a9d39f9f0ce8d0c"
             }
@@ -13698,6 +13703,17 @@
               "line": 35,
               "kind": "literal",
               "context": "42956d5610bb2554b02d45c6aa1785c5ce7d3f080ded164b0899d1daec73a5ee"
+            }
+          ]
+        },
+        {
+          "source": "Setup requests are unavailable for this account.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessGoogleHelp.tsx",
+              "line": 33,
+              "kind": "localized-source",
+              "context": "b0a7ce673f9e37f76c22cc56b8062a597939b852da03e4879e7d3eb9b566a8bb"
             }
           ]
         },
@@ -13855,9 +13871,26 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 276,
+              "line": 277,
               "kind": "literal",
               "context": "bfa3ccdb3b41c6032a5289108b863f1c90df4669ab3a11bcad91e5a127b85d50"
+            }
+          ]
+        },
+        {
+          "source": "Simulated",
+          "occurrences": [
+            {
+              "file": "src/components/owner/OwnerDashboardApp.tsx",
+              "line": 1533,
+              "kind": "literal",
+              "context": "56c1f10fc27457f575a6afb75e6875a7d9e976e89131760a40f45a383139fd0b"
+            },
+            {
+              "file": "src/components/owner/OwnerDashboardApp.tsx",
+              "line": 1586,
+              "kind": "literal",
+              "context": "56c1f10fc27457f575a6afb75e6875a7d9e976e89131760a40f45a383139fd0b"
             }
           ]
         },
@@ -13916,7 +13949,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1710,
+              "line": 1709,
               "kind": "literal",
               "context": "8d765e907e8c80d91ed09f9e5db6c89d2820a408d440b02db300d47ad48d0dde"
             }
@@ -13973,13 +14006,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 40,
+              "line": 41,
               "kind": "localized-source",
               "context": "911413a04e84c357d6931b81dcbe5fd82e725b85a766488c0b08f9434c3aeafb"
             },
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 41,
+              "line": 42,
               "kind": "localized-source",
               "context": "911413a04e84c357d6931b81dcbe5fd82e725b85a766488c0b08f9434c3aeafb"
             },
@@ -14091,7 +14124,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 48,
+              "line": 49,
               "kind": "localized-source",
               "context": "5c5d02777b69d1d650ae7b528c1741ffe2e2bf042cec0d2d498552eeb82987d8"
             }
@@ -14152,7 +14185,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 32,
+              "line": 33,
               "kind": "literal",
               "context": "560fb5ac1fdbcc28c44857f576bfa01520740ade8e208c2f5d7ff1d023675d18"
             }
@@ -14355,6 +14388,23 @@
           ]
         },
         {
+          "source": "Subscription history",
+          "occurrences": [
+            {
+              "file": "src/components/owner/OwnerDashboardApp.tsx",
+              "line": 1511,
+              "kind": "literal",
+              "context": "06fcad870886a255facc0180bf9ad485004b9f9aa342f46013f7cb67ac4a5cf9"
+            },
+            {
+              "file": "src/components/owner/OwnerDashboardApp.tsx",
+              "line": 1515,
+              "kind": "literal",
+              "context": "06fcad870886a255facc0180bf9ad485004b9f9aa342f46013f7cb67ac4a5cf9"
+            }
+          ]
+        },
+        {
           "source": "Subscription payment method",
           "occurrences": [
             {
@@ -14471,17 +14521,6 @@
           ]
         },
         {
-          "source": "Summary uses the date, staff and service filters. Booking value is not money received; test bookings are excluded.",
-          "occurrences": [
-            {
-              "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 21,
-              "kind": "literal",
-              "context": "5da5b7be2ce072d0a7ac30533ef5d3e41cb6a85439ff3d226d494df74f9ebc67"
-            }
-          ]
-        },
-        {
           "source": "Supply name",
           "occurrences": [
             {
@@ -14576,7 +14615,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3857,
+              "line": 3856,
               "kind": "jsx-text",
               "context": "8e792d23a60abf092f546da3cc037444d9a86083fddd06f259e2036308bcf159"
             }
@@ -14760,7 +14799,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 4072,
+              "line": 4071,
               "kind": "literal",
               "context": "9ca6ac106e35becf8d49a37364810e8479b6b6027f767ecb34bb894405a5ad44"
             }
@@ -14771,7 +14810,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2710,
+              "line": 2709,
               "kind": "literal",
               "context": "fdee72a579844aee8012f48995a9e0a08ba978469ade76f51fa8b31f2b9d68c9"
             }
@@ -14859,7 +14898,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2740,
+              "line": 2739,
               "kind": "jsx-attribute",
               "context": "30aeb43d57116ff482447daa8f53e3f1b4aae2d5e389901a27b63c782b8cf119"
             }
@@ -14903,7 +14942,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 474,
+              "line": 475,
               "kind": "literal",
               "context": "95bcc28c68923a7c276bed91aa6f8acd873590d162df39e25fe4b3d9eec6cfab"
             }
@@ -15209,7 +15248,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 536,
+              "line": 537,
               "kind": "literal",
               "context": "47aaaecbb8c003cb3e5b8d62b384309c789b44b80151667057071f950b7a499a"
             }
@@ -15281,7 +15320,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3541,
+              "line": 3540,
               "kind": "jsx-attribute",
               "context": "7d2f4f3828658f0aea19736db3dcd24f1af2ea18a8146900c8e32b83a32ba06a"
             }
@@ -15309,7 +15348,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2612,
+              "line": 2611,
               "kind": "literal",
               "context": "a27b64279845a09fb801d3fc727ea9030d75c0600b091923e860ffb54a8429fa"
             }
@@ -15502,7 +15541,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 296,
+              "line": 297,
               "kind": "literal",
               "context": "cbbd5b48f38cc3925181fdd019b7ad32bd302680ab895312e5e2602058383c14"
             }
@@ -15513,7 +15552,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1047,
+              "line": 1048,
               "kind": "jsx-text",
               "context": "f36dddce23e143c1507bad47b4e63485018591090a31b70aa96552f67c03cf69"
             }
@@ -15745,7 +15784,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 289,
+              "line": 290,
               "kind": "literal",
               "context": "063d51dc1bf3d287f414524b814c6df23d9db4740978b05f6aff829e77151790"
             }
@@ -15811,7 +15850,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 47,
+              "line": 48,
               "kind": "localized-source",
               "context": "c2fa12889c44e65119ca31c8dfc84193ea7909ca79b02ccace890a0872e45981"
             }
@@ -15999,7 +16038,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 58,
+              "line": 59,
               "kind": "localized-source",
               "context": "870be9c017f7687c6aef408b7a482562004d90b0b1fd0863d8e76357fcaa3fce"
             }
@@ -16060,13 +16099,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 24,
+              "line": 25,
               "kind": "localized-source",
               "context": "c2977c0aada8c47f1cdb3a72aa59ebcf10175713f65ad3deb71c37b42d470f59"
             },
             {
               "file": "src/components/owner/BookingsWorkspace.tsx",
-              "line": 48,
+              "line": 49,
               "kind": "localized-source",
               "context": "c2977c0aada8c47f1cdb3a72aa59ebcf10175713f65ad3deb71c37b42d470f59"
             },
@@ -16358,7 +16397,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2375,
+              "line": 2374,
               "kind": "jsx-attribute",
               "context": "9fec554e9a918e99fe9017ee562c4730735d296c175116d90aac2fa3424e9617"
             }
@@ -16744,7 +16783,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1816,
+              "line": 1815,
               "kind": "literal",
               "context": "fb845e8a1748410bb4ab30207615e8dd06a743b962d0e909ad6cde54decfc4ad"
             }
@@ -16755,7 +16794,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 525,
+              "line": 526,
               "kind": "literal",
               "context": "5aba629730bd225047bef53ffff54a6fbdfbec72d8e78aa90ee2217130dd29e0"
             }
@@ -16766,7 +16805,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 613,
+              "line": 614,
               "kind": "literal",
               "context": "fc103849069f856e63b7c07170e79bbbbe9ebffff02dfa0ad27a50d3be265f84"
             }
@@ -16777,13 +16816,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 4018,
+              "line": 4017,
               "kind": "literal",
               "context": "34753bd95b3401ba8b864f16f41a26b19250ccd737325722605306787181c327"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 4031,
+              "line": 4030,
               "kind": "literal",
               "context": "2e65a537d252c45abc93b32b6fea3bee0396b1946679642d53b4b9c5dfadd278"
             }
@@ -16877,19 +16916,19 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2723,
+              "line": 2722,
               "kind": "literal",
               "context": "c9c06441d9c89dc544decc55bb7442b4f168f401dd035dfc6833d3e49fbd8ef2"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 2740,
+              "line": 2739,
               "kind": "literal",
               "context": "491d6a27a2cabbbd6691874d1c25c204b20f50c6b8abd4bd98fc125e4a91f0a6"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 3032,
+              "line": 3031,
               "kind": "literal",
               "context": "491d6a27a2cabbbd6691874d1c25c204b20f50c6b8abd4bd98fc125e4a91f0a6"
             }
@@ -17045,13 +17084,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 772,
+              "line": 773,
               "kind": "literal",
               "context": "847a310d2a4d78c6158aba70724462ae24ce7169564a2330147c3fcfc2e30430"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 847,
+              "line": 848,
               "kind": "literal",
               "context": "847a310d2a4d78c6158aba70724462ae24ce7169564a2330147c3fcfc2e30430"
             }
@@ -17084,13 +17123,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 651,
+              "line": 652,
               "kind": "literal",
               "context": "439ff2328b395d25d077350ad76a31f63b394cd28c03ae4a1ffd8e66db464517"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 4007,
+              "line": 4006,
               "kind": "literal",
               "context": "439ff2328b395d25d077350ad76a31f63b394cd28c03ae4a1ffd8e66db464517"
             },
@@ -17107,13 +17146,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 514,
+              "line": 515,
               "kind": "literal",
               "context": "4b256bd885da169695d8be12dc8fb42fc94b0ef788c688621b6ecc692f909812"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 602,
+              "line": 603,
               "kind": "literal",
               "context": "4b256bd885da169695d8be12dc8fb42fc94b0ef788c688621b6ecc692f909812"
             }
@@ -17124,7 +17163,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 398,
+              "line": 399,
               "kind": "literal",
               "context": "5181a362df25fce64f53f50e51734bd1b9c175056f6d1d75b9ac3ed0a60e33c7"
             }
@@ -17135,7 +17174,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 473,
+              "line": 474,
               "kind": "literal",
               "context": "95bcc28c68923a7c276bed91aa6f8acd873590d162df39e25fe4b3d9eec6cfab"
             }
@@ -17245,7 +17284,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 988,
+              "line": 989,
               "kind": "jsx-text",
               "context": "040b48e73aef1d21a5f2aa86492fdb2b00aa3da0dd84252ef0ced0a16b2c31d5"
             }
@@ -17259,6 +17298,17 @@
               "line": 47,
               "kind": "localized-source",
               "context": "5f29dec74f7afaf66adcb81f43e30e9563c290d62f87b969cd59ddf100d9447d"
+            }
+          ]
+        },
+        {
+          "source": "Your plan history.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/OwnerDashboardApp.tsx",
+              "line": 1518,
+              "kind": "literal",
+              "context": "fcdbd9cbeb886ca5d097d153af9268996601fa42831a63bd7c85d2397d6ab202"
             }
           ]
         },
@@ -17469,14 +17519,14 @@
       ]
     },
     "es": {
-      "source_count": 3033,
-      "covered": 3033,
+      "source_count": 3037,
+      "covered": 3037,
       "missing_count": 0,
       "missing": []
     },
     "zh-CN": {
-      "source_count": 3033,
-      "covered": 3033,
+      "source_count": 3037,
+      "covered": 3037,
       "missing_count": 0,
       "missing": []
     }
