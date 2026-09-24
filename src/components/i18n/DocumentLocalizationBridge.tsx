@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useI18n } from "@/components/i18n/LocaleProvider";
 
 const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "CODE", "PRE"]);
@@ -14,7 +14,10 @@ export default function DocumentLocalizationBridge() {
     new WeakMap<Element, Map<string, TranslationState>>(),
   );
 
-  useEffect(() => {
+  // Register/update the observer in the commit phase. A passive effect can run
+  // after the first paint of the translated React headings, leaving newly
+  // mounted legacy panels under the old locale (or with no observer) for a frame.
+  useLayoutEffect(() => {
     function excluded(element: Element | null) {
       return (
         !element ||

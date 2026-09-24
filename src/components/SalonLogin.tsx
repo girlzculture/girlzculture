@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { salonSupabase } from "@/lib/supabase";
 import { EMAIL_PATTERN, isValidEmail, normalizeEmail } from "@/lib/validation";
@@ -9,7 +9,12 @@ import MfaCodeField from "@/components/auth/MfaCodeField";
 import { surfacePathForHost } from "@/lib/hostRouting";
 import PasswordInput from "@/components/auth/PasswordInput";
 
+const subscribeToHydration = () => () => {};
+
 export default function SalonLogin() {
+  // Server-rendered inputs must not accept edits before React owns their state.
+  // Otherwise hydration can erase an email typed while the bundles are loading.
+  const ready = useSyncExternalStore(subscribeToHydration, () => true, () => false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -49,7 +54,7 @@ export default function SalonLogin() {
     finally { setLoading(false); }
   }
 
-  return <form onSubmit={submit} className="space-y-4">
+  return <form onSubmit={submit} aria-busy={!ready || loading}><fieldset disabled={!ready} className="space-y-4">
     {challenge ? <MfaCodeField challenge={challenge} code={code} setCode={setCode} reset={() => { setChallenge(null); setCode(""); setPassword(""); }} /> : <>
       <label className="block text-sm font-semibold">Email<input type="email" pattern={EMAIL_PATTERN} value={email} onChange={(event) => setEmail(event.target.value)} required className="mt-2 w-full rounded-md border border-ink/15 bg-white px-3 py-3" /></label>
       <div className="block text-sm font-semibold"><label htmlFor="salon-password">Password</label><span className="mt-2 flex w-full rounded-md border border-ink/15 bg-white px-3 py-1.5"><PasswordInput id="salon-password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required inputClassName="bg-transparent py-1.5 outline-none" /></span></div>
@@ -59,5 +64,5 @@ export default function SalonLogin() {
     <button type="submit" disabled={loading || Boolean(challenge && code.length !== 6)} className="w-full rounded-[9px] bg-magenta px-4 py-3 font-semibold text-white gc-disabled-control">{loading ? "Verifying..." : challenge ? "Verify and open dashboard" : "Continue securely"}</button>
     {!challenge ? <p className="text-sm text-ink/65">Business accounts use SMS two-factor verification. If SMS delivery is unavailable, the code is sent to the account email.</p> : null}
     <Link className="block text-center text-sm text-ink/70 hover:text-plum" href="/business/signup">Need an account?</Link>
-  </form>;
+  </fieldset></form>;
 }

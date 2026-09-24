@@ -51,10 +51,32 @@ async function signIn(page: Page) {
   await page.goto('/business/login');
   await page.locator('input[type=email]').fill('p0-browser@example.test');
   await page.locator('#salon-password').fill('isolated-fixture-only');
+  await expect(page.locator('input[type=email]')).toHaveValue('p0-browser@example.test');
+  await expect(page.locator('#salon-password')).toHaveValue('isolated-fixture-only');
   await page.locator('button[type=submit]').click();
   await expect(page).toHaveURL(/\/salon\/dashboard\/settings\/security$/);
   await expect(page.locator('[data-owner-workspace]')).toBeVisible();
 }
+
+test('P0 account locale login waits for hydration without losing entered credentials',async({page})=>{
+ const fixture=await loginFixture(page);
+ let release!:()=>void;
+ const scriptsReady=new Promise<void>(resolve=>{release=resolve;});
+ await page.route('**/_next/static/**/*.js',async route=>{await scriptsReady;await route.continue();});
+ try {
+  await page.goto('/business/login',{waitUntil:'commit'});
+  await expect(page.locator('input[type=email]')).toBeDisabled();
+  await expect(page.locator('#salon-password')).toBeDisabled();
+  await expect(page.locator('button[type=submit]')).toBeDisabled();
+ } finally {release();}
+ await page.locator('input[type=email]').fill('p0-browser@example.test');
+ await page.locator('#salon-password').fill('isolated-fixture-only');
+ await expect(page.locator('input[type=email]')).toHaveValue('p0-browser@example.test');
+ await page.locator('button[type=submit]').click();
+ await expect(page).toHaveURL(/\/salon\/dashboard\/settings\/security$/);
+ await expect(page.locator('[data-owner-workspace]')).toBeVisible();
+ expect(fixture.unexpected).toEqual([]);
+});
 
 async function signOut(page: Page) {
   // Logout owns its redirect. Do not install another actor or race page.goto

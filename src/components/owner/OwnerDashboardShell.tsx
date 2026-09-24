@@ -298,7 +298,7 @@ export default function OwnerDashboardShell({
           <div className="order-2 sm:order-none"><GcAssistantLauncher /></div>
         </header>
         <main data-owner-workspace className={`min-w-0 overflow-x-hidden px-4 pb-24 pt-5 sm:px-5 lg:pb-8 ${assistantDocked ? "xl:mr-[336px]" : ""}`}>
-          {sampleBusiness?<aside role="note" className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm"><strong>Private demonstration — sample data</strong><p>Fictional clients, bookings and financial records. Payments, invitations and external notifications are disabled.</p></aside>:null}
+
           {children}
         </main>
       </div>

@@ -1,3 +1,7 @@
+-- Install reviewed controls only; refreshing the existing private business is an explicit guarded action.
+begin;
+set local lock_timeout='5s';
+set local statement_timeout='60s';
 -- Installed only by the protected migration; invocation is a separate, explicit admin action.
 create or replace function public.seed_private_demo(p_salon uuid,p_owner uuid,p_anchor date)
 returns jsonb language plpgsql security definer set search_path=pg_catalog,public,auth,gc_private as $$
@@ -221,3 +225,69 @@ begin
 end;$$;
 revoke all on function public.seed_private_demo(uuid,uuid,date) from public,anon,authenticated;
 grant execute on function public.seed_private_demo(uuid,uuid,date) to service_role;
+
+-- No secret, email address or client details are returned by this service-only check.
+create or replace function public.check_private_demo(p_salon uuid) returns jsonb
+language plpgsql security definer set search_path=pg_catalog,public,gc_private as $$
+declare w gc_private.demo_workspaces%rowtype;checks jsonb;
+begin
+ select * into w from gc_private.demo_workspaces where salon_id=p_salon;
+ if not found or not exists(select 1 from public.salons where id=p_salon and is_demo and user_id=w.owner_id) then raise exception 'DEMO_WORKSPACE_REQUIRED';end if;
+ checks=jsonb_build_object(
+  'private',exists(select 1 from public.salons where id=p_salon and not is_discoverable and not accepting_bookings and stripe_account_id is null),
+  'sample_markers',not exists(select 1 from public.bookings where salon_id=p_salon and not is_demo),
+  'saved_booking_terms',not exists(select 1 from public.bookings where salon_id=p_salon and booking_origin='marketplace' and
+   (deposit_rule_snapshot is null or deposit_percentage<>20 or original_deposit_amount is distinct from deposit_amount or subtotal_before_promotion is distinct from estimated_total+coalesce(promotion_discount_amount,0)
+    or (deposit_rule_snapshot->>'deposit')::numeric is distinct from deposit_amount or (deposit_rule_snapshot->>'subtotal')::numeric is distinct from subtotal_before_promotion or round(subtotal_before_promotion*0.2,2) is distinct from deposit_amount)),
+  'team_schedules',not exists(select 1 from public.stylists where salon_id=p_salon and archived_at is null and not(availability ?& array['Mon','Tue','Wed','Thu','Fri','Sat','Sun'])),
+  'no_provider_payment',not exists(select 1 from public.bookings where salon_id=p_salon and (payment_mode<>'test' or stripe_charge_id is not null or stripe_payment_id is not null)),
+  'booking_scope',not exists(select 1 from public.bookings b join public.styles s on s.id=b.style_id join public.stylists t on t.id=b.stylist_id where b.salon_id=p_salon and (s.salon_id<>p_salon or t.salon_id<>p_salon)),
+  'completed_booking_receipts',not exists(select 1 from public.bookings b where b.salon_id=p_salon and b.status='Completed' and b.booking_origin='marketplace'
+    and round(b.estimated_total*100)<>(select coalesce(sum(case when r.stage='refund' then -r.amount_cents else r.amount_cents end),0) from public.business_finance_receipts r where r.salon_id=p_salon and r.booking_id=b.id)),
+  'cancelled_deposits_returned',not exists(select 1 from public.bookings b where b.salon_id=p_salon and b.status='Cancelled'
+    and 0<>(select coalesce(sum(case when r.stage='refund' then -r.amount_cents else r.amount_cents end),0) from public.business_finance_receipts r where r.salon_id=p_salon and r.booking_id=b.id)),
+  'manual_sales_paid',not exists(select 1 from public.business_finance_sales s where s.salon_id=p_salon and s.agreed_cents<>(select coalesce(sum(case when r.stage='refund' then -r.amount_cents else r.amount_cents end),0) from public.business_finance_receipts r where r.salon_id=p_salon and r.sale_id=s.id)),
+  'stock_reconciled',not exists(select 1 from public.salon_products p where p.salon_id=p_salon and (p.inventory_quantity<>(select m.after_quantity from public.business_stock_movements m where m.salon_id=p_salon and m.product_id=p.id order by m.revision desc limit 1)
+    or p.inventory_quantity<>(select m.after_quantity from public.business_stock_movements m where m.salon_id=p_salon and m.product_id=p.id and m.reason='opening')-(select coalesce(sum(quantity),0) from public.business_finance_sales s where s.salon_id=p_salon and s.product_id=p.id))),
+  'communication_disabled',not exists(select 1 from public.business_communication_preferences where salon_id=p_salon and (email_enabled or sms_enabled or push_enabled or marketing)),
+  'no_external_notifications',not exists(select 1 from public.notifications where salon_id=p_salon and channel<>'in_app'),
+  'no_provider_connections',not exists(select 1 from public.business_google_connections where salon_id=p_salon) and not exists(select 1 from public.business_instagram_connections where salon_id=p_salon),
+  'commission_reconciled',not exists(
+   select 1 from public.stylists t where t.salon_id=p_salon and
+   (select coalesce(sum(round(b.estimated_total*100*(b.operating_compensation->>'percent')::numeric/100)),0) from public.bookings b where b.salon_id=p_salon and b.stylist_id=t.id and b.status='Completed')
+    +(select coalesce(sum(round(s.agreed_cents*(s.compensation->>'percent')::numeric/100)),0) from public.business_finance_sales s where s.salon_id=p_salon and s.stylist_id=t.id and s.kind='service')
+    <>(select coalesce(sum(p.amount_cents),0) from public.business_compensation_payments p where p.salon_id=p_salon and p.stylist_id=t.id and p.kind='commission')),
+  'capacity_respected',not exists(select 1 from public.bookings a join public.bookings b on b.salon_id=a.salon_id and b.stylist_id=a.stylist_id and b.id>a.id where a.salon_id=p_salon and a.status<>'Cancelled' and b.status<>'Cancelled' and a.appointment_datetime<b.appointment_datetime+(b.duration_hours*60+15)*interval '1 minute' and b.appointment_datetime<a.appointment_datetime+(a.duration_hours*60+15)*interval '1 minute'),
+  'subscription_simulated',exists(select 1 from public.subscriptions where salon_id=p_salon and stripe_subscription_id is null and status='active')
+ );
+ return jsonb_build_object('sample',true,'checks',checks,'passed',not exists(select 1 from jsonb_each(checks)where value<>'true'::jsonb),
+  'counts',jsonb_build_object('bookings',(select count(*) from public.bookings where salon_id=p_salon),'services',(select count(*) from public.styles where salon_id=p_salon),
+   'products',(select count(*) from public.salon_products where salon_id=p_salon),'clients',(select count(*) from public.business_client_cards where salon_id=p_salon),
+   'messages',(select count(*) from public.booking_messages where salon_id=p_salon),'reviews',(select count(*) from public.reviews where salon_id=p_salon)));
+end;$$;
+revoke all on function public.check_private_demo(uuid) from public,anon,authenticated;
+grant execute on function public.check_private_demo(uuid) to service_role;
+
+-- Owner/staff-scoped readback of canonical receipts, never a provider charge.
+create or replace function public.read_private_booking_balances(p_salon uuid,p_user uuid)
+returns jsonb language plpgsql security definer set search_path=pg_catalog,public,gc_private as $$
+declare v_stylist uuid;result jsonb;
+begin
+ if not exists(select 1 from public.salons s join gc_private.demo_workspaces w on w.salon_id=s.id where s.id=p_salon and s.is_demo)
+   or not public.p0_actor_has_permission(p_salon,p_user,'bookings') then raise exception 'BOOKING_RECEIPT_ACCESS_DENIED';end if;
+ if not exists(select 1 from public.salons where id=p_salon and user_id=p_user) then
+  select stylist_id into v_stylist from public.salon_team_members where salon_id=p_salon and user_id=p_user and status='Active';
+  if v_stylist is null then raise exception 'BOOKING_RECEIPT_ACCESS_DENIED';end if;
+ end if;
+ select coalesce(jsonb_agg(to_jsonb(x) order by x.id),'[]') into result from (
+  select b.id,b.salon_id,case when b.status in ('Cancelled','No Show') then 0 else greatest(0,round(b.estimated_total*100)-coalesce(sum(case when r.stage='refund' then 0 else r.amount_cents end),0)) end as remaining_cents
+  from public.bookings b left join public.business_finance_receipts r on r.salon_id=b.salon_id and r.booking_id=b.id
+  where b.salon_id=p_salon and b.is_demo and b.payment_mode='test' and b.booking_origin='marketplace' and (v_stylist is null or b.stylist_id=v_stylist)
+  group by b.id
+ ) x;
+ return result;
+end;$$;
+revoke all on function public.read_private_booking_balances(uuid,uuid) from public,anon,authenticated;
+grant execute on function public.read_private_booking_balances(uuid,uuid) to service_role;
+update public.engine_settings set published_value='"20260924164000"',draft_value='"20260924164000"',updated_at=now() where setting_key='integrations.expected_migration';
+commit;

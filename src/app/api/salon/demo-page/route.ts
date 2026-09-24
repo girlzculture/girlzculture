@@ -19,6 +19,6 @@ async function handle(request:Request){
   if(salon.business_policy_revision_id&&(!policy.data?.published_at||policy.data.salon_id!==salon.id))throw Error('DEMO_PREVIEW_POLICY_INVALID');
   if([...services.data||[],...team.data||[]].some(row=>row.salon_id!==salon.id))throw Error('DEMO_PREVIEW_SCOPE_INVALID');
   return Response.json({sample:true,assistant:{id:salon.id,userId:context.user.id,isOwner:context.isOwner,permissions:context.isOwner?null:context.teamMember?.permissions||{},avatar:assistantAvatar(salon.gc_assistant_avatar)},business:{name:salon.name,description:salon.description,cover:salon.cover_photo_url,photos:salon.gallery_photos||[],hours:salon.hours||{},city:salon.address_city},services:services.data,team:team.data,policy:policy.data?{id:policy.data.id,policy:policy.data.policy,version:policy.data.version,source_locale:policy.data.source_locale}:null},{headers});
- }catch(error){return monitoredRouteFailure({request,admin:context?.admin,error,feature:'business-demo',action:'preview',actorId:context?.user.id,actorRole:'salon',salonId:context?.salon.id,safeMessage:'The private demo page could not load. Try again.'});}
+ }catch(error){return monitoredRouteFailure({request,admin:context?.admin,error,feature:'business-demo',action:'preview',actorId:context?.user.id,actorRole:'salon',salonId:context?.salon.id,safeMessage:'The page preview could not load. Try again.'});}
 }
 export const GET=withOperationalMonitoring(routeMonitoringProfile('/api/salon/demo-page','GET'),handle);

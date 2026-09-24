@@ -1,4 +1,5 @@
 "use client";
+import {bookingBalanceAmount} from "@/lib/bookingReceiptBalance";
 import BusinessGrowthControls from "./BusinessGrowthControls";
 import BusinessRebookingControls from "./BusinessRebookingControls";
 import BusinessLocationControls from "@/components/owner/BusinessLocationControls";
@@ -295,7 +296,7 @@ export default function OwnerDashboardApp({
       if (!salonId)
         throw new Error("This business profile is missing its identifier.");
       setSalon(s as Salon);
-      const displayName = session.user.user_metadata?.full_name || session.user.user_metadata?.first_name || session.user.user_metadata?.name;
+      const displayName = s.is_demo === true && !workspace.isTeamMember ? s.owner_name : session.user.user_metadata?.full_name || session.user.user_metadata?.first_name || session.user.user_metadata?.name;
       setActorName(typeof displayName === "string" ? displayName.trim().split(/\s+/)[0].slice(0,80) : "");
       const teamLogin = Boolean(workspace.isTeamMember);
       setIsTeamMember(teamLogin);
@@ -1507,32 +1508,30 @@ function SubscriptionV2({ c }: { c: Ctx }) {
           ) : null}
         </div>
       ) : null}
-      <Panel className="mt-5 min-w-0" role="region" aria-label={sample ? "Private demonstration — sample data" : "Stripe billing history"} tabIndex={0}>
+      <Panel className="mt-5 min-w-0" role="region" aria-label={sample ? "Subscription history" : "Stripe billing history"} tabIndex={0}>
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2 className="font-serif text-xl text-plum">
-              {sample ? "Private demonstration — sample data" : "Stripe billing history"}
+              {sample ? "Subscription history" : "Stripe billing history"}
             </h2>
             <p className="mt-1 text-[10px] text-ink/55">
-              {sample ? "Fictional clients, bookings and financial records. Payments, invitations and external notifications are disabled." : "Confirmed invoice, renewal, plan-change, refund, and credit events received through the signed Stripe webhook."}
+              {sample ? "Your plan history." : "Confirmed invoice, renewal, plan-change, refund, and credit events received through the signed Stripe webhook."}
             </p>
           </div>
-          <span className="text-[9px] font-bold uppercase gc-text-secondary">
-            Test mode
-          </span>
+          {!sample ? <span className="text-[9px] font-bold uppercase gc-text-secondary">Test mode</span> : null}
         </div>
         {billingEvents.length ? <>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:hidden">
           {billingEvents.map((event) => <article key={event.id} className="min-w-0 rounded-xl border border-border p-4 text-sm">
             <dl className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-4">
-              <div className="col-span-2 min-w-0"><dt className="text-xs gc-text-secondary">Event</dt><dd className="mt-1 break-words font-semibold">{String(event.event_type || "Billing event")}</dd>{event.failure_reason ? <dd className="mt-1 break-words gc-text-danger">{String(event.failure_reason)}</dd> : null}</div>
+              <div className="col-span-2 min-w-0"><dt className="text-xs gc-text-secondary">Event</dt><dd className="mt-1 break-words font-semibold">{String(sample && event.event_type === "sample_subscription" ? "Monthly subscription" : event.event_type || "Billing event")}</dd>{event.failure_reason ? <dd className="mt-1 break-words gc-text-danger">{String(event.failure_reason)}</dd> : null}</div>
               <div className="min-w-0"><dt className="text-xs gc-text-secondary">Date</dt><dd className="mt-1 break-words">{dateText(event.event_date, c.salon.time_zone, c.locale)}</dd></div>
               <div className="min-w-0"><dt className="text-xs gc-text-secondary">Plan</dt><dd className="mt-1 break-words">{[event.previous_plan,event.new_plan].filter(Boolean).join(" → ") || "—"}</dd></div>
               <div className="min-w-0"><dt className="text-xs gc-text-secondary">Collected</dt><dd className="mt-1 break-words">{c.formatCurrency(Number(event.amount_collected || 0) / 100)}</dd></div>
               <div className="min-w-0"><dt className="text-xs gc-text-secondary">Refunded</dt><dd className="mt-1 break-words">{c.formatCurrency(Number(event.amount_refunded || 0) / 100)}</dd></div>
               <div className="min-w-0"><dt className="text-xs gc-text-secondary">Credited</dt><dd className="mt-1 break-words">{c.formatCurrency(Number(event.amount_credited || 0) / 100)}</dd></div>
-              <div className="min-w-0"><dt className="text-xs gc-text-secondary">Payment</dt><dd className="mt-1"><Status value={String(event.payment_status || "Not recorded")} /></dd></div>
-              <div className="col-span-2 min-w-0"><dt className="text-xs gc-text-secondary">{sample ? "Reference" : "Stripe reference"}</dt><dd className="mt-1 break-all" data-no-translate>{String(event.stripe_invoice_id || event.stripe_event_id || "—")}</dd></div>
+              <div className="min-w-0"><dt className="text-xs gc-text-secondary">Payment</dt><dd className="mt-1"><Status value={String(sample && event.payment_status === "Simulated" ? "Recorded" : event.payment_status || "Not recorded")} /></dd></div>
+              <div className="col-span-2 min-w-0"><dt className="text-xs gc-text-secondary">{sample ? "Reference" : "Stripe reference"}</dt><dd className="mt-1 break-all" data-no-translate>{String(sample ? `CH-${String(event.id).slice(0,8).toUpperCase()}` : event.stripe_invoice_id || event.stripe_event_id || "—")}</dd></div>
             </dl>
           </article>)}
         </div>
@@ -1561,7 +1560,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
               <tr key={event.id} className="border-b border-plum/10">
                 <td className="py-3 pr-3">{dateText(event.event_date, c.salon.time_zone, c.locale)}</td>
                 <td className="pr-3">
-                  <b>{String(event.event_type || "Billing event")}</b>
+                  <b>{String(sample && event.event_type === "sample_subscription" ? "Monthly subscription" : event.event_type || "Billing event")}</b>
                   {event.failure_reason ? (
                     <span className="block gc-text-danger">
                       {String(event.failure_reason)}
@@ -1584,12 +1583,12 @@ function SubscriptionV2({ c }: { c: Ctx }) {
                 </td>
                 <td className="pr-3">
                   <Status
-                    value={String(event.payment_status || "Not recorded")}
+                    value={String(sample && event.payment_status === "Simulated" ? "Recorded" : event.payment_status || "Not recorded")}
                   />
                 </td>
                 <td className="max-w-52 break-all pr-3 text-[9px]">
                   {String(
-                    event.stripe_invoice_id || event.stripe_event_id || "—",
+                    sample ? `CH-${String(event.id).slice(0,8).toUpperCase()}` : event.stripe_invoice_id || event.stripe_event_id || "—",
                   )}
                 </td>
               </tr>
@@ -3274,7 +3273,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                 <p className="flex justify-between">
                   <span>Remaining balance</span>
                   <b className="text-magenta">
-                    {c.formatCurrency(Number(selected.balance_due || 0))}
+                    {c.formatCurrency(Number(bookingBalanceAmount(selected) || 0))}
                   </b>
                 </p>
               </div>
