@@ -806,6 +806,29 @@ test('planning retains authorized booking identities for the next conversational
   assert.equal(result.bookings[0].guest_name, 'Sarah Save');
 });
 
+test('booking answers receive business-local appointment times rather than ambiguous raw UTC', async () => {
+  const dates = [
+    ['2026-09-24T14:00:00Z', 'Sep 24, 2026, 10:00 AM EDT'],
+    ['2026-01-24T15:00:00Z', 'Jan 24, 2026, 10:00 AM EST'],
+    ['2026-09-24T02:00:00Z', 'Sep 23, 2026, 10:00 PM EDT'],
+    ['2026-11-01T05:30:00Z', 'Nov 1, 2026, 1:30 AM EDT'],
+    ['2026-11-01T06:30:00Z', 'Nov 1, 2026, 1:30 AM EST'],
+    ['invalid', 'Date not recorded'],
+  ];
+  for (const tool of ['get_bookings', 'get_upcoming_appointments']) for (const answerOnly of [false, true]) {
+    const facts = { bookings: dates.map(([date]) => ({ ...booking, appointment_datetime: date })), time_zone: 'UTC', total: dates.length };
+    const f = fixture({ answerOnly, history: [{ tool, permission: 'bookings', arguments: {}, result: facts }], ...(answerOnly ? { output: { reply: 'Your appointment is at 10 AM.' } } : {}) });
+    await f.run('en', 'What bookings do I have today?');
+    const sent = JSON.parse(f.requests[0].messages[1].content).previous[0].result;
+    assert.equal(sent.time_zone, 'America/New_York', 'The authenticated business zone is authoritative');
+    dates.forEach(([utc, local], index) => {
+      assert.equal(sent.bookings[index].appointment_local_time, local);
+      assert.equal(sent.bookings[index].id, booking.id);
+      assert.equal(sent.bookings[index].appointment_datetime, answerOnly ? undefined : utc);
+    });
+  }
+});
+
 test('booking planning context is bounded and omits contacts, payment data and prior private message text', async () => {
   const f = fixture({ history: [
     { tool: 'get_bookings', permission: 'bookings', arguments: {}, result: { bookings: Array.from({ length: 31 }, () => ({ ...booking, guest_email: 'contact@example.test', deposit_amount: 50, body: 'Private conversation' })) } },
