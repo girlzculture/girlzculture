@@ -20,10 +20,17 @@ function execute(url,sql){return spawnSync(psql,[url.toString(),'-X','-qAt','-v'
 function run(sql){const r=execute(target,sql);assert.equal(r.status,0,r.stderr);return r.stdout.trim();}
 let checks=0;function equal(a,b,label){assert.equal(a,b,label);checks++;}
 function denied(sql,pattern){const r=execute(target,sql);assert.notEqual(r.status,0,'Expected a denied database operation');assert.match(r.stderr,pattern);checks++;}
-const created=execute(control,`create database ${clone} template ${source.pathname.slice(1)};`);assert.equal(created.status,0,created.stderr);
+const after=process.env.MASTER_UPGRADE_AFTER ?? "20260923212146";
+const created=execute(control,`create database ${clone} template ${after?'template0':source.pathname.slice(1)};`);assert.equal(created.status,0,created.stderr);
 try{
+ // An upgrade starts at the actual earlier schema, not by reapplying migrations
+ // to an already upgraded template. Empty string explicitly selects clean mode.
+ if(after){
+  assert.match(after,/^\d{14}$/);
+  run(readFileSync('scripts/sql/supabase-platform-prerequisites.sql','utf8'));
+  for(const name of readdirSync('supabase/migrations').filter(n=>n.endsWith('.sql')&&n.slice(0,14)<=after).sort())run(readFileSync('supabase/migrations/'+name,'utf8'));
+ }
  // Always exercise an already-populated version-one owner before the current seed.
- const after=process.env.MASTER_UPGRADE_AFTER || "20260923212146";
  if(after){
   const pending=readdirSync('supabase/migrations').filter(n=>n.endsWith('.sql')&&n.slice(0,14)>after).sort();
   for(const name of pending.filter(n=>n.slice(0,14)<'20260924164000'))run(readFileSync('supabase/migrations/'+name,'utf8'));
@@ -91,6 +98,27 @@ try{
  equal(run("select md5(jsonb_agg(to_jsonb(m) order by id)::text) from public.master_styles m;"),catalogBefore,'demo seed must not change the managed platform catalog');
  equal(run(`select count(*) from public.styles s join public.service_groups g on g.id=s.service_group_id join public.service_categories c on c.id=g.category_id where s.salon_id='${sid}' and s.master_style_id is null and s.category_id=c.id and g.is_active and g.archived_at is null and c.is_active and c.archived_at is null;`),'6','all six fictional services retain active canonical group/category references');
  equal(run(`select count(*) from public.stylists t where salon_id='${sid}' and jsonb_array_length(specialties)>0 and not exists(select 1 from jsonb_array_elements_text(t.specialties) s(name) where not exists(select 1 from public.master_styles m join public.service_groups g on g.id=m.service_group_id where m.name=s.name and m.is_active and m.archived_at is null and g.name in ('Braids','Protective Styles','Locs','Cornrows','Twists')));`),'6','fictional hair-team specialties retain managed validation and exclude unrelated services');
+ // Image roles remain connected to the same private business records.
+ equal(run(`select count(*) from public.stylists where salon_id='${sid}' and photos->>0 like 'https://girlzculture.com/images/culture-house/%.webp';`),'6','six original staff portraits');
+ equal(run(`select count(distinct photos->>0) from public.stylists where salon_id='${sid}';`),'6','staff never reuse a service image');
+ equal(run(`select count(*) from public.styles where salon_id='${sid}' and photos->>0 like 'https://girlzculture.com/images/culture-house/%.webp';`),'6','six corresponding service portfolio images');
+ equal(run(`select count(*) from public.salon_products where salon_id='${sid}' and photo_url=images->>0 and photo_url like 'https://girlzculture.com/images/culture-house/%.webp';`),'4','all four products have their own matching imagery');
+ equal(run(`select logo_url like '%/culture-house/logo.svg' and cover_photo_url like '%/culture-house/cover.webp' and (select count(*) from jsonb_object_keys(photo_metadata))=8 from public.salons where id='${sid}';`),'t','business identity and all gallery captions are populated');
+ const agreedBefore=run(`select md5(jsonb_agg(to_jsonb(b) order by id)::text) from public.bookings b where salon_id='${sid}';`);
+ for(const rate of [0,30,80,20]){
+  const prior=run(`select id from public.current_business_deposit_rules where salon_id='${sid}';`);
+  const rule={rate,threshold_amount:null,threshold_rate:null,repeat_incident_count:null,repeat_incident_rate:null,incident_window_days:365};
+  const saved=JSON.parse(run(`select public.save_business_deposit_rule('${sid}','${demo}','${randomUUID()}','${prior}','${JSON.stringify(rule)}');`));
+  equal(saved.rate,rate,'owner deposit rate saves exactly');
+  equal(JSON.parse(run(`select public.read_gc_business_controls('${sid}','${demo}','deposits');`)).values.rate,rate,'assistant and owner share the same persisted rule');
+ }
+ for(const patch of [{rate:80.01},{rate:100},{threshold_amount:100,threshold_rate:80.01},{repeat_incident_count:2,repeat_incident_rate:81}]){
+  const prior=run(`select id from public.current_business_deposit_rules where salon_id='${sid}';`);
+  const rule={rate:20,threshold_amount:null,threshold_rate:null,repeat_incident_count:null,repeat_incident_rate:null,incident_window_days:365,...patch};
+  denied(`select public.save_business_deposit_rule('${sid}','${demo}','${randomUUID()}','${prior}','${JSON.stringify(rule)}');`,/DEPOSIT_RULE_INVALID/);
+ }
+ equal(run(`select md5(jsonb_agg(to_jsonb(b) order by id)::text) from public.bookings b where salon_id='${sid}';`),agreedBefore,'deposit changes never rewrite historical or already confirmed booking terms');
+ for(const field of ['rate','threshold_rate','repeat_incident_rate'])equal(run(`select gc_private.assistant_controls_schema('deposits')->'${field}'->>'maximum';`),'80','assistant review shares the eighty percent ceiling');
  const expectedBookings=seeded.bookings;equal(expectedBookings>2500&&expectedBookings<5000,true,'substantial, capacity-bounded history');
  const firstUpcoming=run(`select gc_private.demo_record_id('${sid}','upcoming',0);`);
  const sampleClient=run(`select customer_id from public.bookings where id='${firstUpcoming}';`);
@@ -205,5 +233,5 @@ try{
  equal(run(`select count(*) from auth.users where id='${demo}' and raw_app_meta_data->>'gc_demo'='true';`),'1','reset preserves owner login identity');
  denied(`select public.reset_private_demo('${sid}','${demo}','${stamp}','RESET PRIVATE DEMO');`,/DEMO_RESET_CONFIRMATION_REQUIRED/);
  console.log(run(`select jsonb_build_object('bookings',(select count(*) from public.bookings where salon_id='${sid}'),'clients',(select count(distinct customer_id) from public.bookings where salon_id='${sid}'),'completed_booking_value',(select sum(estimated_total) from public.bookings where salon_id='${sid}' and status='Completed'),'monthly_booking_values',(select jsonb_object_agg(report_month,total) from (select to_char(appointment_datetime at time zone 'America/New_York','YYYY-MM') as report_month,sum(estimated_total) total from public.bookings where salon_id='${sid}' and status='Completed' group by 1)m));`));
- console.log(`Master Build demo isolation: ${checks} checks passed against an isolated local ${process.env.MASTER_UPGRADE_AFTER?'upgrade':'current-schema clone'} database.`);
+ console.log(`Master Build demo isolation: ${checks} checks passed against an isolated local ${after?'upgrade':'current-schema clone'} database.`);
 }finally{const removed=execute(control,`drop database ${clone} with(force);`);assert.equal(removed.status,0,removed.stderr);}

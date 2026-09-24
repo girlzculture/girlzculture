@@ -6,6 +6,55 @@ import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catal
 
 test.use({ serviceWorkers: 'block' });
 for (const locale of ['en', 'fr', 'es', 'zh-CN']) {
+  test(`Dashboard redesign long business identity and bottom navigation stay readable in ${locale}`, async ({page}, info) => {
+    const fixture = await p0OwnerFixture(page, {populated: true, locale});
+    Object.assign(fixture.business, {name: 'Culture House Hair Studio and Isha 5 Stars Salon', cover_photo_url: '/images/culture-house/cover.webp', logo_url: '/images/culture-house/logo.svg', address_city: 'New York', address_state: 'NY'});
+    await page.setViewportSize({width: 320, height: 844});
+    await page.goto('/salon/dashboard/my-page');
+    const name = page.getByRole('heading', {name: fixture.business.name, exact: true});
+    await expect(name).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({path: info.outputPath('profile-phone.png')});
+    for (const [width, height] of [[320,844],[360,800],[390,844],[412,915],[768,1024],[1440,1000],[844,390],[1180,820]]) {
+      await page.setViewportSize({width,height});
+      const identity = await name.boundingBox();
+      expect(identity!.width, `Business name at ${width}px`).toBeGreaterThan(Math.min(width - 100, 200));
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+      if (width < 1024) {
+        const nav = page.locator('[data-owner-mobile-navigation]');
+        for (const link of await nav.getByRole('link').all()) {
+          const metrics = await link.evaluate(el => {
+            const label = el.querySelector('span')!, range = document.createRange(); range.selectNodeContents(label);
+            const r = label.getBoundingClientRect(), box = el.getBoundingClientRect();
+            return {label: label.textContent, lines: range.getClientRects().length, width: box.width, height: box.height, fits: r.left >= box.left && r.right <= box.right && r.right <= innerWidth};
+          });
+          expect(metrics.lines, JSON.stringify(metrics)).toBe(1);
+          expect(metrics.fits, JSON.stringify(metrics)).toBe(true);
+          expect(metrics.width).toBeGreaterThanOrEqual(44);
+          expect(metrics.height).toBeGreaterThanOrEqual(44);
+        }
+      }
+    }
+    await page.setViewportSize({width:320,height:844});
+    await page.addStyleTag({content:'html { font-size: 125% !important; }'});
+    await page.screenshot({path:info.outputPath('profile-enlarged-phone.png')});
+    expect((await name.boundingBox())!.width).toBeGreaterThan(220);
+    const enlargedNav = page.locator('[data-owner-mobile-navigation]');
+    for (const link of await enlargedNav.getByRole('link').all()) {
+      const geometry = await link.evaluate(el => { const label=el.querySelector('span')!,r=label.getBoundingClientRect(),cell=el.getBoundingClientRect(),range=document.createRange();range.selectNodeContents(label);return {lines:range.getClientRects().length,fits:r.left>=cell.left&&r.right<=cell.right&&r.left>=0&&r.right<=innerWidth}; });
+      expect(geometry).toEqual({lines:1,fits:true});
+    }
+    const more = enlargedNav.locator('a[href="/salon/dashboard/settings"]');
+    await expect(more).toHaveAttribute('aria-current','page');
+    await more.focus(); await page.keyboard.press('Enter');
+    const destinations = page.locator('[data-owner-more-navigation]');
+    await expect(destinations.locator('a[href="/salon/dashboard/messages"]')).toBeVisible();
+    await expect(destinations.locator('a[href="/salon/dashboard/availability"]')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    expect(fixture.unexpected).toEqual([]);
+  });
+}
+for (const locale of ['en', 'fr', 'es', 'zh-CN']) {
   test(`Dashboard redesign My Page mobile sections keep labels separate and menu routes intact in ${locale}`, async ({ page }, info) => {
     const fixture = await p0OwnerFixture(page, { populated: true, locale });
     const t = (source: string) => DASHBOARD_SOURCE_MESSAGES[locale]?.[source] || source;

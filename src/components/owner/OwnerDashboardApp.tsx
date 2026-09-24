@@ -1210,7 +1210,6 @@ function SubscriptionV2({ c }: { c: Ctx }) {
     <>
       <Title
         title="Subscription"
-        subtitle="Choose the plan that matches your business’s operations and growth goals."
       />
       {c.subscriptionActive ? (
         <p className="mb-4 text-sm text-ink/70">
@@ -1397,7 +1396,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
         </Panel>
       ) : null}
       <div className="grid gap-4 lg:grid-cols-3">
-        {PLAN_ORDER.map((name) => {
+        {[...PLAN_ORDER].sort((a, b) => Number(b === c.plan) - Number(a === c.plan)).map((name) => {
           const plan = SUBSCRIPTION_PLANS[name];
           const current = !legacyBasicActive && c.plan === name && c.subscriptionActive;
           const changing = c.subscriptionActive && !current;
@@ -1608,7 +1607,7 @@ function Title({
   action,
 }: {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   action?: React.ReactNode;
 }) {
   return (
@@ -1617,7 +1616,7 @@ function Title({
         <h1 className="font-serif text-[36px] font-semibold leading-none tracking-[-.035em] text-plum sm:text-[48px]">
           {title}
         </h1>
-        <p className="mt-2 text-sm text-ink/65">{subtitle}</p>
+        {subtitle ? <p className="mt-2 text-sm text-ink/65">{subtitle}</p> : null}
       </div>
       {action}
     </div>
@@ -1677,6 +1676,8 @@ function Overview({c}:{c:Ctx}) { return <BusinessOverview {...c}/>; }
 function BusinessProfileWorkspace({ c, focus, children }: { c: Ctx; focus: string; children: React.ReactNode }) {
   const { locale: onboardingLocale } = useI18n();
   const current = focus || "business";
+  // A policy task needs its own compact heading, not another profile hero.
+  if (current === "business-policies") return <div className="min-w-0">{children}</div>;
   const progress = profileCompletion(c.salon, c.styles.length, c.stylists.length, isSoloPlan(c.plan));
   const labels=businessLabels(c.salon.business_type,isSoloPlan(c.plan));
   const tabs = [["business", "Business information"], ["description", "Description"], ["address", "Location"], ["social", "Social links"], ["business-policies", "Business Policy"], ["policies", "Girlz Culture Policies"], ...(c.isOwner ? [["identity", "Public identity"]] : [])];
@@ -1689,27 +1690,26 @@ function BusinessProfileWorkspace({ c, focus, children }: { c: Ctx; focus: strin
     ...(labels.team?[[labels.team,c.stylists.length>0,"stylists"] as [string,boolean,string]]:[]),
   ];
   return <div className="space-y-5">
-    <Title title="My Page" subtitle="Manage your public business profile and showcase your brand to new clients." action={<div className="flex flex-wrap gap-2">{c.isOwner ? <Link href="/salon/onboarding/import" className="flex min-h-11 items-center rounded-xl border border-border bg-white px-4 text-sm font-semibold">{onboardingText(onboardingLocale,"entry")}</Link> : null}<Link href={c.salon.is_demo===true?"/salon/dashboard/demo-page":`/salon/${c.salon.slug}`} className="flex min-h-11 items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold"><Eye size={17}/>{c.translateSource("Preview public page")}</Link></div>}/>
+    <Title title="My Page" action={<div className="flex flex-wrap gap-2">{c.isOwner ? <Link href="/salon/onboarding/import" className="hidden min-h-11 items-center rounded-xl border border-border bg-white px-4 text-sm font-semibold sm:flex">{onboardingText(onboardingLocale,"entry")}</Link> : null}<Link href={c.salon.is_demo===true?"/salon/dashboard/demo-page":`/salon/${c.salon.slug}`} className="flex min-h-11 items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold"><Eye size={17}/>{c.translateSource("Preview public page")}</Link></div>}/>
     <section className="overflow-hidden rounded-2xl border border-border bg-white">
       <div className="relative h-36 bg-gradient-to-r from-primary-hover to-primary sm:h-52">
         {c.salon.cover_photo_url ? <SafeImage src={c.salon.cover_photo_url} fallbackSrc={c.salon.cover_photo_url} alt={c.salon.name || "Business"} className="h-full w-full object-cover"/> : <div className="flex h-full items-center justify-center text-sm text-white">{c.translateSource("Add a cover photo to showcase your business.")}</div>}
         <Link href="/salon/dashboard/photos/cover" className="absolute right-3 top-3 flex min-h-11 items-center gap-2 rounded-xl bg-white/95 px-3 text-xs font-semibold text-ink"><ImagePlus size={16}/>{c.translateSource("Change cover photo")}</Link>
       </div>
-      <div className="flex flex-wrap items-end gap-4 px-4 pb-5 sm:px-6">
+      <div className="grid min-w-0 gap-3 px-4 pb-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-end sm:gap-x-4 sm:px-6 lg:grid-cols-[auto_minmax(0,1fr)_auto]">
         <Link href="/salon/dashboard/photos/logo" aria-label={c.translateSource("Change business logo")} className="relative -mt-9 flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-primary-hover text-3xl text-white shadow-sm sm:h-28 sm:w-28">{c.salon.logo_url ? <SafeImage src={c.salon.logo_url} fallbackSrc={c.salon.logo_url} alt={c.salon.name || "Business"} className="h-full w-full object-cover"/> : (c.salon.name || "G").slice(0, 1)}</Link>
-        <div className="min-w-0 flex-1 pt-3"><h2 data-no-translate className="break-words font-serif text-2xl text-ink">{c.salon.name}</h2><p className="mt-1 text-sm text-muted" data-no-translate>{[c.salon.address_city, c.salon.address_state].filter(Boolean).join(", ")}</p></div>
-        <Link href="/salon/dashboard/availability" className="min-h-11 rounded-lg border border-border px-3 py-3 text-xs font-semibold">{c.translateSource("Manage hours")}</Link>
+        <div className="min-w-0 sm:pt-3"><h2 data-no-translate className="[overflow-wrap:anywhere] font-serif text-2xl text-ink">{c.salon.name}</h2><p className="mt-1 text-sm text-muted" data-no-translate>{[c.salon.address_city, c.salon.address_state].filter(Boolean).join(", ")}</p></div>
+        <Link href="/salon/dashboard/availability" className="min-h-11 w-fit rounded-lg border border-border px-3 py-3 text-xs font-semibold sm:col-start-2 lg:col-start-auto">{c.translateSource("Manage hours")}</Link>
       </div>
     </section>
     <nav aria-label={c.translateSource("My Page sections")} className="relative border-b border-border pb-1">
       <div className="flex flex-wrap gap-1 sm:hidden">
         {[["business","Info","my-page/business"],["services","Services","styles"],["address","Location","my-page/address"]].map(([id,label,path]) => <Link key={id} href={`/salon/dashboard/${path}`} aria-current={current === id ? "page" : undefined} className={`flex min-h-11 min-w-11 flex-[1_0_auto] items-center justify-center whitespace-nowrap rounded-lg text-xs font-semibold ${current === id ? "bg-teal/10 text-primary" : "text-muted"}`}>{c.translateSource(label)}</Link>)}
-        <details className="group min-w-11 flex-[1_0_auto]"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-center whitespace-nowrap rounded-lg text-xs font-semibold group-open:bg-teal/10">{c.translateSource("More")}</summary><div className="absolute right-0 z-20 mt-1 min-w-56 rounded-xl border border-border bg-white p-2 shadow-lg">{tabs.filter(([id]) => !["business","address"].includes(id)).map(([id,label]) => <Link key={id} href={`/salon/dashboard/my-page/${id}`} onClick={event => event.currentTarget.closest("details")?.removeAttribute("open")} className="flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-subtle">{c.translateSource(label)}</Link>)}</div></details>
+        <details className="group min-w-11 flex-[1_0_auto]"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-center whitespace-nowrap rounded-lg text-xs font-semibold group-open:bg-teal/10">{c.translateSource("More")}</summary><div className="absolute right-0 z-20 mt-1 min-w-56 rounded-xl border border-border bg-white p-2 shadow-lg">{tabs.filter(([id]) => !["business","address"].includes(id)).map(([id,label]) => <Link key={id} href={`/salon/dashboard/my-page/${id}`} onClick={event => event.currentTarget.closest("details")?.removeAttribute("open")} className="flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-subtle">{c.translateSource(label)}</Link>)}{c.isOwner ? <Link href="/salon/onboarding/import" className="flex min-h-11 items-center rounded-lg px-3 text-sm">{onboardingText(onboardingLocale,"entry")}</Link> : null}</div></details>
       </div>
       <div className="hidden flex-wrap gap-1 sm:flex">{[["business","Business Information","my-page/business"],["services","Services & Pricing","styles"],["address","Location & Hours","my-page/address"],["business-policies","Amenities & Policies","my-page/business-policies"],["social","Social & Links","my-page/social"]].map(([id,label,path]) => <Link key={id} href={`/salon/dashboard/${path}`} aria-current={current === id ? "page" : undefined} className={`flex min-h-11 items-center border-b-2 px-3 text-xs ${current === id ? "border-primary font-semibold text-primary" : "border-transparent text-muted"}`}>{c.translateSource(label)}</Link>)}</div>
     </nav>
     {["business","description","identity"].includes(current) ? <div className="flex flex-wrap gap-2">{tabs.filter(([id]) => ["business","description","identity"].includes(id)).map(([id,label]) => <Link key={id} href={`/salon/dashboard/my-page/${id}`} aria-current={current === id ? "page" : undefined} className={`flex min-h-10 items-center rounded-lg border px-3 text-xs ${current === id ? "border-primary bg-teal/5 text-primary" : "border-border text-muted"}`}>{c.translateSource(label)}</Link>)}</div> : null}
-    {current === "business-policies" ? <Link className="inline-flex min-h-11 items-center text-sm text-primary underline" href="/salon/dashboard/my-page/policies">{c.translateSource("Girlz Culture Policies")}</Link> : null}
     <div className="grid min-w-0 gap-5 min-[1400px]:grid-cols-[minmax(0,1fr)_220px]">
       <div className="min-w-0">{children}</div>
       <aside className="h-fit rounded-2xl border border-border bg-white p-5"><h2 className="font-serif text-lg">{c.translateSource("Profile Completion")}</h2><div className="my-5 flex items-center gap-4"><div className="flex h-20 w-20 items-center justify-center rounded-full border-[7px] border-primary/20 text-xl font-semibold text-primary" aria-label={`${c.translateSource("Profile Completion")}: ${progress}%`}>{progress}%</div><p className="flex-1 text-xs leading-5 text-muted">{c.translateSource("Keep your profile complete so clients know what to expect.")}</p></div><ul className="space-y-3">{checks.map(([label,done,href]) => <li key={label}><Link href={`/salon/dashboard/${href}`} className="flex min-h-8 items-center gap-2 text-sm"><span aria-hidden className={`flex h-5 w-5 items-center justify-center rounded-full border ${done ? "border-emerald-600 bg-emerald-600 text-white" : "border-border"}`}>{done ? <Check size={13}/> : null}</span>{c.translateSource(label)}<span className="sr-only"> — {c.translateSource(done ? "Complete" : "Incomplete")}</span></Link></li>)}</ul></aside>
@@ -1719,7 +1719,7 @@ function BusinessProfileWorkspace({ c, focus, children }: { c: Ctx; focus: strin
 
 function MyPage({ c, focus }: { c: Ctx; focus: string }) {
   if (focus === "address" && c.salon.service_location_type) return c.isOwner ? <BusinessLocationControls key={c.salon.id}/> : <Panel><Empty text="Owner-only access"/></Panel>;
-  if (focus === "business-policies") return <BusinessPolicies />;
+  if (focus === "business-policies") return <BusinessPolicies canManageDeposits={c.isOwner} />;
   if (focus === "policies") {
     return (
       <>

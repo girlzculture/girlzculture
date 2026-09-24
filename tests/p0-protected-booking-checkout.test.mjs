@@ -87,3 +87,11 @@ test('reviewed travel fee remains outside promotion and deposit calculations thr
 test('missing mobile destination stops checkout before booking or provider operations',async()=>{
  const f=fixture({travel:true});const response=await f.post();assert.equal(response.status,409);assert.equal((await response.json()).code,'TRAVEL_ADDRESS_REQUIRED');assert.equal(f.reservations.length,0);assert.equal(f.stripe.length,0);
 });
+
+for(const rate of [0,30,80])test(`owner ${rate}% deposit preserves exact cents through checkout with travel`,async()=>{
+ const f=fixture({offer:false,rate,travel:true,stylePatch:{base_price:99.99}});
+ const deposit=Math.round(9999*rate/100)/100,total=114.99,balance=(11499-Math.round(9999*rate/100))/100;
+ const response=await f.post({expected_deposit:deposit,expected_total:total,service_visit_mode:'mobile',travel_quote_id:intent});const data=await response.json();assert.equal(response.status,200,JSON.stringify(data));
+ const saved=f.reservations[0].p_payload;assert.equal(saved.deposit_amount,deposit);assert.equal(saved.balance_due,balance);assert.equal(saved.estimated_total,total);assert.equal(saved.deposit_rule_snapshot.deposit,deposit);assert.equal(saved.travel_fee_cents,1500);
+ if(rate===0){assert.equal(f.stripe.length,0);assert.equal(f.bookings[0].deposit_amount,0);assert.equal(f.bookings[0].balance_due,balance);}else{assert.equal(f.stripe.length,1);assert.equal(f.stripe[0].body['line_items[0][price_data][unit_amount]'],Math.round(deposit*100));}
+});

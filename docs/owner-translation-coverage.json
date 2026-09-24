@@ -10,7 +10,7 @@
     "wo": "Founder explicitly deferred Wolof; not release-verified."
   },
   "scope": "All inventoried owner graph copy, including dynamic labels, error literals and templates. Only documented proper names and reviewed non-copy source contexts are excluded. Source coverage is not linguistic review or full browser workflow acceptance.",
-  "candidate_count": 3382,
+  "candidate_count": 3381,
   "excluded_code_count": 269,
   "intentional_untranslated": [
     "Girlz Culture",
@@ -101,21 +101,21 @@
   ],
   "locales": {
     "en": {
-      "source_count": 3037,
-      "covered": 3037,
+      "source_count": 3036,
+      "covered": 3036,
       "missing_count": 0,
       "missing": []
     },
     "fr": {
-      "source_count": 3037,
-      "covered": 3037,
+      "source_count": 3036,
+      "covered": 3036,
       "missing_count": 0,
       "missing": []
     },
     "wo": {
-      "source_count": 3037,
+      "source_count": 3036,
       "covered": 1668,
-      "missing_count": 1369,
+      "missing_count": 1368,
       "missing": [
         {
           "source": "{completed} completed · {cancelled} cancelled · {noShow} no-show · {other} other current states",
@@ -509,7 +509,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1695,
+              "line": 1696,
               "kind": "literal",
               "context": "5f57d7fe617ef1672d186a49d2d088797119802ce266d41491668148daa7f97c"
             }
@@ -1062,7 +1062,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1709,
+              "line": 1710,
               "kind": "literal",
               "context": "6f4718b1b41ac44718d329864c96fbe8be0186809e441002bd3487019abe9f95"
             }
@@ -2061,7 +2061,7 @@
             },
             {
               "file": "src/components/owner/BusinessDepositSettings.tsx",
-              "line": 36,
+              "line": 37,
               "kind": "localized-source",
               "context": "720efdacacb878fb2c76fcd6ff0f2dcb67cf299d77a34c2e8e97cf0fd8754475"
             }
@@ -2073,6 +2073,12 @@
             {
               "file": "src/components/owner/BusinessDepositSettings.tsx",
               "line": 33,
+              "kind": "localized-source",
+              "context": "5dc2ff6ffcc3de63b0ecaf1c02a102f95fb4b56b745618cc64fc3f38a2d1f605"
+            },
+            {
+              "file": "src/components/owner/BusinessPolicies.tsx",
+              "line": 82,
               "kind": "localized-source",
               "context": "5dc2ff6ffcc3de63b0ecaf1c02a102f95fb4b56b745618cc64fc3f38a2d1f605"
             }
@@ -2162,7 +2168,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessPolicies.tsx",
-              "line": 15,
+              "line": 17,
               "kind": "localized-source",
               "context": "2dae3523bd9f49ce716ae58b2a8358b0dfb4f354fa65431113c587f35f834fc2"
             },
@@ -2514,7 +2520,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardShell.tsx",
-              "line": 189,
+              "line": 209,
               "kind": "jsx-attribute",
               "context": "4fb70f34c6e63d53850acdd1da9d3378a2e4bb8c5f9c49fc70984b104758761b"
             }
@@ -2536,7 +2542,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessPolicies.tsx",
-              "line": 15,
+              "line": 17,
               "kind": "localized-source",
               "context": "d2e647f48e95c0f449934ab3b8edd7c1dfe068ddab1ced9e0b01e2fc677fd54a"
             },
@@ -2554,7 +2560,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1682,
+              "line": 1683,
               "kind": "literal",
               "context": "f09ed99c1b512ad79032b1a9fe17af091e586136d5d08b18b663c97ad88d57d7"
             }
@@ -2979,13 +2985,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1534,
+              "line": 1533,
               "kind": "template",
               "context": "27fb7e61e5c7b949ca94f1543576b74f647a57fcebd0c0c6bd70724eba755c35"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1591,
+              "line": 1590,
               "kind": "template",
               "context": "27fb7e61e5c7b949ca94f1543576b74f647a57fcebd0c0c6bd70724eba755c35"
             }
@@ -3002,7 +3008,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1699,
+              "line": 1700,
               "kind": "literal",
               "context": "9f45daf208f1103a1cb3e9590d342c7ddb20de8c0a2d789d373a01a110ecbac9"
             }
@@ -3019,7 +3025,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1696,
+              "line": 1697,
               "kind": "literal",
               "context": "ffe15357ad13db26c57a6d74440bf016374f6118056a0203ea91497ff2056996"
             }
@@ -3258,6 +3264,17 @@
           ]
         },
         {
+          "source": "Choose a deposit from 0% to 80%.",
+          "occurrences": [
+            {
+              "file": "src/components/owner/BusinessDepositSettings.tsx",
+              "line": 34,
+              "kind": "localized-source",
+              "context": "8c1cc9b23aae06a290723fd3ebb3582d99b2073739c371eeca45a53fdd39a171"
+            }
+          ]
+        },
+        {
           "source": "Choose a profile",
           "occurrences": [
             {
@@ -3432,17 +3449,6 @@
               "line": 47,
               "kind": "localized-source",
               "context": "1f2ce3ce9334338396e606fe3cc302d66d36e614da86e5d295f6d9d83a9415c1"
-            }
-          ]
-        },
-        {
-          "source": "Choose the plan that matches your business’s operations and growth goals.",
-          "occurrences": [
-            {
-              "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1213,
-              "kind": "jsx-attribute",
-              "context": "59e201a54fb36ac7e8b6be45a71f720ede968fe88a332cf61a1cf777e8b73701"
             }
           ]
         },
@@ -6365,7 +6371,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessDepositSettings.tsx",
-              "line": 37,
+              "line": 38,
               "kind": "localized-source",
               "context": "3dcdca11b72fed0b50c9889f38e97271df51d9e17ee16ca7dd3bfd56c74215b9"
             }
@@ -6376,7 +6382,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessDepositSettings.tsx",
-              "line": 37,
+              "line": 38,
               "kind": "localized-source",
               "context": "ab5a45c3315df129445e25c972320699c737ec2d1908bf48c5927a20f6e6bc85"
             }
@@ -6725,7 +6731,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessDepositSettings.tsx",
-              "line": 38,
+              "line": 39,
               "kind": "localized-source",
               "context": "304f53f8592f52ecd906456ad6197f42bf2c363a7d327b6ca808377ce9b5e916"
             }
@@ -6769,7 +6775,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1706,
+              "line": 1707,
               "kind": "literal",
               "context": "83670f8e5bc083ddfc872ef07f3d28ce39892f1b736fad06a6d2a2ffa4023094"
             }
@@ -7075,7 +7081,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessDepositSettings.tsx",
-              "line": 39,
+              "line": 40,
               "kind": "localized-source",
               "context": "70639c43122da60dc7dcdd1b018b33fe1b48f2a63045cbfe7088997c7016fbcd"
             }
@@ -7292,19 +7298,19 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1682,
+              "line": 1683,
               "kind": "literal",
               "context": "ae85115295a4e5c469359b9475729a1227754a0ffac1c83ed45e51ac7787ecc8"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1686,
+              "line": 1687,
               "kind": "literal",
               "context": "e9b9ccf0745d627e7013483e1ca529d1884d403e8fb56f87acaee17817e98b28"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1706,
+              "line": 1707,
               "kind": "literal",
               "context": "f471ae2f564145b211eb648568a4660acb3a0f5b88e82532d081d1eb342ebfdf"
             }
@@ -7315,7 +7321,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1709,
+              "line": 1710,
               "kind": "literal",
               "context": "32c9906e73aa11cabf23f08333e48ede623ab8270c93571bab2d00c32182a8ec"
             }
@@ -7465,7 +7471,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1701,
+              "line": 1702,
               "kind": "literal",
               "context": "ef8f50369498e8fababb3e08f4c745e7b3e9a081af8c3595e0b03fe7bf326227"
             }
@@ -7512,17 +7518,6 @@
               "line": 307,
               "kind": "jsx-attribute",
               "context": "47842efb66f191148965e4c56eb0f0856b7a0f36cade18f30b9d3d786ebf60a2"
-            }
-          ]
-        },
-        {
-          "source": "Manage your public business profile and showcase your brand to new clients.",
-          "occurrences": [
-            {
-              "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1692,
-              "kind": "jsx-attribute",
-              "context": "73d5c743f7f88fde6d7037eb9f452d157159d34288bf35e71357f9717455f267"
             }
           ]
         },
@@ -7842,13 +7837,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1527,
+              "line": 1526,
               "kind": "literal",
               "context": "ce461b15aab2f2e5b4537fa6627a6e23df05cbde1b83d45666e6f8b5de312d83"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1563,
+              "line": 1562,
               "kind": "literal",
               "context": "ce461b15aab2f2e5b4537fa6627a6e23df05cbde1b83d45666e6f8b5de312d83"
             }
@@ -7953,7 +7948,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1704,
+              "line": 1705,
               "kind": "literal",
               "context": "ae71bf8eff767e34394a75cb2e783019e4973bc50518174cb6c31fe853557b51"
             }
@@ -8697,7 +8692,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1599,
+              "line": 1598,
               "kind": "jsx-attribute",
               "context": "52effeecd947b3c83ace2c3f2709ca4e5fffa433123dd252300701a3bd4a6ee5"
             }
@@ -10021,7 +10016,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessPolicies.tsx",
-              "line": 85,
+              "line": 87,
               "kind": "localized-source",
               "context": "e6d878d0a663145f493d5fe660615e631cd4142985878f53b4dc695e0e5738e6"
             }
@@ -10226,7 +10221,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1217,
+              "line": 1216,
               "kind": "jsx-text",
               "context": "63966ca1de968261040db1db1a27d189df51626d0df2d6c095207e7a41ac83bd"
             }
@@ -11327,13 +11322,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1534,
+              "line": 1533,
               "kind": "literal",
               "context": "45eb44d7dd615c1603759ce8b53d24eb516e3236369500bd881eada7bb35c24c"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1550,
+              "line": 1549,
               "kind": "literal",
               "context": "45eb44d7dd615c1603759ce8b53d24eb516e3236369500bd881eada7bb35c24c"
             },
@@ -11750,7 +11745,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessDepositSettings.tsx",
-              "line": 38,
+              "line": 39,
               "kind": "localized-source",
               "context": "594dafde16dcf629001e99702059a139ac85fa451e7aee14e0ae665e9886667e"
             }
@@ -11761,7 +11756,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessDepositSettings.tsx",
-              "line": 38,
+              "line": 39,
               "kind": "localized-source",
               "context": "11423ef827638460983d2852391a50ba0aee2a80931e4010e28d43eaa1075b9c"
             }
@@ -12083,7 +12078,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessPolicies.tsx",
-              "line": 84,
+              "line": 86,
               "kind": "localized-source",
               "context": "b6c8366265f3f9e9428ad3acdcf226bae852e823aceac490248b4acdbcc44b94"
             }
@@ -12754,7 +12749,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessDepositSettings.tsx",
-              "line": 39,
+              "line": 40,
               "kind": "literal",
               "context": "aaaee87eeecddd99469af23cfb64f24f367ca23c8ce2014763be54ea22a8c08e"
             }
@@ -13587,7 +13582,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1709,
+              "line": 1710,
               "kind": "literal",
               "context": "dae6d564a837b4ddf21ab116897069858cc60a8c420290e165dceb8cb1aab31e"
             },
@@ -13661,7 +13656,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessDepositSettings.tsx",
-              "line": 34,
+              "line": 35,
               "kind": "localized-source",
               "context": "ed8d22ab8b195eb7a10ee233139a4ed95950924cf1ad9415a5963d5741e96afe"
             }
@@ -13882,13 +13877,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1533,
+              "line": 1532,
               "kind": "literal",
               "context": "56c1f10fc27457f575a6afb75e6875a7d9e976e89131760a40f45a383139fd0b"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1586,
+              "line": 1585,
               "kind": "literal",
               "context": "56c1f10fc27457f575a6afb75e6875a7d9e976e89131760a40f45a383139fd0b"
             }
@@ -13949,7 +13944,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1709,
+              "line": 1710,
               "kind": "literal",
               "context": "8d765e907e8c80d91ed09f9e5db6c89d2820a408d440b02db300d47ad48d0dde"
             }
@@ -14146,7 +14141,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/BusinessDepositSettings.tsx",
-              "line": 36,
+              "line": 37,
               "kind": "localized-source",
               "context": "46dd27056c678b9cd75de16dc47fccade8ec18fde1fd903fb67e4584b7e7543c"
             }
@@ -14392,13 +14387,13 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1511,
+              "line": 1510,
               "kind": "literal",
               "context": "06fcad870886a255facc0180bf9ad485004b9f9aa342f46013f7cb67ac4a5cf9"
             },
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1515,
+              "line": 1514,
               "kind": "literal",
               "context": "06fcad870886a255facc0180bf9ad485004b9f9aa342f46013f7cb67ac4a5cf9"
             }
@@ -14592,7 +14587,7 @@
             },
             {
               "file": "src/components/owner/OwnerDashboardShell.tsx",
-              "line": 149,
+              "line": 168,
               "kind": "literal",
               "context": "3e2aeb185e6b0657dec39515ad1075912cf23e915cd8845f002cbc615dbdda03"
             },
@@ -17306,7 +17301,7 @@
           "occurrences": [
             {
               "file": "src/components/owner/OwnerDashboardApp.tsx",
-              "line": 1518,
+              "line": 1517,
               "kind": "literal",
               "context": "fcdbd9cbeb886ca5d097d153af9268996601fa42831a63bd7c85d2397d6ab202"
             }
@@ -17519,14 +17514,14 @@
       ]
     },
     "es": {
-      "source_count": 3037,
-      "covered": 3037,
+      "source_count": 3036,
+      "covered": 3036,
       "missing_count": 0,
       "missing": []
     },
     "zh-CN": {
-      "source_count": 3037,
-      "covered": 3037,
+      "source_count": 3036,
+      "covered": 3036,
       "missing_count": 0,
       "missing": []
     }

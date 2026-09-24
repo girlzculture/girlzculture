@@ -1,6 +1,7 @@
+import {MAX_BOOKING_DEPOSIT_PERCENT} from './businessDepositRules';
 import type {ToolSchema} from '@/lib/gcAssistantCore';
 const integer=(minimum:number,maximum:number):ToolSchema=>({type:'integer',minimum,maximum});
-const rate:ToolSchema={type:'number',minimum:0,maximum:100};
+const rate:ToolSchema={type:'number',minimum:0,maximum:MAX_BOOKING_DEPOSIT_PERCENT};
 const ids:ToolSchema={type:'array',maxItems:100,items:{type:'string',pattern:'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'}};
 export const ASSISTANT_CONTROLS={
  profile:{name:{type:'string',minLength:1,maxLength:120},phone:{type:'string',maxLength:40},languages:{type:'array',maxItems:5,items:{type:'string',minLength:1,maxLength:50}}},

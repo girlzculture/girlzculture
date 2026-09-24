@@ -25,3 +25,13 @@ test('deposit API keeps owner-only scope and rejects foreign business or rule ke
  assert.equal((await f.get('?salon_id=B')).status,400);assert.equal(f.calls.length,0);
  const response=await f.post();assert.equal(response.status,200);assert.equal(f.calls[0].args.p_salon,'A');assert.equal(f.calls[0].args.p_user,'owner-A');assert.equal(f.calls[0].args.p_request,op);
 });
+
+test('deposit API enforces the eighty percent boundary before RPC and accepts zero and thirty percent',async()=>{
+ for(const rate of [0,30,80]){
+  const f=fixture();const value={...f.body,rule:{...f.body.rule,rate,repeat_incident_count:null,repeat_incident_rate:null}};
+  assert.equal((await f.post(value)).status,200);assert.equal(f.calls[0].args.p_rule.rate,rate);
+ }
+ for(const patch of [{rate:80.01},{rate:100},{threshold_amount:100,threshold_rate:80.01},{repeat_incident_rate:80.01}]){
+  const f=fixture();assert.equal((await f.post({...f.body,rule:{...f.body.rule,...patch}})).status,400);assert.equal(f.calls.length,0);
+ }
+});

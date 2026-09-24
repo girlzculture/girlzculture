@@ -26,6 +26,7 @@ for(const [width,height] of [[390,844],[768,1024],[1440,1000],[844,390]]){
   await page.goto('/salon/dashboard/subscription');
   const history=page.getByRole('region',{name:'Subscription history',exact:true});
   await expect(history).toBeVisible();
+  await page.screenshot({path:info.outputPath('subscription-summary.png')});
   const rows=width<1024?history.getByRole('article'):history.locator('tbody tr');
   await expect(rows).toHaveCount(14);
   await expect(rows.first()).toContainText('CH-SAMPLE-1');

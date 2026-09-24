@@ -2,10 +2,10 @@ import {randomUUID} from 'node:crypto';
 import {expect} from '@playwright/test';
 import {test} from './helpers/hydration';
 test.use({serviceWorkers:'block'});
-for(const [width,height]of [[390,844],[768,1024],[1440,1000],[844,390]])test(`Master mobile booking reviews destination and protects fee at ${width}px`,async({page,request},info)=>{
+for(const [width,height,depositRate]of [[390,844,10],[768,1024,10],[1440,1000,10],[844,390,10],[320,844,0],[390,844,30],[1440,1000,80]])test(`Master mobile booking reviews destination and protects fee at ${width}px with ${depositRate}% deposit`,async({page,request},info)=>{
  const provider=process.env.PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL||'http://127.0.0.1:3105';expect(['localhost','127.0.0.1']).toContain(new URL(provider).hostname);
  const id=randomUUID(),quoteId=randomUUID(),slug=`p0-policy-${id}`;let checks=0,reservations=0;
- const seed=(version:number|null)=>request.post(`${provider}/__fixtures/p0-public-policy/${id}`,{headers:{'x-acceptance-fixture':'p0-public-policy'},data:{version,priced:true,mobile:true}});
+ const seed=(version:number|null)=>request.post(`${provider}/__fixtures/p0-public-policy/${id}`,{headers:{'x-acceptance-fixture':'p0-public-policy'},data:{version,priced:true,mobile:true,deposit_rate:depositRate}});
  expect((await seed(1)).ok()).toBe(true);
  try{
   await page.setViewportSize({width,height});
@@ -15,8 +15,8 @@ for(const [width,height]of [[390,844],[768,1024],[1440,1000],[844,390]])test(`Ma
    return checks===1?r.fulfill({status:409,json:{code:'TRAVEL_OUTSIDE_RADIUS',request_id:'TRAVEL-FIXTURE'}}):r.fulfill({json:{quote:{id:quoteId,address:body.address,fee_cents:1500,expires_at:new Date(Date.now()+900000).toISOString()}}});
   });
   await page.route('**/api/stripe/booking-checkout',r=>{
-   const body=r.request().postDataJSON();reservations++;expect(body.guest_name).toBe('Fixture customer');expect(body.guest_email).toBe('fixture@example.test');expect(body.expected_total).toBe(115);expect(body.expected_deposit).toBe(10);expect(body.travel_quote_id).toBe(quoteId);expect(body.service_visit_mode).toBe('mobile');
-   return r.fulfill({json:{booking:{id,public_reference:'GC-TRAVEL',status:'Confirmed',estimated_total:115,deposit_amount:10,balance_due:105}}});
+   const body=r.request().postDataJSON();reservations++;expect(body.guest_name).toBe('Fixture customer');expect(body.guest_email).toBe('fixture@example.test');expect(body.expected_total).toBe(115);expect(body.expected_deposit).toBe(depositRate);expect(body.travel_quote_id).toBe(quoteId);expect(body.service_visit_mode).toBe('mobile');
+   return r.fulfill({json:{booking:{id,public_reference:'GC-TRAVEL',status:'Confirmed',estimated_total:115,deposit_amount:depositRate,balance_due:115-depositRate,subtotal_before_promotion:115,deposit_rule_snapshot:{rate:depositRate,deposit:depositRate,subtotal:115},travel_fee_cents:1500}}});
   });
   // Exercise the first desktop field before JavaScript is available. Inputs
   // must not accept text that React would discard during hydration.
@@ -40,13 +40,14 @@ for(const [width,height]of [[390,844],[768,1024],[1440,1000],[844,390]])test(`Ma
   await expect(page.getByRole('region',{name:'Appointment location',exact:true}).filter({visible:true}).getByRole('alert')).toContainText('outside the business’s travel radius');expect(reservations).toBe(0);
   await expect(page.getByLabel('Street address',{exact:true}).filter({visible:true})).toHaveValue('100 Sample Avenue');await check.click();
   await expect(page.getByRole('status').filter({hasText:'Address checked.'}).filter({visible:true})).toContainText('$15.00');
-  const consent=page.getByRole('checkbox',{name:/I understand the reservation deposit/}).filter({visible:true});await consent.check();
+  const consent=page.getByRole('checkbox',{name:depositRate?/I understand the reservation deposit/: 'I confirm the appointment details and agree to the booking terms.'}).filter({visible:true});await consent.check();
   await page.getByLabel('Apartment or suite (optional)',{exact:true}).filter({visible:true}).fill('2');await expect(consent).not.toBeChecked();await check.click();
   await expect(page.getByRole('status').filter({hasText:'Address checked.'}).filter({visible:true})).toBeVisible();
   const agreements=page.getByRole('checkbox').filter({visible:true});await expect(agreements).toHaveCount(2);await agreements.nth(0).check();await consent.check();
   await page.screenshot({path:info.outputPath('mobile-destination-review.png'),fullPage:true});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   if(width<1280)await page.getByRole('button',{name:'Continue',exact:true}).filter({visible:true}).click();
-  await page.getByRole('button',{name:'Pay $10.00 Deposit',exact:true}).filter({visible:true}).click();await expect(page.getByRole('heading',{name:'You’re All Set!',exact:true}).filter({visible:true})).toBeVisible();
+  await page.getByRole('button',{name:depositRate?`Pay $${depositRate.toFixed(2)} Deposit`:'Confirm Booking — No Deposit',exact:true}).filter({visible:true}).click();await expect(page.getByRole('heading',{name:'You’re All Set!',exact:true}).filter({visible:true})).toBeVisible();
+  await expect(page.getByRole('region',{name:'Agreed booking price',exact:true}).filter({visible:true})).toContainText(`$${depositRate.toFixed(2)}`);
   expect(checks).toBe(3);expect(reservations).toBe(1);
  }finally{expect((await seed(null)).ok()).toBe(true);}
 });

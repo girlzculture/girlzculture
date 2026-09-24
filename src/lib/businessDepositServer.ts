@@ -2,7 +2,7 @@ import "server-only";
 import type { User } from "@supabase/supabase-js";
 import type { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getEngineNumber } from "@/lib/engineConfigServer";
-import { bookingDepositTerms, defaultDepositRule, validateDepositRule, type BusinessDepositRule } from "@/lib/businessDepositRules";
+import { MAX_BOOKING_DEPOSIT_PERCENT, bookingDepositTerms, defaultDepositRule, validateDepositRule, type BusinessDepositRule } from "@/lib/businessDepositRules";
 type Admin = ReturnType<typeof getSupabaseAdmin>;
 
 export function depositRuleFromRow(row: Record<string, unknown>): BusinessDepositRule {
@@ -14,7 +14,7 @@ export async function readBusinessDepositRule(admin: Admin, salonId: string) {
   const result=await admin.from("business_deposit_rules").select("id,salon_id,rate,threshold_amount,threshold_rate,repeat_incident_count,repeat_incident_rate,incident_window_days").eq("salon_id",salonId).order("created_at",{ascending:false}).order("id",{ascending:false}).limit(1).maybeSingle();
   if(result.error) throw result.error;
   if(result.data && result.data.salon_id!==salonId) throw Error("DEPOSIT_SCOPE_MISMATCH");
-  return result.data ? depositRuleFromRow(result.data) : defaultDepositRule(await getEngineNumber("booking.deposit_percentage",10,0,100));
+  return result.data ? depositRuleFromRow(result.data) : defaultDepositRule(await getEngineNumber("booking.deposit_percentage",10,0,MAX_BOOKING_DEPOSIT_PERCENT));
 }
 
 export async function readBookingDepositTerms(admin: Admin, salonId: string, subtotal: number, verifiedUser: User | null) {

@@ -50,12 +50,15 @@ export default function InlineFormValidation() {
       control.removeAttribute("aria-describedby");
     }
     document.addEventListener("invalid", show, true);
-    document.addEventListener("input", clear, true);
-    document.addEventListener("change", clear, true);
+    // The locale bridge clears translated custom validity during body capture.
+    // Clear the inline error afterward on input, not later on blur/change: a
+    // disappearing error during pointer activation moves the Save button.
+    document.addEventListener("input", clear);
+    document.addEventListener("change", clear);
     return () => {
       document.removeEventListener("invalid", show, true);
-      document.removeEventListener("input", clear, true);
-      document.removeEventListener("change", clear, true);
+      document.removeEventListener("input", clear);
+      document.removeEventListener("change", clear);
     };
   }, []);
   return null;
