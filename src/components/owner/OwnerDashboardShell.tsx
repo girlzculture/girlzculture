@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -98,6 +98,25 @@ export default function OwnerDashboardShell({
   businessType?:string;
 }) {
   const { locale, translateSource } = useI18n();
+  const mobileMeasure = useRef<HTMLDivElement>(null);
+  const [mobileSlots, setMobileSlots] = useState(3);
+  useEffect(() => {
+    const measure = mobileMeasure.current;
+    if (!measure) return;
+    const fit = () => {
+      const widths = [...measure.children].map(el => el.getBoundingClientRect().width);
+      const available = document.documentElement.clientWidth - 16;
+      // Keep full words at enlarged text sizes. Less-used destinations remain
+      // immediately accessible on More; do not shrink, truncate or wrap labels.
+      const sum = (indexes: number[]) => indexes.reduce((total, i) => total + (widths[i] || 0), 0);
+      setMobileSlots(sum([0,1,2,3,4]) <= available ? 5 : sum([0,1,2,4]) <= available ? 4 : 3);
+    };
+    const observer = new ResizeObserver(fit);
+    observer.observe(document.documentElement);
+    for (const el of measure.children) observer.observe(el);
+    fit();
+    return () => observer.disconnect();
+  }, [locale]);
   const labels=businessLabels(businessType,independent);
   const assistantDocked = useAssistantDocked();
   const [notificationCounts, setNotificationCounts] = useState<
@@ -159,6 +178,7 @@ export default function OwnerDashboardShell({
       ["settings", "More", Menu],
     ] as const
   ).filter(([id]) => canAccess(id));
+  const displayedMobileNav = mobileNav.filter(([id]) => !mobileNav.some(([key]) => key === "settings") || (mobileSlots >= 5 || id !== "messages") && (mobileSlots >= 4 || id !== "availability"));
   const navBadge = (id: string) =>
     id === "bookings"
       ? Number(
@@ -297,24 +317,24 @@ export default function OwnerDashboardShell({
           </div>
           <div className="order-2 sm:order-none"><GcAssistantLauncher /></div>
         </header>
-        <main data-owner-workspace className={`min-w-0 overflow-x-hidden px-4 pb-24 pt-5 sm:px-5 lg:pb-8 ${assistantDocked ? "xl:mr-[336px]" : ""}`}>
-          {sampleBusiness?<aside role="note" className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm"><strong>Private demonstration — sample data</strong><p>Fictional clients, bookings and financial records. Payments, invitations and external notifications are disabled.</p></aside>:null}
+        <main data-owner-workspace className={`min-w-0 overflow-x-hidden px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-5 sm:px-5 lg:pb-8 ${assistantDocked ? "xl:mr-[336px]" : ""}`}>
+
+          {section === "settings" ? <nav data-owner-more-navigation aria-label={translateSource("More")} className="mb-5 grid grid-cols-2 gap-2 lg:hidden">{visibleNav.filter(([id]) => !["overview","bookings","settings"].includes(id)).map(([id,label,Icon]) => <Link key={id} href={hrefFor(id)} className="flex min-h-14 items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-sm font-semibold"><Icon aria-hidden size={18} className="shrink-0"/><span>{label}</span></Link>)}</nav> : null}
           {children}
         </main>
       </div>
 
+      <div aria-hidden className="pointer-events-none invisible fixed left-0 top-0 size-0 overflow-hidden"><div ref={mobileMeasure} className="flex w-max text-[0.8125rem] font-semibold">{["overview","bookings","availability","messages","settings"].map(id => <span key={id} className="min-w-11 whitespace-nowrap px-1">{ownerMobileDestinationCopy(locale,id)?.label}</span>)}</div></div>
       <nav
         aria-label="Owner mobile navigation"
         data-owner-mobile-navigation
         className="fixed inset-x-0 bottom-0 z-50 flex justify-around border-t border-plum/10 bg-white px-1 pb-[max(7px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(13,17,20,.08)] lg:hidden"
       >
-        {mobileNav.map(([id, label, Icon]) => {
+        {displayedMobileNav.map(([id, label, Icon]) => {
           const active =
             section === id ||
             (id === "settings" &&
-              !["overview", "bookings", "availability", "messages"].includes(
-                section,
-              ));
+              !displayedMobileNav.some(([key]) => key !== "settings" && key === section));
           const count = navBadge(id);
           const localized = ownerMobileDestinationCopy(locale, id);
           return (
@@ -322,13 +342,14 @@ export default function OwnerDashboardShell({
               key={id}
               href={hrefFor(id)}
               aria-label={localized?.accessibleName}
+              aria-current={active ? "page" : undefined}
               data-no-translate={localized ? true : undefined}
-              className={`relative flex min-h-12 flex-col items-center justify-center gap-1 px-1 text-center font-semibold ${localized ? "min-w-11 flex-auto text-[13px] leading-normal" : "min-w-0 flex-1 text-[11px] leading-tight"} ${
-                active ? "text-magenta" : "text-ink/70"
+              className={`relative flex min-h-12 min-w-11 flex-auto flex-col items-center justify-center gap-1 rounded-lg px-0.5 text-center text-[0.8125rem] leading-normal font-semibold ${
+                active ? "bg-primary/5 text-primary" : "text-ink/70"
               }`}
             >
               <Icon aria-hidden="true" size={19} />
-              <span className={localized ? "whitespace-nowrap" : "max-w-full break-words"}>{localized?.label || label}</span>
+              <span className="whitespace-nowrap">{localized?.label || label}</span>
               {count ? (
                 <span className="absolute right-1 top-0 rounded-full bg-magenta px-1.5 py-0.5 text-[9px] font-bold text-white">
                   {Math.min(count, 99)}

@@ -1,4 +1,5 @@
 const rows = [
+  ["Choose a deposit from 0% to 80%.", "Choisissez un acompte de 0 % à 80 %.", "Elige un depósito del 0 % al 80 %.", "请选择 0% 至 80% 的订金比例。"],
   ["Deposit rates are managed separately in Finances. Remove the custom deposit amount to prepare this service.", "Les taux d’acompte se gèrent séparément dans Finances. Retirez le montant personnalisé pour préparer ce service.", "Las tasas de depósito se gestionan por separado en Finanzas. Quita el depósito personalizado para preparar este servicio.", "订金比例在财务中单独管理。请移除自定义订金金额以准备此服务。"],
   ["Booking deposit settings", "Réglages des acomptes", "Configuración de depósitos", "预约订金设置"],
   ["Booking deposits", "Acomptes de réservation", "Depósitos de reserva", "预约订金"],

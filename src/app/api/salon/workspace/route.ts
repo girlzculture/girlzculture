@@ -1,6 +1,7 @@
 import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { monitoredRouteFailure } from "@/lib/platformErrors";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
+import { attachBookingReceiptBalances } from "@/lib/bookingReceiptBalance";
 
 type WorkspaceKey = "bookings" | "reviews" | "styles" | "stylists" | "salon_products" | "salon_promotions" | "subscriptions" | "billing_events" | "notifications" | "salon_blockouts";
 
@@ -108,6 +109,12 @@ async function GETHandler(request: Request) {
       return [table, rows] as const;
     }));
     const records: Record<string, Record<string, unknown>[]> = Object.fromEntries(entries);
+    if (context.salon.is_demo === true && records.bookings.length) {
+      const readback = await context.admin.rpc("read_private_booking_balances", { p_salon: context.salon.id, p_user: context.user.id });
+      if (readback.error) throw readback.error;
+      if (!Array.isArray(readback.data)) throw Error("BOOKING_RECEIPT_READBACK_INVALID");
+      attachBookingReceiptBalances(context.salon.id, records.bookings, readback.data);
+    }
     if (!context.isOwner && context.teamMember?.stylist_id) {
       const assignedBookings = new Set(records.bookings.map(row => row.id));
       records.notifications = records.notifications.filter(row => !row.booking_id || assignedBookings.has(row.booking_id));

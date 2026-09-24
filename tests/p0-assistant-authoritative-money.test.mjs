@@ -154,7 +154,7 @@ test('private sample booking terms use marked simulated receipts, never provider
  const receipts=[{id:'sample-deposit',salon_id:business,booking_id:booking,occurred_at:'2026-09-01T12:01:00Z',stage:'deposit',method:'other',amount_cents:1000},{id:'sample-balance',salon_id:business,booking_id:booking,occurred_at:'2026-09-10T13:00:00Z',stage:'balance',method:'other',amount_cents:7000}];
  const f=fixture({demo:true,booking:{is_demo:true,payment_mode:'test',verified_charge:false,payment_verified_at:null},receipts});
  const result=await f.read('get_booking_price_details',{booking_id:booking});
- assert.equal(result.available,true);assert.equal(result.sample_data,true);assert.match(result.definition,/FICTIONAL SAMPLE DATA/);
+ assert.equal(result.available,true);assert.equal(result.sample_data,true);assert.match(result.definition,/not provider charges or evidence of bank settlement/);assert.doesNotMatch(result.definition,/FICTIONAL SAMPLE DATA/);
  assert.equal(result.current.available,true);assert.equal(result.current.received_cents,8000);assert.equal(result.current.unpaid_cents,0);
  for(const options of [{booking:{is_demo:true,payment_mode:'test'},receipts},{demo:true,booking:{payment_mode:'test'},receipts}])assert.equal((await fixture(options).read('get_booking_price_details',{booking_id:booking})).available,false);
 });

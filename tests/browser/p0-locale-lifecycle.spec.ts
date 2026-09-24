@@ -51,9 +51,44 @@ async function signIn(page: Page) {
   await page.goto('/business/login');
   await page.locator('input[type=email]').fill('p0-browser@example.test');
   await page.locator('#salon-password').fill('isolated-fixture-only');
+  await expect(page.locator('input[type=email]')).toHaveValue('p0-browser@example.test');
+  await expect(page.locator('#salon-password')).toHaveValue('isolated-fixture-only');
   await page.locator('button[type=submit]').click();
   await expect(page).toHaveURL(/\/salon\/dashboard\/settings\/security$/);
   await expect(page.locator('[data-owner-workspace]')).toBeVisible();
+}
+
+for (const viewport of [{width:320,height:568},{width:768,height:1024},{width:1440,height:1000},{width:844,height:390}]) {
+test(`P0 account locale login waits for hydration without losing entered credentials at ${viewport.width}px`,async({page})=>{
+ const fixture=await loginFixture(page);
+ await page.setViewportSize(viewport);
+ let release!:()=>void,releaseStyles!:()=>void;
+ const scriptsReady=new Promise<void>(resolve=>{release=resolve;});
+ const stylesReady=new Promise<void>(resolve=>{releaseStyles=resolve;});
+ await page.route("**/_next/static/**/*.css",async route=>{await stylesReady;await route.continue();});
+ await page.route('**/_next/static/**/*.js',async route=>{await scriptsReady;await route.continue();});
+ try {
+  await page.goto('/business/login',{waitUntil:'commit'});
+  await expect(page.locator('input[type=email]')).toBeDisabled();
+  await expect(page.locator('#salon-password')).toBeDisabled();
+  await expect(page.locator('button[type=submit]')).toBeDisabled();
+  releaseStyles();
+  // The CI trace measured intrinsic controls before the render-blocking CSS
+  // (including its font import) had applied. Keep JS blocked, but wait for the
+  // actual stylesheet before assessing enlarged-text layout.
+  await expect(page.locator('fieldset')).toHaveCSS('min-width','0px');
+  await page.addStyleTag({content:'html { font-size: 125% !important; }'});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);
+ } finally {releaseStyles();release();}
+ await page.locator('input[type=email]').fill('p0-browser@example.test');
+ await page.locator('#salon-password').fill('isolated-fixture-only');
+ await expect(page.locator('input[type=email]')).toHaveValue('p0-browser@example.test');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1)).toBe(true);
+ await page.locator('button[type=submit]').click();
+ await expect(page).toHaveURL(/\/salon\/dashboard\/settings\/security$/);
+ await expect(page.locator('[data-owner-workspace]')).toBeVisible();
+ expect(fixture.unexpected).toEqual([]);
+});
 }
 
 async function signOut(page: Page) {

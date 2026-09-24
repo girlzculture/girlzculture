@@ -3,7 +3,39 @@ import { test } from './helpers/hydration';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
 import { summarizeOperatingBooks, type OperatingBooks } from '../../src/lib/businessFinanceCore';
 import { BOOKING_DEPOSIT_SOURCE_MESSAGES } from '../../src/i18n/booking-deposit-source-catalog';
+import { DASHBOARD_SOURCE_MESSAGES } from '../../src/i18n/dashboard-source-catalog';
 test.use({serviceWorkers:'block'});
+
+for(const locale of ['en','fr','es','zh-CN']) test(`Deposit rules are discoverable from compact policies and preserve zero through eighty percent in ${locale}`,async({page},info)=>{
+ const f=await p0OwnerFixture(page,{populated:true,locale});
+ const t=(s:string)=>BOOKING_DEPOSIT_SOURCE_MESSAGES[locale]?.[s]||DASHBOARD_SOURCE_MESSAGES[locale]?.[s]||s;
+ let rule={version:null as string|null,rate:20,threshold_amount:null,threshold_rate:null,repeat_incident_count:null,repeat_incident_rate:null,incident_window_days:365};let writes=0;
+ await page.route('**/api/salon/deposit-rules',async route=>{
+  if(route.request().method()==='GET')return route.fulfill({json:{rule}});
+  const body=route.request().postDataJSON();expect(body.expected_version).toBe(rule.version);expect(body.rule.rate).toBeLessThanOrEqual(80);
+  rule={...body.rule,version:crypto.randomUUID()};writes++;return route.fulfill({json:{rule,verified:true}});
+ });
+ await page.setViewportSize({width:320,height:844});await page.goto('/salon/dashboard/my-page/business-policies');
+ const heading=page.getByRole('heading',{name:t('Your Business Policies'),exact:true});await expect(heading).toBeVisible();
+ expect((await heading.boundingBox())!.y).toBeLessThan(300);
+ await expect(page.getByRole('link',{name:t('Back to My Page'),exact:true})).toHaveText('');
+ await expect(page.getByRole('heading',{name:t('My Page'),exact:true})).toHaveCount(0);
+ await expect(page.locator('[data-owner-workspace]').getByRole('link',{name:t('Girlz Culture Policies'),exact:true})).toHaveCount(0);
+ await page.screenshot({path:info.outputPath('compact-policy-phone.png')});
+ await page.getByRole('link',{name:t('Booking deposits'),exact:true}).click();await page.getByRole('button',{name:t('Manage deposit settings'),exact:true}).click();
+ const form=page.getByRole('form',{name:t('Booking deposit settings'),exact:true}),rate=form.getByLabel(t('Standard deposit (%)'),{exact:true});
+ await expect(rate).toHaveAttribute('max','80');await rate.fill('80.01');await form.getByRole('button',{name:t('Save deposit settings'),exact:true}).click();
+ expect(writes).toBe(0);expect(await rate.evaluate((el:HTMLInputElement)=>el.validity.rangeOverflow)).toBe(true);
+ for(const value of [0,30,80]){
+  const before=writes;await rate.fill(String(value));await expect(rate).not.toHaveAttribute('aria-invalid','true');await expect(page.locator('[data-inline-validation]')).toHaveCount(0);await form.getByRole('button',{name:t('Save deposit settings'),exact:true}).click();
+  await expect.poll(()=>writes).toBe(before+1);await expect(page.getByRole('status').filter({hasText:t('Deposit settings saved. Existing bookings keep their original terms.')})).toBeVisible();
+  await page.reload();await page.getByRole('button',{name:t('Manage deposit settings'),exact:true}).click();await expect(rate).toHaveValue(String(value));
+ }
+ for(const [width,height] of [[320,844],[360,800],[390,844],[412,915],[768,1024],[1440,1000],[844,390],[1180,820]]){
+  await page.setViewportSize({width,height});await form.scrollIntoViewIfNeeded();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+ }
+ await page.setViewportSize({width:390,height:844});await form.screenshot({path:info.outputPath('deposit-boundary-phone.png')});expect(f.unexpected).toEqual([]);
+});
 
 for(const [locale,width,height] of [['en',1440,1000],['fr',390,844],['es',768,900],['zh-CN',844,390]] as const){
  test(`Deposit rules retain input, retry identity and saved values in ${locale} at ${width}x${height}`,async({page},info)=>{

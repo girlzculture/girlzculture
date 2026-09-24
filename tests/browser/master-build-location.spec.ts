@@ -6,7 +6,7 @@ test.use({serviceWorkers:'block'});
 for(const [locale,width,height] of [['en',390,844],['fr',768,1024],['es',1440,1000],['zh-CN',844,390]] as const){
  test(`Master location privacy and travel save readback refresh in ${locale}`,async({page},info)=>{
   const fixture=await p0OwnerFixture(page,{populated:true,locale});
-  Object.assign(fixture.business,{service_location_type:'home',operator_type:'solo',subscription_tier:'Solo Pro'});
+  Object.assign(fixture.business,{service_location_type:'home',operator_type:'solo',subscription_tier:locale==='en'||locale==='es'?'Solo':'Solo Pro'});
   let settings={service_location_type:'home',home_address_public:false,public_neighborhood:'Harlem',offers_mobile:false,travel_radius_miles:null as number|null,travel_fee_cents:0,revision:1};
   let saves=0,fail=true;
   await page.route('**/api/salon/location',async route=>{

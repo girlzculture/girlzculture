@@ -17,7 +17,7 @@ export default function BusinessRebookingControls(){
  return <section aria-label={t('Rebooking reminders')} className='mt-5 rounded-xl border border-border bg-white p-5'>
   <h2 className='font-serif text-2xl'>{t('Rebooking reminders')}</h2>
   {saved&&draft?<>
-   <p className='mt-3 text-sm'>{t(saved.is_demo?'Demo reminders are never sent.':saved.effective_enabled&&saved.email_available?'Automatic rebooking reminders are on.':'Automatic rebooking reminders are off.')}</p>
+   <p className='mt-3 text-sm'>{t(saved.is_demo?'Automatic rebooking reminders are off.':saved.effective_enabled&&saved.email_available?'Automatic rebooking reminders are on.':'Automatic rebooking reminders are off.')}</p>
    {!saved.automatic?<p className='mt-2 text-sm'>{t('Your plan includes manual rebooking. Review returning clients from Bookings.')}</p>:null}
    {!saved.email_available?<p className='mt-2 text-sm'>{t('Email delivery is unavailable. You can still turn reminders off.')}</p>:null}
    <form onSubmit={save} className='mt-4 space-y-4'><fieldset disabled={busy} className='space-y-4'>

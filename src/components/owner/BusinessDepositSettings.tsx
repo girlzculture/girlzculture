@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState,type FormEvent} from "react";
 import {createAuthenticatedApiClient} from "@/lib/scopedApiClient";
 import {scopedApiErrorMessage} from "@/lib/scopedApiCore";
-import {validateDepositRule,type BusinessDepositRule} from "@/lib/businessDepositRules";
+import {MAX_BOOKING_DEPOSIT_PERCENT,validateDepositRule,type BusinessDepositRule} from "@/lib/businessDepositRules";
 import {FinanceField,financePanel,financeInput,financePrimary,financeButton} from "./FinanceUI";
 import {useI18n} from "@/components/i18n/LocaleProvider";
 
@@ -31,10 +31,11 @@ export default function BusinessDepositSettings(){
  }
  const number=(name:string,value:number|null,max:number,required=false,step="0.01")=><input name={name} type="number" min="0" max={max} step={step} required={required} defaultValue={value??""} className={financeInput}/>;
  return <section className={financePanel} aria-label={t("Booking deposit settings")}><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-serif text-xl font-bold">{t("Booking deposits")}</h2><button className={financeButton} disabled={busy} onClick={()=>void load()}>{t(open?"Reload saved settings":"Manage deposit settings")}</button></div>
+ <p className="mt-2 text-sm gc-text-secondary">{t("Choose a deposit from 0% to 80%.")}</p>
  <p className="mt-2 text-sm gc-text-secondary">{t("Set rates for future bookings. Promotions reduce the remaining balance, never the required deposit.")}</p>
  {error?<p role="alert" className="mt-3 text-sm gc-text-danger">{error}</p>:null}{notice?<p role="status" className="mt-3 text-sm gc-text-success">{notice}</p>:null}
- {open&&rule?<form key={rule.version||"default"} onSubmit={save} aria-label={t("Booking deposit settings")} className="mt-4 space-y-4"><fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2"><FinanceField label={t("Standard deposit (%)")}>{number("rate",rule.rate,100,true)}</FinanceField><div/>
- <FinanceField label={t("Higher rate above service price (USD)")}>{number("threshold_amount",rule.threshold_amount,10000)}</FinanceField><FinanceField label={t("Higher-price deposit (%)")}>{number("threshold_rate",rule.threshold_rate,100)}</FinanceField>
- <FinanceField label={t("Repeat incidents at this business")}>{number("repeat_incident_count",rule.repeat_incident_count,100,false,"1")}</FinanceField><FinanceField label={t("Repeat-incident deposit (%)")}>{number("repeat_incident_rate",rule.repeat_incident_rate,100)}</FinanceField><FinanceField label={t("Incident lookback (days)")}>{number("incident_window_days",rule.incident_window_days,730,true,"1")}</FinanceField></fieldset>
+ {open&&rule?<form key={rule.version||"default"} onSubmit={save} aria-label={t("Booking deposit settings")} className="mt-4 space-y-4"><fieldset disabled={busy} className="min-w-0 grid gap-4 sm:grid-cols-2"><FinanceField label={t("Standard deposit (%)")}>{number("rate",rule.rate,MAX_BOOKING_DEPOSIT_PERCENT,true)}</FinanceField><div/>
+ <FinanceField label={t("Higher rate above service price (USD)")}>{number("threshold_amount",rule.threshold_amount,10000)}</FinanceField><FinanceField label={t("Higher-price deposit (%)")}>{number("threshold_rate",rule.threshold_rate,MAX_BOOKING_DEPOSIT_PERCENT)}</FinanceField>
+ <FinanceField label={t("Repeat incidents at this business")}>{number("repeat_incident_count",rule.repeat_incident_count,100,false,"1")}</FinanceField><FinanceField label={t("Repeat-incident deposit (%)")}>{number("repeat_incident_rate",rule.repeat_incident_rate,MAX_BOOKING_DEPOSIT_PERCENT)}</FinanceField><FinanceField label={t("Incident lookback (days)")}>{number("incident_window_days",rule.incident_window_days,730,true,"1")}</FinanceField></fieldset>
  <p className="text-xs gc-text-secondary">{t("Leave both fields in a pair blank to disable that rule. The highest applicable rate is used once. Only confirmed incidents at your business count; disputed incidents are excluded.")}</p><button className={financePrimary} disabled={busy} type="submit">{t(busy?"Saving…":"Save deposit settings")}</button></form>:null}</section>;
 }

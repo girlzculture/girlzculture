@@ -24,7 +24,9 @@ export function bookingMoneyCohort(salonId: string, data: BusinessFinanceData, p
   const day = bookingMoneyDay(row.appointment_datetime, period.timeZone);
   return day >= period.from && day <= period.to;
  })());
- if (rows.length > 2000) throw Error("BOOKING_MONEY_RANGE_TOO_LARGE");
+ // A busy multi-professional business can exceed 2,000 visits in a year.
+ // The server still bounds the full ledger and reads metadata in authorized chunks.
+ if (rows.length > 10000) throw Error("BOOKING_MONEY_RANGE_TOO_LARGE");
  return rows;
 }
 const metrics = () => ({ count: 0, agreed_cents: 0, verified_platform_receipts_cents: 0, verified_platform_refunds_cents: 0, business_recorded_receipts_cents: 0, business_recorded_refunds_cents: 0, net_recorded_receipts_cents: 0 });
@@ -57,7 +59,9 @@ export function businessBookingMoney(salonId: string, books: OperatingBooks, dat
  const categories = { completed: metrics(), cancelled: metrics(), no_show: metrics(), other: metrics() };
  const sales = new Map(books.sales.map(sale => [sale.id, sale]));
  const receipts = new Map<string, typeof books.payments>();
+ const allReceipts = new Map<string, typeof books.payments>();
  for (const payment of books.payments) {
+  const all = allReceipts.get(payment.sale_id) || []; all.push(payment); allReceipts.set(payment.sale_id, all);
   if (!payment.sale_id.startsWith("booking:") || bookingMoneyDay(payment.occurred_at, period.timeZone) > period.to) continue;
   const rows = receipts.get(payment.sale_id) || []; rows.push(payment); receipts.set(payment.sale_id, rows);
  }
@@ -66,7 +70,7 @@ export function businessBookingMoney(salonId: string, books: OperatingBooks, dat
  for (const [id, row] of supplied) {
   const sale = sales.get(`booking:${id}`);
   if (!sale || sale.kind !== "service" || sale.agreed_cents !== moneyCents(row.estimated_total)) throw Error("BOOKING_MONEY_CHANGED");
-  const canonicalPayments = books.payments.filter(payment => payment.sale_id === sale.id);
+  const canonicalPayments = allReceipts.get(sale.id) || [];
   const original = wanted.get(id)!;
   // Private sample bookings have recorded simulated receipts, never provider
   // charges. Keep every live booking subject to the existing evidence guards.

@@ -23,3 +23,16 @@ test('malformed and contradictory deposit rules fail closed',()=>{
  assert.throws(()=>bookingDepositTerms(100,rule,-1),/DEPOSIT_PRICE_INVALID/);
  assert.throws(()=>protectedBookingDiscount(100,101,20),/BOOKING_PRICE_INVALID/);
 });
+
+test('zero, business-set thirty percent and the eighty percent maximum keep exact cents and prior snapshots',()=>{
+ const previous=bookingDepositTerms(99.99,defaultDepositRule(30));
+ for(const [rate,cents] of [[0,0],[30,3000],[79.99,7998],[80,7999]]){
+  const terms=bookingDepositTerms(99.99,defaultDepositRule(rate));
+  assert.equal(Math.round(terms.deposit*100),cents);
+  const price=protectedBookingDiscount(99.99,terms.deposit,0);
+  assert.equal(Math.round((price.deposit+price.balance)*100),9999);
+ }
+ assert.equal(previous.deposit,30);assert.equal(previous.rule.rate,30);
+ for(const rate of [80.01,100,Infinity,-.01])assert.throws(()=>defaultDepositRule(rate),/DEPOSIT_RULE_INVALID/);
+ for(const patch of [{threshold_rate:80.01},{repeat_incident_rate:80.01}])assert.throws(()=>validateDepositRule({...rule,...patch}),/DEPOSIT_RULE_INVALID/);
+});
