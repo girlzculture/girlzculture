@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Culture House">
-  <rect width="512" height="512" rx="48" fill="#043f49"/>
-  <rect x="28" y="28" width="456" height="456" rx="26" fill="none" stroke="#e9ddc6" stroke-width="2"/>
-  <text x="256" y="255" text-anchor="middle" font-family="Georgia,serif" font-size="150" letter-spacing="-9" fill="#fffaf0">CH</text>
-  <path d="M128 293H384" stroke="#d4b884" stroke-width="2"/>
-  <text x="256" y="345" text-anchor="middle" font-family="Georgia,serif" font-size="29" letter-spacing="5" fill="#fffaf0">CULTURE HOUSE</text>
-  <text x="256" y="385" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" letter-spacing="4" fill="#e9ddc6">HAIR &amp; CARE</text>
+  <rect width="512" height="512" rx="48" fill="#006b88"/>
+  <rect x="28" y="28" width="456" height="456" rx="26" fill="none" stroke="#e6eaed" stroke-width="2"/>
+  <text x="256" y="255" text-anchor="middle" font-family="Georgia,serif" font-size="150" letter-spacing="-9" fill="#ffffff">CH</text>
+  <path d="M128 293H384" stroke="#e6eaed" stroke-width="2"/>
+  <text x="256" y="345" text-anchor="middle" font-family="Georgia,serif" font-size="29" letter-spacing="5" fill="#ffffff">CULTURE HOUSE</text>
+  <text x="256" y="385" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" letter-spacing="4" fill="#e6eaed">HAIR &amp; CARE</text>
 </svg>
