@@ -1,5 +1,17 @@
 // Interface copy only. Applicant answers and uploaded filenames stay unchanged.
 export const MASTER_BUILD_COPY = [
+["Plans for businesses", "Formules pour les entreprises", "Planes para negocios", "商家套餐"],
+["Grow on your terms", "Développez votre activité à votre rythme", "Crece a tu manera", "按您的节奏发展业务"],
+["Choose a plan during your application. You will not be charged until your business is approved and you subscribe", "Choisissez une formule lors de votre candidature. Aucun montant ne sera facturé avant l’approbation de votre entreprise et votre souscription", "Elige un plan al presentar tu solicitud. No se te cobrará hasta que se apruebe tu negocio y te suscribas", "申请时选择套餐。只有在您的商家获批并订阅后，才会收取费用"],
+["Choose", "Choisir", "Elegir", "选择"],
+["Full comparison", "Comparaison complète", "Comparación completa", "完整比较"],
+["Compare every plan benefit", "Comparez les avantages de chaque formule", "Compara las ventajas de cada plan", "比较各套餐的全部权益"],
+["Every business receives the same standard marketplace visibility. Advertising benefits are separate from organic search results.", "Chaque entreprise bénéficie de la même visibilité standard sur la plateforme. Les avantages publicitaires sont distincts des résultats de recherche naturels.", "Todos los negocios reciben la misma visibilidad estándar en la plataforma. Las ventajas publicitarias son independientes de los resultados de búsqueda orgánicos.", "所有商家在平台上享有相同的标准曝光机会。广告权益与自然搜索结果分开。"],
+["Swipe left and right to compare all five plans.", "Balayez vers la gauche ou la droite pour comparer les cinq formules.", "Desliza a izquierda y derecha para comparar los cinco planes.", "左右滑动以比较全部五种套餐。"],
+["Scrollable plan comparison", "Comparaison des formules avec défilement", "Comparación de planes desplazable", "可滚动的套餐比较"],
+["Solo, Solo Pro, Starter, Growth, and Premium business subscription feature comparison", "Comparaison des fonctionnalités des abonnements professionnels Solo, Solo Pro, Starter, Growth et Premium", "Comparación de funciones de las suscripciones empresariales Solo, Solo Pro, Starter, Growth y Premium", "Solo、Solo Pro、Starter、Growth 和 Premium 商家订阅功能比较"],
+["No payment at application", "Aucun paiement lors de la candidature", "Sin pago al solicitar", "申请时无需付款"],
+["Apply first. Application and approval are available. New-plan billing activation is not yet verified; no charge is made by applying.", "Commencez par votre candidature. Les candidatures et leur approbation sont disponibles. La facturation des nouvelles formules n’est pas encore vérifiée ; déposer une candidature ne génère aucun frais.", "Presenta primero tu solicitud. La solicitud y la aprobación están disponibles. La activación de la facturación de los nuevos planes aún no está verificada; no se cobra por solicitar.", "请先提交申请。目前可提交和审核申请。新套餐的账单激活尚未验证；提交申请不收费。"],
 ["Bookable calendars", "Calendriers réservables", "Calendarios de reservas", "可预约日历"],
 ["Business owner navigation", "Navigation du propriétaire", "Navegación del propietario", "商家所有者导航"],
 ["Business-specific scheduling controls, hours, and closure dates remain in Availability & Calendar so customers always receive the same authoritative booking rules.", "Les horaires et fermetures se gèrent dans Disponibilités et calendrier pour que les clients disposent toujours des règles de réservation en vigueur.", "Los horarios y cierres se gestionan en Disponibilidad y calendario para que los clientes siempre reciban las reglas de reserva vigentes.", "营业时间、休息日和排期设置均在可用时间与日历中管理，确保客户始终获得一致的有效预约规则。"],

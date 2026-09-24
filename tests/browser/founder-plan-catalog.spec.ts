@@ -1,6 +1,28 @@
 import { expect, test } from "@playwright/test";
 
 import expected from "../fixtures/master-build-plan-catalog.json";
+
+for (const [locale, width, height, heading, choose, disclaimer] of [
+  ['en', 1440, 900, 'Grow on your terms.', 'Choose', 'New-plan billing activation is not yet verified'],
+  ['fr', 390, 844, 'Développez votre activité à votre rythme.', 'Choisir', 'La facturation des nouvelles formules n’est pas encore vérifiée'],
+  ['es', 768, 900, 'Crece a tu manera.', 'Elegir', 'La activación de la facturación de los nuevos planes aún no está verificada'],
+  ['zh-CN', 844, 390, '按您的节奏发展业务.', '选择', '新套餐的账单激活尚未验证'],
+] as const) {
+  test(`plans page publishes localized pricing and honest billing in ${locale}`, async ({page}) => {
+    await page.setViewportSize({width, height});
+    await page.goto(`/plans?lang=${locale}`);
+    await expect(page.getByRole('heading', {level: 1})).toHaveText(heading);
+    for (const plan of expected.plans) {
+      const link = page.locator(`article a[href="/business/signup?plan=${plan.key}"]`);
+      await expect(link).toContainText(choose);
+      await expect(link.locator('..')).toContainText(`$${plan.price}`);
+    }
+    await expect(page.locator('main')).toContainText(disclaimer);
+    await expect(page.getByRole('rowheader')).toHaveCount(23);
+    if (locale !== 'en') await expect(page.locator('main')).not.toContainText(/Plans for businesses|Choose a plan during|Full comparison|Compare every plan benefit|Every business receives the same|Swipe left and right|No payment at application|New-plan billing activation/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  });
+}
 const comparison = expected.rows.map(([, label, ...values]) => [label, ...values.map(value => value === true ? "Included" : value)]);
 
 test("plans page publishes the exact founder-approved catalog and application links", async ({
