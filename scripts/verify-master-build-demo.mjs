@@ -10,7 +10,10 @@ const source=new URL(process.env.CLEAN_DATABASE_URL||'');
 assert.ok(['127.0.0.1','localhost','[::1]'].includes(source.hostname));
 assert.match(source.pathname,/^\/girlzculture_(?:[a-z_0-9]+)?(?:release|clean)$/);
 // Git may check out CRLF on Windows; compare the exact SQL with only line endings normalized.
-for(const name of ['seed-private-demo.sql','check-private-demo.sql','reset-private-demo.sql'])assert.ok(readFileSync('supabase/migrations/20260923064718_master_build_demo_workspace.sql','utf8').replaceAll('\r\n','\n').includes(readFileSync('supabase/demo/'+name,'utf8').replaceAll('\r\n','\n')),'Reviewed migration and canonical demo procedure diverged: '+name);
+for(const name of ['seed-private-demo.sql','check-private-demo.sql','reset-private-demo.sql']){
+ const migration=name==='seed-private-demo.sql'?'20260924050655_private_demo_catalog_resilience.sql':'20260923064718_master_build_demo_workspace.sql';
+ assert.ok(readFileSync('supabase/migrations/'+migration,'utf8').replaceAll('\r\n','\n').includes(readFileSync('supabase/demo/'+name,'utf8').replaceAll('\r\n','\n')),'Reviewed migration and canonical demo procedure diverged: '+name);
+}
 const psql=process.env.PSQL_BIN||'psql',clone='girlzculture_master_demo_'+randomUUID().replaceAll('-','');
 const control=new URL(source);control.pathname='/postgres';const target=new URL(source);target.pathname='/'+clone;
 function execute(url,sql){return spawnSync(psql,[url.toString(),'-X','-qAt','-v','ON_ERROR_STOP=1'],{input:sql,encoding:'utf8'});}
@@ -50,10 +53,20 @@ try{
  equal(run(`select public.demo_delivery_actor_ids(array['${demo}'::uuid,'${real}'::uuid])::text;`),`{${demo}}`,'push delivery suppression excludes only sample actors');
  denied(`delete from public.test_data_registry where record_type='salon' and record_id='${sid}';`,/DEMO_CLASSIFICATION_IMMUTABLE/);
  run(`delete from public.stylists where id='${stylist}';`);
- run(readFileSync('supabase/demo/seed-private-demo.sql','utf8'));
- run(readFileSync('supabase/demo/check-private-demo.sql','utf8'));
+ // Exercise the procedures installed by the migration chain, not local replacements.
+ // Reproduce the hosted Engine catalog: these historical exact labels no
+ // longer represent active choices. A private demo must not restore them.
+ run("update public.master_styles set is_active=false,archived_at=now() where name in ('Locs','Cornrows','Feed-in Braids');");
+ const catalogBefore=run("select md5(jsonb_agg(to_jsonb(m) order by id)::text) from public.master_styles m;");
+ const unseededBefore=run(`select to_jsonb(s)::text from public.salons s where id='${sid}';`);
+ denied(`begin;update public.service_groups set is_active=false where name='Locs';select public.seed_private_demo('${sid}','${demo}',current_date);commit;`,/DEMO_SERVICE_GROUP_REQUIRED/);
+ equal(run(`select to_jsonb(s)::text from public.salons s where id='${sid}';`),unseededBefore,'missing active group rolls back every profile and child write');
+ equal(run(`select count(*) from public.styles where salon_id='${sid}';`),'0','failed seed leaves no partial services');
  const expectedBookings=Number(run("select 476+least(28,2*(extract(day from current_date)::integer-1))+13+(case when extract(day from current_date)>2 then 1 else 0 end)+8;"));
  const seeded=JSON.parse(run(`select public.seed_private_demo('${sid}','${demo}',current_date);`));
+ equal(run("select md5(jsonb_agg(to_jsonb(m) order by id)::text) from public.master_styles m;"),catalogBefore,'demo seed must not change the managed platform catalog');
+ equal(run(`select count(*) from public.styles s join public.service_groups g on g.id=s.service_group_id join public.service_categories c on c.id=g.category_id where s.salon_id='${sid}' and s.master_style_id is null and s.category_id=c.id and g.is_active and g.archived_at is null and c.is_active and c.archived_at is null;`),'6','all six fictional services retain active canonical group/category references');
+ equal(run(`select count(*) from public.stylists t where salon_id='${sid}' and jsonb_array_length(specialties)>0 and not exists(select 1 from jsonb_array_elements_text(t.specialties) s(name) where not exists(select 1 from public.master_styles m join public.service_groups g on g.id=m.service_group_id where m.name=s.name and m.is_active and m.archived_at is null and g.name in ('Braids','Protective Styles','Locs','Cornrows','Twists')));`),'4','fictional hair-team specialties retain managed validation and exclude unrelated services');
  equal(seeded.bookings,expectedBookings,'fourteen months of connected bookings');
  equal(run(`select count(distinct date_trunc('month',appointment_datetime)) from public.bookings where salon_id='${sid}' and appointment_datetime<date_trunc('month',current_date)+interval '1 month';`),'14','fourteen reporting periods');
  equal(JSON.parse(run(`select public.seed_private_demo('${sid}','${demo}',current_date);`)).already_seeded,true,'seed is idempotent and preserves edits');
@@ -104,13 +117,19 @@ try{
  equal(JSON.parse(run(`select public.confirm_gc_assistant_request('${archiveRequest}','${sid}','${demo}','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');`)).replayed,true,'same confirmation is idempotent');
  equal(run(`select count(*) from public.record_management_events where record_id='${archived}' and action='Archived';`),'1','single authoritative archive audit');
  equal(run(`select count(*) from public.bookings where salon_id='${sid}';`),String(expectedBookings),'archive does not remove bookings');
- run(readFileSync('supabase/demo/reset-private-demo.sql','utf8'));
+ // Reproduce the current Engine group arrangement on reset as well as the
+ // historical clean-chain arrangement above. No public master name is required.
+ run("insert into public.service_groups(category_id,name) select category_id,'Braids' from public.service_groups where name='Protective Styles' on conflict(category_id,name)do update set is_active=true,archived_at=null;insert into public.service_groups(category_id,name) select category_id,'Cornrows' from public.service_groups where name='Braids' and is_active on conflict(category_id,name)do update set is_active=true,archived_at=null;update public.service_groups set is_active=false,archived_at=now() where name='Protective Styles';");
+ const groupCatalogBefore=run("select md5(jsonb_agg(to_jsonb(g) order by id)::text) from public.service_groups g;");
  const stamp=run(`select seeded_at from gc_private.demo_workspaces where salon_id='${sid}';`);
  denied(`select public.reset_private_demo('${realSid}','${real}',now(),'RESET PRIVATE DEMO');`,/DEMO_WORKSPACE_REQUIRED/);
  denied(`select public.reset_private_demo('${sid}','${demo}',now(),'RESET PRIVATE DEMO');`,/DEMO_RESET_CONFIRMATION_REQUIRED/);
  denied(`begin;set local role authenticated;select public.reset_private_demo('${sid}','${demo}','${stamp}','RESET PRIVATE DEMO');rollback;`,/permission denied/);
  const reset=JSON.parse(run(`select public.reset_private_demo('${sid}','${demo}','${stamp}','RESET PRIVATE DEMO');`));
  equal(reset.reconciled,true,'explicit reset reconciles atomically');equal(reset.bookings,expectedBookings,'reset does not double records');
+ equal(run("select md5(jsonb_agg(to_jsonb(g) order by id)::text) from public.service_groups g;"),groupCatalogBefore,'reset preserves the Engine group catalog');
+ equal(run("select md5(jsonb_agg(to_jsonb(m) order by id)::text) from public.master_styles m;"),catalogBefore,'reset never restores withdrawn public styles');
+ equal(run(`select g.name from public.styles s join public.service_groups g on g.id=s.service_group_id where s.salon_id='${sid}' and s.name='Cornrows';`),'Cornrows','current specific group wins over the historical braiding fallback');
  equal(run('select row_to_json(m) from public.platform_admin_overview_metrics() m;'),before,'reset leaves real business and platform totals unchanged');
  equal(run(`select count(*) from auth.users where id='${demo}' and raw_app_meta_data->>'gc_demo'='true';`),'1','reset preserves owner login identity');
  denied(`select public.reset_private_demo('${sid}','${demo}','${stamp}','RESET PRIVATE DEMO');`,/DEMO_RESET_CONFIRMATION_REQUIRED/);
