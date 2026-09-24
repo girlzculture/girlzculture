@@ -1,3 +1,4 @@
+import {CategoryOpeningMessage} from "@/components/business/CategoryComingSoonContent";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
 
 export default async function BusinessWaitlistPage({ searchParams }: { searchParams: Promise<{ category?: string | string[] }> }) {
   const [query, content] = await Promise.all([searchParams, getBusinessSignupContent()]);
-  const category = typeof query.category === "string" ? content?.categories.find(item => item.id === query.category && item.visible) : null;
+  const category = typeof query.category === "string" ? content?.categories.find(item => item.id === query.category && item.id !== "other" && item.visible) : null;
   if (!content || !category) redirect("/business/signup");
   if (category.mode === "live_application") redirect("/business/signup");
   const copy = content.waitlist;
@@ -28,7 +29,7 @@ export default async function BusinessWaitlistPage({ searchParams }: { searchPar
         <Link href="/business/signup" className="business-back-link">All business types</Link>
         {copy.eyebrow ? <p className="business-waitlist-eyebrow">{copy.eyebrow}</p> : null}
         <h1 id="business-waitlist-title">{interpolateBusinessSignupTemplate(category.waitlist?.heading ?? copy.heading, category.name)}</h1>
-        <p>{interpolateBusinessSignupTemplate(category.waitlist?.description ?? copy.description, category.name)}</p>
+        <p><CategoryOpeningMessage name={category.name}/></p>
         <BusinessWaitlistForm category={category} copy={copy} />
       </section>
     </div>

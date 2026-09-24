@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
 const workerSource = readFileSync("public/sw.js", "utf8");
+const offlineShell = readFileSync("public/offline.html", "utf8");
+assert.doesNotMatch(offlineShell, /<script|_next|<link[^>]+rel=["']stylesheet/i, "offline fallback must not need runtime chunks or network styles");
+assert.match(offlineShell, /<h1>You’re offline<\/h1>/);
 const nextConfig = readFileSync("next.config.ts", "utf8");
 
 for (const path of ["/api", "/admin", "/account", "/salon/dashboard", "/salon/apply", "/business"]) {
@@ -26,7 +29,7 @@ for (const origin of [
 assert.doesNotMatch(nextConfig, /script-src[^`\n]*\s\*/, "script-src must not use an unrestricted wildcard");
 
 const handlers = {};
-const cacheEntries = new Map([["https://example.test/offline", new Response("offline")]]);
+const cacheEntries = new Map([["https://example.test/offline.html", new Response("offline")]]);
 let fetchFails = false;
 let cacheWriteCount = 0;
 const cache = {
@@ -88,5 +91,12 @@ for (const path of ["/business/signup", "/business/signup/hair", "/business/logi
 fetchFails = true;
 const offlineResponse = await dispatchFetch("/salons");
 assert.equal(await offlineResponse.text(), "offline", "failed public navigation should use the safe offline fallback");
+
+// Installation deliberately tolerates failed precache requests. The offline
+// journey must still work if /offline.html was the resource that could not load.
+cacheEntries.delete("https://example.test/offline.html");
+const uncachedOffline = await dispatchFetch("/uncached-public-offline-check");
+assert.match(uncachedOffline.headers.get("Content-Type"), /text\/html/);
+assert.match(await uncachedOffline.text(), /<h1>You’re offline<\/h1>/);
 
 console.log("Verified service-worker response cloning, private-route bypasses, offline containment, cache scoping, and CSP allowlists.");

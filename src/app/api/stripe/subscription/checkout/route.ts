@@ -1,3 +1,4 @@
+import {demoExternalActionResponse} from '@/lib/demoWorkspace';
 import { routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { parseOfficialPlan } from "@/lib/plans";
 import { cleanText, enforceRateLimit, errorResponse, RateLimitError } from "@/lib/requestSecurity";
@@ -272,6 +273,7 @@ async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request, "subscription-checkout", 8, 10 * 60_000);
     const { admin, user, salon, isOwner } = await requireSalonOwner(request);
+    const demoBlocked=demoExternalActionResponse(salon);if(demoBlocked)return demoBlocked;
     monitoringAdmin = admin;
     salonId = salon.id;
     actorId = user.id;

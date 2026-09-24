@@ -98,12 +98,12 @@ export const DEFAULT_BUSINESS_SIGNUP_CONTENT: BusinessSignupContent = {
   categories: BUSINESS_CATEGORIES.map((category, order) => ({
     id: category.slug, name: category.name,
     image: image(`/images/business/${categoryAssets[category.photo]}-service.avif`),
-    visible: true, order, mode: category.live ? "live_application" : "waitlist",
+    visible: category.slug !== "other", order, mode: category.live ? "live_application" : "waitlist",
   })),
   waitlist: {
     eyebrow: "EARLY ACCESS",
     heading: "Join the {businessType} Waitlist",
-    description: "We’re opening access to more beauty and wellness businesses in stages. Join the waitlist and we’ll reach out when onboarding opens for {businessType} businesses in your area.",
+    description: "We're opening access to more beauty and wellness businesses in your area soon. Join the waitlist and we'll reach out when onboarding opens for {businessType} businesses in your area.",
     submitLabel: "Join the Waitlist",
     successHeading: "You’re on the waitlist",
     successDescription: "We’ve received your interest in {businessType}. We’ll email you when this category opens in your area.",
@@ -314,11 +314,11 @@ export function decodeBusinessSignupContent(labels: unknown): BusinessSignupCont
 }
 
 export function visibleBusinessCategories(content: BusinessSignupContent) {
-  return content.categories.filter(category => category.visible).sort((left, right) => left.order - right.order || BUSINESS_CATEGORIES.findIndex(category => category.slug === left.id) - BUSINESS_CATEGORIES.findIndex(category => category.slug === right.id));
+  return content.categories.filter(category => category.visible && category.id !== "other").sort((left, right) => left.order - right.order || BUSINESS_CATEGORIES.findIndex(category => category.slug === left.id) - BUSINESS_CATEGORIES.findIndex(category => category.slug === right.id));
 }
 
 export function businessSignupCategoryHref(category: BusinessSignupCategory, explicitPlan?: unknown): string | null {
-  if (!BUSINESS_CATEGORIES.some(item => item.slug === category.id)) return null;
+  if (category.id === "other" || !BUSINESS_CATEGORIES.some(item => item.slug === category.id)) return null;
   if (category.mode === "waitlist") return `/business/waitlist?category=${category.id}`;
   if (category.mode !== "live_application") return null;
   const target = BUSINESS_SIGNUP_LIVE_APPLICATIONS[category.id];

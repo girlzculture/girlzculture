@@ -48,7 +48,7 @@ assert.doesNotMatch(password, /Customer login|Salon login|Admin login/);
 assert.doesNotMatch(password, /works for customer/i);
 assert.match(
   application,
-  /Number of stylists[\s\S]*min=\{1\}[\s\S]*max=\{500\}/,
+  /form\.operator_type!=="solo"\?input\("stylist_count","Number of professionals",\{type:"number",min:1,max:500\}\)/,
 );
 assert.match(submitted, /within 2–4 business days/);
 

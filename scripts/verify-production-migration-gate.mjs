@@ -8,6 +8,8 @@ export const MIGRATION_CONFIRMATION = "APPLY REVIEWED MIGRATIONS";
 export const REQUIRED_CI_STEPS = [
   "Require secure full and production dependency trees",
   "Execute the complete migration chain from an empty database",
+  "Verify Master Build contract and behavior regressions",
+  "Verify Master Build representative upgrade and demo isolation",
   "Exercise focused Workstream 1 accessibility and contrast workflows",
   "Exercise responsive and affected browser workflows",
 ];

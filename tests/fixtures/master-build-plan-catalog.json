@@ -1,0 +1,238 @@
+{
+  "plans": [
+    {
+      "name": "Solo",
+      "key": "solo",
+      "price": 69
+    },
+    {
+      "name": "Solo Pro",
+      "key": "solo-pro",
+      "price": 99
+    },
+    {
+      "name": "Starter",
+      "key": "starter",
+      "price": 99
+    },
+    {
+      "name": "Growth",
+      "key": "growth",
+      "price": 149
+    },
+    {
+      "name": "Premium",
+      "key": "premium",
+      "price": 199
+    }
+  ],
+  "rows": [
+    [
+      "calendars",
+      "Bookable calendars",
+      "1",
+      "1",
+      "One per professional",
+      "One per professional",
+      "One per professional"
+    ],
+    [
+      "team-payouts",
+      "Team payouts",
+      "Not included",
+      "Not included",
+      true,
+      true,
+      true
+    ],
+    [
+      "assistant",
+      "Full GC Assistant",
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    [
+      "finance",
+      "Finances and accounting",
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    [
+      "client-cards",
+      "Client and formula cards",
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    [
+      "professional-salon-profile",
+      "Professional business profile",
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    [
+      "unlimited-stylist-profiles",
+      "Team profiles and permissions",
+      "Not included",
+      "Not included",
+      true,
+      true,
+      true
+    ],
+    [
+      "unlimited-appointment-bookings",
+      "Unlimited appointment bookings",
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    [
+      "appointment-commission",
+      "0% Girlz Culture appointment commission",
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    [
+      "customer-deposits",
+      "Customer deposits",
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    [
+      "booking-chat",
+      "Booking-specific customer chat",
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    [
+      "appointment-reminders",
+      "Appointment reminders",
+      "Standard",
+      "Customizable",
+      "Standard",
+      "Customizable",
+      "Advanced"
+    ],
+    [
+      "marketplace-visibility",
+      "Marketplace visibility",
+      "Standard",
+      "Standard",
+      "Standard",
+      "Standard",
+      "Standard"
+    ],
+    [
+      "monthly-reporting",
+      "Monthly reporting",
+      "Basic",
+      "Detailed",
+      "Basic",
+      "Detailed",
+      "Advanced"
+    ],
+    [
+      "booking-source-tracking",
+      "Booking-source tracking",
+      "Summary",
+      "Full",
+      "Summary",
+      "Full",
+      "Full + comparisons"
+    ],
+    [
+      "waitlist",
+      "Waitlist",
+      "Manual",
+      "Automated",
+      "Manual",
+      "Automated",
+      "Automated + targeted"
+    ],
+    [
+      "rebooking-reminders",
+      "Rebooking reminders",
+      "Manual",
+      "Automatic",
+      "Manual",
+      "Automatic",
+      "Automatic + segmented"
+    ],
+    [
+      "customer-promotions",
+      "Customer promotions",
+      "1 active",
+      "Up to 3",
+      "1 active",
+      "Up to 5",
+      "Unlimited, fair use"
+    ],
+    [
+      "product-listings",
+      "Product listings",
+      "10",
+      "30",
+      "10",
+      "30",
+      "Unlimited, fair use"
+    ],
+    [
+      "google-business-profile-help",
+      "Google Business Profile help",
+      "Guide",
+      "Assisted setup",
+      "Guide",
+      "Assisted setup",
+      "Assisted setup + review"
+    ],
+    [
+      "advertising-discount",
+      "Advertising discount",
+      "—",
+      "5%",
+      "—",
+      "5%",
+      "15%"
+    ],
+    [
+      "advertising-credit",
+      "Advertising credit",
+      "—",
+      "$10 quarterly",
+      "—",
+      "$10 quarterly",
+      "$10 monthly"
+    ],
+    [
+      "advertising-early-access",
+      "Early access to advertising spaces",
+      "—",
+      "—",
+      "—",
+      "—",
+      "48 hours early"
+    ]
+  ]
+}

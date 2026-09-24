@@ -44,7 +44,7 @@ async function GETHandler(request: Request) {
     if (customerQuery.length >= 2) {
       const { data, error } = await admin
         .from("customers")
-        .select("id,name,email,phone,status,created_at")
+        .select("id,name,email,phone,status,created_at").eq("is_demo",false)
         .or(`name.ilike.%${customerQuery}%,email.ilike.%${customerQuery}%,phone.ilike.%${customerQuery}%`)
         .order("name", { ascending: true })
         .limit(20);
@@ -56,18 +56,18 @@ async function GETHandler(request: Request) {
       const [salonResult, styleResult, stylistResult] = await Promise.all([
         admin
           .from("salons")
-          .select("id,name,slug,time_zone,status,email,phone,address_street,address_line2,address_city,address_state,address_zip,stripe_account_id")
+          .select("id,name,slug,time_zone,status,email,phone,address_street,address_line2,address_city,address_state,address_zip,stripe_account_id").eq("is_demo",false)
           .eq("id", salonId)
           .maybeSingle(),
         admin
           .from("styles")
-          .select("*")
+          .select("*").eq("is_demo",false)
           .eq("salon_id", salonId)
           .is("archived_at", null)
           .order("name", { ascending: true }),
         admin
           .from("stylists")
-          .select("*")
+          .select("*").eq("is_demo",false)
           .eq("salon_id", salonId)
           .is("archived_at", null)
           .order("name", { ascending: true }),
@@ -134,7 +134,7 @@ async function POSTHandler(request: Request) {
     if (customerId) {
       const customer = await admin
         .from("customers")
-        .select("id,name,email,phone")
+        .select("id,name,email,phone").eq("is_demo",false)
         .eq("id", customerId)
         .maybeSingle();
       if (customer.error) throw customer.error;
@@ -149,12 +149,12 @@ async function POSTHandler(request: Request) {
     const [salonResult, styleResult] = await Promise.all([
       admin
         .from("salons")
-        .select("id,name,slug,time_zone,status,stripe_account_id")
+        .select("id,name,slug,time_zone,status,stripe_account_id").eq("is_demo",false)
         .eq("id", salonId)
         .maybeSingle(),
       admin
         .from("styles")
-        .select("*")
+        .select("*").eq("is_demo",false)
         .eq("id", styleId)
         .eq("salon_id", salonId)
         .is("archived_at", null)
@@ -170,7 +170,7 @@ async function POSTHandler(request: Request) {
     if (requestedStylistId) {
       const stylist = await admin
         .from("stylists")
-        .select("id")
+        .select("id").eq("is_demo",false)
         .eq("id", requestedStylistId)
         .eq("salon_id", salonId)
         .eq("is_active", true)

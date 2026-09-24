@@ -68,7 +68,7 @@ function fixture(options = {}) {
         eq(key, value) { filters.push(['eq', key, value]); return query; },
         in(key, value) { filters.push(['in', key, value]); return query; },
         is(key, value) { filters.push(['is', key, value]); return query; },
-        order() { return query; }, limit() { return query; },
+        abortSignal() { return query; }, order() { return query; }, limit() { return query; },
         maybeSingle() { single = true; return query; },
         update(value) { mutation = value; return query; },
         then(resolve, reject) {
@@ -89,7 +89,7 @@ function fixture(options = {}) {
               assert.ok(filters.some(f => f[0] === 'eq' && f[1] === 'user_id' && f[2] === actor));
               rows = assigned ? [{ salon_id: business, user_id: actor, stylist_id: assigned, status: 'Active' }] : [];
             } else if (table === 'ai_automation_features') rows = [{ feature_key: 'gc_owner_assistant', is_enabled: true, provider_key: 'openai', model_key: 'fixture-model', timeout_ms: 1000 }];
-            else if (table === 'master_styles') rows = [];
+            else if (table === 'master_styles' || table === 'engine_settings') rows = [];
             else if (table === 'ai_usage_events') rows = [];
             else throw Error(`Unexpected table ${table}`);
             rows = rows.filter(row => filters.every(([op, key, value]) => op === 'eq' ? row[key] === value : op === 'in' ? value.includes(row[key]) : op === 'is' ? (row[key] ?? null) === value : true));

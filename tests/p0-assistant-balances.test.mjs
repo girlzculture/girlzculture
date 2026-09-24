@@ -1,3 +1,4 @@
+import { migratedAssistantTools } from './helpers/assistant-migration-tools.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
 import {loadNodeTypescript} from './helpers/load-node-typescript.mjs';
 import {typescriptLoader} from './helpers/load-typescript.mjs';
@@ -8,7 +9,7 @@ function fixture(sales,payments=[],evidence={}){const books={sales,payments,expe
 test('cumulative older balances preserve anonymous/future distinction, exact totals and bounded own record links',async()=>{const result=await fixture([...Array.from({length:15},(_,i)=>sale(i+10)),sale(90,{status:'pending',occurred_at:'2026-09-25T12:00:00Z',client_name:null})])();assert.equal(result.completed_count,15);assert.equal(result.completed.length,12);assert.equal(result.completed_unpaid_cents,150000);assert.equal(result.pending_count,1);assert.equal(result.pending_unpaid_cents,10000);assert.equal(result.pending[0].client_name,null);assert.equal(result.as_of_day,'2026-09-18');const url=new URL(result.completed[0].href,'https://fixture.invalid');assert.equal(url.pathname,'/salon/dashboard/earnings');assert.equal(url.searchParams.get('finance_record'),result.completed[0].record);assert.equal(url.searchParams.get('finance_balance'),'unpaid');assert.doesNotMatch(JSON.stringify(result),/client_id|provider_id|email|phone/);});
 test('a verified recorded refund does not reopen discharged customer debt',async()=>{const s=sale(10);const receipt={id:'receipt:own',salon_id:business,sale_id:s.id,occurred_at:'2026-09-15T12:00:00Z',stage:'full',method:'cash',amount_cents:10000,original_payment_id:null};const result=await fixture([s],[receipt,{...receipt,id:'refund:own',stage:'refund',amount_cents:2000,original_payment_id:receipt.id}])();assert.equal(result.completed_count,0);assert.equal(result.completed_unpaid_cents,0);});
 for(const key of ['unverified_deposit_records','unverified_product_payments','unverified_refund_records'])test(`${key} produces unavailable balances, never zero or a false debt claim`,async()=>{const result=await fixture([sale(10)],[],{[key]:1})();assert.equal(result.available,false);assert.equal(result.completed_unpaid_cents,null);assert.equal(result.completed_count,null);assert.deepEqual(result.completed,[]);assert.deepEqual(result.pending,[]);const p=typescriptLoader(process.cwd())('src/lib/gcAssistantPresentation.ts').presentAssistantResult('get_outstanding_balances',result,'en');assert.match(p.message,/verification is incomplete/);assert.doesNotMatch(p.message,/\$0|Client 10/);});
-test('179 and180 preserve their exact tool deltas;185 preserves settings and186 matches the current assistant',()=>{
+test('179 and180 preserve their exact tool deltas;185 preserves settings and the full migration chain matches the current assistant',()=>{
  const previous=readFileSync('supabase/migrations/20260919052000_assistant_manual_service_receipts.sql','utf8');
  const balances=readFileSync('supabase/migrations/20260919063800_assistant_outstanding_balances.sql','utf8');
  const current=readFileSync('supabase/migrations/20260919084221_assistant_booking_reschedule.sql','utf8');
@@ -20,7 +21,7 @@ test('179 and180 preserve their exact tool deltas;185 preserves settings and186 
  assert.deepEqual(new Set(list(settings)),new Set([...list(current),'get_business_settings']));
  const money=readFileSync('supabase/migrations/20260919143452_assistant_authoritative_money_reads.sql','utf8');
  assert.deepEqual(new Set(list(money)),new Set([...list(settings),'calculate_service_selection','get_booking_price_details']));
- assert.deepEqual(new Set(list(money)),new Set(Object.keys(assistant.ASSISTANT_TOOLS)));
+ assert.deepEqual(migratedAssistantTools(),new Set(Object.keys(assistant.ASSISTANT_TOOLS)));
  assert.equal(assistant.ASSISTANT_TOOLS.get_outstanding_balances.risk,1);
  assert.doesNotMatch(balances,/grant|create table|delete from|insert into/i);
 });

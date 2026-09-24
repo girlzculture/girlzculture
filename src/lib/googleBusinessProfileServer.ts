@@ -1,3 +1,4 @@
+import {demoExternalActionResponse} from "@/lib/demoWorkspace";
 import "server-only";
 import {getSupabaseAdmin,requireSalonOwner} from "@/lib/supabaseAdmin";
 import {assertGoogleAccess,googleProfileConfig,GoogleProfileError,GoogleProfileProvider,googleFingerprint,googleManagedFields,googleAuthorization,sealGoogleSecret,openGoogleSecret,verifyGoogleState,googleAccountId,googleLocationId,type GoogleTokens,type GoogleLocation,type GoogleProfileConfig} from "@/lib/googleBusinessProfileCore";
@@ -114,6 +115,7 @@ export async function googleBusinessProfileRequest(request:Request){
  let c:Context|undefined;
  try{
   c=await requireSalonOwner(request);if(!c.isOwner)throw new GoogleProfileError("GOOGLE_ACCESS_DENIED",403);
+  if(c.salon.is_demo===true)return request.method==="GET"?Response.json({available:false,status:"deferred",reason:"DEMO_EXTERNAL_ACTION_DISABLED"},{headers}):demoExternalActionResponse(c.salon)!;
   enforceRateLimit(request,`google-business:${c.user.id}`,30,60_000);
   if(new URL(request.url).searchParams.size)throw new GoogleProfileError("GOOGLE_INVALID_INPUT",400);
   const config=googleProfileConfig();let available=false;

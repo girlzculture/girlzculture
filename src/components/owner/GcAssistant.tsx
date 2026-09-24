@@ -1,4 +1,14 @@
 "use client";
+import AssistantFinanceReport from './AssistantFinanceReport';
+import AssistantMarketingPreview from "./AssistantMarketingPreview";
+import {assistantMarketingCopy} from "@/i18n/assistant-marketing-copy";
+import AssistantPhotoUpload from './AssistantPhotoUpload';
+import AssistantTeamPreview from './AssistantTeamPreview';
+import AssistantControlsPreview from "@/components/owner/AssistantControlsPreview";
+import {isCatalogTool} from "@/lib/assistantCatalog";
+import AssistantCatalogPreview from "./AssistantCatalogPreview";
+import AssistantOperationPreview from "@/components/owner/AssistantOperationPreview";
+import type {AppointmentAlternative} from "@/lib/assistantAppointmentAlternatives";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -8,6 +18,8 @@ import AssistantDictation from "@/components/owner/AssistantDictation";
 import AssistantSpeech from "@/components/owner/AssistantSpeech";
 import AssistantReschedulePreview from "@/components/owner/AssistantReschedulePreview";
 import {rescheduleAssistantCopy} from "@/i18n/assistant-reschedule-copy";
+import AssistantFinancePreview from "@/components/owner/AssistantFinancePreview";
+import {assistantFinanceCopy} from "@/i18n/assistant-finance-record-copy";
 import AssistantBalances from "@/components/owner/AssistantBalances";
 import { MEMORY_TOOLS } from "@/lib/assistantMemory";
 import { ArrowUp, Sparkles, X } from "lucide-react";
@@ -24,7 +36,8 @@ import { presentAssistantResult, presentPreparedAssistantAction } from "@/lib/gc
 
 type Row = Record<string, unknown>;
 type SavedRequest = { id: string; tool: string; arguments: Row; execution_payload: Row; before_summary: Row; result: unknown; risk_class: number; digest: string; confirmed_at: string | null };
-type Turn = { id: string; locale?: string; text?: string; request?: SavedRequest; assistant_message?: string; reply?: string; clarification?: string; navigate?: string; notice?: string; suggestions?: string[]; submission?: Row; pending?: boolean; error?: string; errorReference?: string };
+type ActiveTask={id:string;tool:string;revision:number;label:string};
+type Turn = { alternatives?:AppointmentAlternative[]; task_switch_required?:boolean; abandoned?:boolean; id: string; locale?: string; text?: string; request?: SavedRequest; assistant_message?: string; reply?: string; clarification?: string; navigate?: string; notice?: string; suggestions?: string[]; submission?: Row; pending?: boolean; error?: string; errorReference?: string };
 const AssistantOpenContext = createContext<{ open: (button: HTMLButtonElement) => void; openAppearance: (button: HTMLButtonElement) => void; expanded: boolean; docked: boolean; avatar: AssistantAvatar } | null>(null);
 const AssistantBusinessBinding = createContext<((business: AssistantBusinessContext) => void) | null>(null);
 export function useAssistantBusinessBinding() { return useContext(AssistantBusinessBinding); }
@@ -49,7 +62,7 @@ export function GcAssistantAppearanceLauncher() {
 }
 const destinations: Record<string, [string, string]> = {
   overview: ["Overview", "/salon/dashboard"], photos: ["Photos", "/salon/dashboard/photos"], professionals: ["Stylists", "/salon/dashboard/stylists"], products: ["Products", "/salon/dashboard/products"], availability: ["Availability & Calendar", "/salon/dashboard/availability"], messages: ["Messages", "/salon/dashboard/messages"], reviews: ["Reviews", "/salon/dashboard/reviews"], earnings: ["Finances", "/salon/dashboard/earnings"], promotions: ["Promotions", "/salon/dashboard/promotions"], settings: ["Settings", "/salon/dashboard/settings"],
-  profile: ["My Page", "/salon/dashboard/my-page"], services: ["Styles & Pricing", "/salon/dashboard/styles"], imports: ["Import a spreadsheet", "/salon/dashboard/styles"], policies: ["Your Business Policies", "/salon/dashboard/my-page/business-policies"], bookings: ["Bookings", "/salon/dashboard/bookings"], subscription: ["Subscription", "/salon/dashboard/subscription"], support: ["Help", "/help"], security: ["Security & sign out", "/salon/dashboard/settings/security"],
+  profile: ["My Page", "/salon/dashboard/my-page"], services: ["Services & Pricing", "/salon/dashboard/styles"], imports: ["Import a spreadsheet", "/salon/dashboard/styles"], policies: ["Your Business Policies", "/salon/dashboard/my-page/business-policies"], bookings: ["Bookings", "/salon/dashboard/bookings"], subscription: ["Subscription", "/salon/dashboard/subscription"], support: ["Help", "/help"], security: ["Security & sign out", "/salon/dashboard/settings/security"],
 };
 const fieldNames: Record<string, string> = {
   amount_cents: "Received amount", occurred_at: "Received at", method: "Payment method", client_name: "Client name (optional)",
@@ -96,16 +109,27 @@ export function Facts({ value, name = "", group = "", depth = 0, timeZone = "Ame
   return <span className="whitespace-pre-wrap break-words" data-no-translate>{String(value)}</span>;
 }
 const errors: Record<string, string> = {
+  ASSISTANT_GALLERY_FULL: "Your gallery is full. Remove a photo before adding another.",
+    ASSISTANT_BOOKING_NOT_READY: "This appointment is not ready for that action. Refresh its status and review again.",
+    ASSISTANT_CHECK_IN_REASON_REQUIRED: "Early or late check-in needs your actual reason and confirmation that it is accurate.",
+  ASSISTANT_MARKETING_REVIEW_REQUIRED: "Review all four versions and confirm permission to publish the selected photos.",
+  ASSISTANT_LOCATION_REVIEW_REQUIRED: "A verified business location is required before changing privacy or travel settings. Contact support to complete the location review.",
+  ASSISTANT_EMAIL_UNAVAILABLE: "Email delivery is unavailable. Keep automatic reminders off until support restores the connection.",
+  ASSISTANT_TASK_CHANGED: "This task changed in another session. Send your request again to use its current state.",
+  ASSISTANT_TASK_CONTEXT_FULL: "This task has reached its context limit. Review and finish it, or end it before starting another task.",
   ASSISTANT_CONVERSATION_CLOSED: "This conversation is closed. Its history is still available.",
   ASSISTANT_SERVICE_CLARIFICATION_REQUIRED: "Which service is this appointment for?", ASSISTANT_DURATION_CLARIFICATION_REQUIRED: "How many minutes will this appointment take?", ASSISTANT_PROFESSIONAL_CLARIFICATION_REQUIRED: "Which professional should take this appointment?", ASSISTANT_AVAILABILITY_CONFLICT: "That time is unavailable. Choose another time.", ASSISTANT_DRAFT_REQUIRED: "Choose a draft record. Published records remain in their existing editing workflow.", ASSISTANT_CUSTOMER_PARTICIPANT_REQUIRED: "This appointment has no customer participant in Girlz Culture. Use your existing contact channel.",
 
   ASSISTANT_ACCESS_DENIED: "You do not have permission for this action.", AUTH_REQUIRED: "Sign in to use GC Assistant.",
+  ASSISTANT_PROFESSIONAL_BOOKINGS_REMAIN: "Reassign this professional’s upcoming appointments before removing them.",
+  ASSISTANT_FINANCE_AMOUNT_EXCEEDS_REMAINING: "The amount exceeds the remaining recorded balance. Review the current record and prepare a new draft.", ASSISTANT_FINANCE_PAYMENT_UNVERIFIED: "The original payment is unverified or in test mode. Review it in Finances before recording a balance.",
   ASSISTANT_PLAN_REQUIRED: "Open Subscription to review your business access.", ASSISTANT_PREVIEW_STALE: "This information changed. Ask for a new preview before confirming.",
   ASSISTANT_PREVIEW_EXPIRED: "This preview expired. Ask for a new preview.", ASSISTANT_DEPOSIT_PLATFORM_RULE: "Deposit rates are managed separately in Finances. Remove the custom deposit amount to prepare this service.",
   ASSISTANT_RECORD_NOT_FOUND: "Choose a record from your business and try again.", ASSISTANT_RANGE_CONFLICT: "That time overlaps an existing block. Review Availability before trying again.",
   ASSISTANT_BUDGET_LIMIT: "GC Assistant has reached its protected usage allowance. Your dashboard data is safe; contact Girlz Culture support to review access.",
   ASSISTANT_RATE_LIMIT: "Too many requests were sent at once. Wait a moment, then try again.",
   ASSISTANT_COST_CONFIGURATION_REQUIRED: "GC Assistant needs its approved AI cost settings before free-form chat can run. The dashboard quick actions still work.",
+  ASSISTANT_LANGUAGE_SAVE_FAILED: "Your response language could not be saved. Retry this message; no business change was made.",
   ASSISTANT_UNAVAILABLE: "GC Assistant could not reach its AI service. The dashboard and read-only quick actions are still available.",
   PLATFORM_POLICY_CONFLICT: "These preferences conflict with platform protections. Review the payment and policy rules.",
 };
@@ -135,6 +159,8 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
   const [reviewed, setReviewed] = useState<Record<string, boolean>>({});
   const actor = useRef<string | null>(null);
   const actorGeneration = useRef(0);
+  const [activeTask,setActiveTask]=useState<ActiveTask|null>(null);
+  const taskMutation = useRef(0);
   const [rememberedIds, setRememberedIds] = useState<string[]>([]);
   const [memory, setMemory] = useState<{ request_ids: string[]; locale: string; expires_at: string } | null>(null);
   const [memoryNotice, setMemoryNotice] = useState("");
@@ -147,8 +173,8 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
   const [appearanceNotice, setAppearanceNotice] = useState("");
   const [appearanceReference, setAppearanceReference] = useState("");
   const quickActions = assistantPageActions(assistantPageFromPath(pathname), business);
-  // Active preference is actor-scoped; persistence requires explicit save and
-  // resume. A display-language change resets its default, not the account UI.
+  // The server resolves the account response preference independently of the
+  // display language. Saving it does not opt the owner into conversation memory.
   const responseLanguage = useRef<{ display: string; response: string } | null>(null);
   const bindBusiness = useCallback((next: AssistantBusinessContext) => {
     if (actor.current && actor.current !== next.userId) return;
@@ -157,7 +183,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     const accessChanged = previous && (previous.isOwner !== next.isOwner || (!next.isOwner && JSON.stringify(previous.permissions) !== JSON.stringify(next.permissions)));
     if (previous && (previous.id !== next.id || previous.userId !== next.userId || accessChanged)) {
       actorGeneration.current++; responseLanguage.current = null;
-      setTurns([]); setText(""); setReviewed({}); setNotice(""); setReference(""); setBusy(false);
+      setActiveTask(null); setTurns([]); setText(""); setReviewed({}); setNotice(""); setReference(""); setBusy(false);
       setRememberedIds([]); setMemory(null); setMemoryNotice(""); setMemoryReference(""); setMemoryOpen(false);
       setDictationSession(value => value + 1); submissionInFlight.current = false;
       setAppearanceNotice(""); setAppearanceReference(""); setAppearanceBusy(false);
@@ -174,7 +200,7 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
         responseLanguage.current = null;
         setRememberedIds([]); setMemory(null); setMemoryNotice(""); setMemoryReference(""); setMemoryOpen(false);
         submissionInFlight.current = false; followConversation.current = true;
-        setDictationSession(value => value + 1); setTurns([]); setText(""); setReviewed({}); setNotice(""); setReference(""); setBusy(false);
+        setDictationSession(value => value + 1); setActiveTask(null); setTurns([]); setText(""); setReviewed({}); setNotice(""); setReference(""); setBusy(false);
       }
       setHasSession(Boolean(session));
       if (!session) { dialog.current?.close(); setOpen(false); }
@@ -220,7 +246,25 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     const viewport = conversationViewport.current;
     if (viewport && followConversation.current) viewport.scrollTop = viewport.scrollHeight;
   }, [turns, busy, notice]);
+  useEffect(() => {
+    if (!open || !hasSession || !business?.id) return;
+    const controller = new AbortController();
+    const generation = actorGeneration.current, revision = taskMutation.current;
+    void (async () => {
+      try {
+        const session = await getSessionForScope("salon");
+        if (!session || generation !== actorGeneration.current) return;
+        const response = await fetch("/api/salon/assistant/task", {headers:{Authorization:`Bearer ${session.access_token}`},signal:controller.signal});
+        const result = await readOwnerResponse(response,"ASSISTANT_UNAVAILABLE");
+        if (!controller.signal.aborted && generation === actorGeneration.current && revision === taskMutation.current) setActiveTask(result.active_task as ActiveTask|null);
+      } catch {
+        if (!controller.signal.aborted && generation === actorGeneration.current && revision === taskMutation.current) setNotice("The unfinished task could not be loaded. Try again.");
+      }
+    })();
+    return () => controller.abort();
+  }, [open, hasSession, business?.id]);
   async function call(body: Row, generation: number) {
+    taskMutation.current++;
     const session = await getSessionForScope("salon");
     if (!session || generation !== actorGeneration.current) throw new Error("AUTH_REQUIRED");
     // onAuthStateChange can arrive after a fast first click. The bearer session
@@ -229,15 +273,15 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     if (actor.current === null) actor.current = session.user.id;
     if (session.user.id !== actor.current) throw new Error("AUTH_REQUIRED");
     const requestLocale = responseLanguage.current?.display === locale ? responseLanguage.current.response : locale;
-    const response = await fetch("/api/salon/assistant", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ ...body, locale: body.locale || requestLocale, ...(body.action === "plan" ? { page: body.page || assistantPageFromPath(pathname) } : {}) }), signal: AbortSignal.timeout(55000) });
+    const response = await fetch("/api/salon/assistant", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ ...body, task_tracking:true, locale: body.locale || requestLocale, ...(body.action === "plan" ? { page: body.page || assistantPageFromPath(pathname) } : {}) }), signal: AbortSignal.timeout(55000) });
     return readOwnerResponse(response, "ASSISTANT_UNAVAILABLE");
   }
-  async function submit(tool?: string, setup = false, retry?: Turn, prompt?: string) {
+  async function submit(tool?: string, setup = false, retry?: Turn, prompt?: string, toolArgs?: Row) {
     const message = prompt || (setup ? t("Help me set up my business, one step at a time.") : text);
     if (busy || submissionInFlight.current || (!retry && !tool && !message.trim())) return;
     const generation = actorGeneration.current;
     const id = retry?.id || crypto.randomUUID();
-    const submission: Row = retry?.submission || { ...(tool ? { action: "tool", request_id: id, tool, args: quickActions.find(action => action.tool === tool)?.args || {} } : { action: "plan", request_id: id, text: message, page: assistantPageFromPath(pathname), conversation: turns.filter(turn => !turn.error && !turn.pending).flatMap(turn => {
+    const submission: Row = retry?.submission || { ...(tool ? { action: "tool", request_id: id, tool, args: toolArgs || quickActions.find(action => action.tool === tool)?.args || {} } : { action: "plan", request_id: id, text: message, page: assistantPageFromPath(pathname), conversation: turns.filter(turn => !turn.error && !turn.pending).flatMap(turn => {
         // Tool facts are replayed only from server records after fresh permission
         // checks. Do not smuggle revoked data back through client chat history.
         const assistant = turn.clarification || "";
@@ -246,24 +290,49 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     submissionInFlight.current = true;
     followConversation.current = true;
     setBusy(true); setNotice(""); setReference("");
-    if (retry) setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, pending: true, error: undefined, errorReference: undefined } : turn));
+    if (retry) setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, pending: true, error: undefined, errorReference: undefined, alternatives:undefined } : turn));
     else {
       const quickAction = quickActions.find(action => action.tool === tool);
-      setTurns(previous => [...previous, { id, text: tool ? t(quickAction?.label || "Business information") : message, submission, pending: true }].slice(-12));
+      setTurns(previous => [...previous, { id, text: tool ? prompt || t(quickAction?.label || "Business information") : message, submission, pending: true }]);
       if (!tool && !setup && !prompt) setText("");
     }
     try {
       const result = await call(submission, generation);
       if (generation !== actorGeneration.current) return;
+      if(Object.hasOwn(result,"active_task"))setActiveTask(result.active_task as ActiveTask|null);
       const resultLocale = isAssistantLanguage(result.response_locale) ? result.response_locale : (responseLanguage.current?.display === locale ? responseLanguage.current.response : locale);
       responseLanguage.current = { display: locale, response: resultLocale };
-      setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, ...result, id, locale: resultLocale, pending: false, error: undefined, errorReference: undefined } : turn));
+      setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, ...result, id, locale: resultLocale, pending: false, error: undefined, errorReference: undefined, alternatives:undefined } : turn));
     } catch (error) {
       if (generation !== actorGeneration.current) return;
       const message = errors[error instanceof Error ? error.message : ""] || "GC Assistant is temporarily unavailable. You can still use the dashboard and the quick actions below.";
       setNotice(message);
-      setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, pending: false, error: message, errorReference: error instanceof OwnerActionError ? error.reference : "" } : turn));
+      setTurns(previous => previous.map(turn => turn.id === id ? { ...turn, pending: false, error: message, errorReference: error instanceof OwnerActionError ? error.reference : "",alternatives:error instanceof OwnerActionError?error.alternatives:[] } : turn));
     } finally { if (generation === actorGeneration.current) { submissionInFlight.current = false; setBusy(false); } }
+  }
+  async function endTask(next?:Turn){
+    if(busy||!activeTask)return;
+    taskMutation.current++;
+    const generation=actorGeneration.current;setBusy(true);setNotice("");
+    try{
+      const session=await getSessionForScope("salon");if(!session)throw Error("AUTH_REQUIRED");
+      const response=await fetch("/api/salon/assistant/task",{method:"DELETE",headers:{Authorization:`Bearer ${session.access_token}`,"Content-Type":"application/json"},body:JSON.stringify({id:activeTask.id,revision:activeTask.revision,confirm:true})});
+      const result=await readOwnerResponse(response,"ASSISTANT_UNAVAILABLE");if(!result.verified)throw Error("ASSISTANT_TASK_CHANGED");
+      if(generation!==actorGeneration.current)return;
+      setActiveTask(null);setRememberedIds([]);
+      setTurns(previous=>previous.map(turn=>({...turn,...(turn.request?.tool===activeTask.tool&&!turn.request.confirmed_at?{abandoned:true}:{}),task_switch_required:false})));
+      if(next){
+        const submission={...next.submission,...(next.submission?.action==='plan'?{previous_request_ids:[],conversation:[]}:{})};
+        // Reuse the already visible user turn. This continuation was explicitly
+        // requested by the owner and must not duplicate the original message.
+        setTurns(previous=>previous.map(turn=>turn.id===next.id?{...turn,pending:true}:turn));
+        const answer=await call(submission,generation);if(generation!==actorGeneration.current)return;
+        if(isAssistantLanguage(answer.response_locale))responseLanguage.current={display:locale,response:answer.response_locale};
+        if(Object.hasOwn(answer,"active_task"))setActiveTask(answer.active_task as ActiveTask|null);
+        setTurns(previous=>previous.map(turn=>turn.id===next.id?{...turn,...answer,submission,pending:false}:turn));
+      }
+    }catch(error){if(generation===actorGeneration.current){setNotice(errors[error instanceof Error?error.message:""]||"The unfinished task could not be loaded. Try again.");if(next)setTurns(previous=>previous.map(turn=>turn.id===next.id?{...turn,pending:false,error:"GC Assistant is temporarily unavailable. You can still use the dashboard and the quick actions below.",submission:{...next.submission,...(next.submission?.action==='plan'?{previous_request_ids:[],conversation:[]}:{})}}:turn));}}
+    finally{if(generation===actorGeneration.current)setBusy(false);}
   }
   async function manageMemory(action: "load" | "save" | "delete" | "resume") {
     if (busy) return;
@@ -307,8 +376,9 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
     const generation = actorGeneration.current;
     setBusy(true); setNotice(""); setReference("");
     try {
-      const result = await call({ action: "confirm", request_id: turn.request.id, digest: turn.request.digest, confirm: true, policy_reviewed: Boolean(reviewed[turn.id]) }, generation);
+      const result = await call({ action: "confirm", request_id: turn.request.id, digest: turn.request.digest, confirm: true, policy_reviewed: Boolean(reviewed[turn.id]), ...(turn.request.tool==="prepare_marketing_change"?{marketing_reviewed:Boolean(reviewed[turn.id])}:{}) }, generation);
       if (generation !== actorGeneration.current) return;
+      if(activeTask?.tool===turn.request?.tool)setActiveTask(null);
       setTurns(previous => previous.map(item => item.id === turn.id ? { ...item, request: { ...turn.request!, result: result.result, confirmed_at: new Date().toISOString() }, notice: turn.request?.tool === "prepare_manual_service_sale" ? "The received payment was recorded and verified in Finances. No customer charge was made." : "Your change was saved and verified." } : item));
       window.dispatchEvent(new Event("gc-assistant-saved"));
       if (result.warnings?.length) { setNotice(turn.request.tool === "prepare_booking_reschedule_proposal" ? "The proposal was saved, but a notification could not be delivered." : "The message was saved, but a notification could not be delivered."); setReference(result.warnings[0].request_id || ""); }
@@ -347,11 +417,12 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
         <header className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
             <Avatar value={avatar}/>
-            <div className="min-w-0"><h2 id="gc-assistant-title" className="truncate font-serif text-lg font-bold text-text-primary" data-no-translate>GC Assistant</h2><p className="text-xs text-text-secondary">{t("Your business co-pilot.")}</p></div>
+            <div className="min-w-0"><h2 id="gc-assistant-title" className="truncate font-serif text-lg font-bold text-text-primary" data-no-translate>GC Assistant</h2><p className="text-xs text-text-secondary">{t("Your AI business assistant.")}</p></div>
           </div>
           <button onClick={() => dialog.current?.close()} className="grid h-10 w-10 place-items-center rounded-full text-text-primary transition hover:bg-subtle" aria-label={t("Close GC Assistant")}><X aria-hidden size={20}/></button>
         </header>
 
+        {activeTask?<section aria-label={t("Unfinished task")} className="border-b border-border px-4 py-2 text-xs"><p className="font-semibold">{t("Unfinished task")}</p><p className="line-clamp-2" data-no-translate>{activeTask.label}</p><button type="button" disabled={busy} onClick={()=>void endTask()} className="min-h-11 underline">{t("End this task")}</button></section>:null}
         <div ref={conversationViewport} data-assistant-conversation onScroll={event => { const viewport = event.currentTarget; followConversation.current = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80; }} className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-subtle px-3 py-3">
           <section className="flex items-start gap-3" aria-label={t("GC Assistant introduction")}>
             <Avatar value={avatar} small/>
@@ -400,26 +471,31 @@ export default function GcAssistant({ children }: { children?: React.ReactNode }
               const suggestions = turn.suggestions || fallback?.suggestions || [];
               return <article key={turn.id} className="space-y-3">
                 {turn.text ? <div className="flex justify-end"><p data-no-translate className="max-w-[86%] whitespace-pre-wrap break-words rounded-2xl rounded-tr-md bg-primary-hover px-4 py-3 text-sm font-medium leading-6 text-white shadow-sm">{turn.text}</p></div> : null}
-                {turn.error ? <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-text-danger"><p role="status">{t(turn.error)}</p>{turn.errorReference ? <p className="mt-1 break-words text-xs">{t("Support reference")}: <span data-no-translate>{turn.errorReference}</span></p> : null}<button type="button" disabled={busy} onClick={() => void submit(undefined, false, turn)} className="mt-2 min-h-11 rounded-lg border border-border bg-white px-3 font-semibold text-text-primary gc-disabled-control">{t("Retry message")}</button></div> : null}
+                {turn.error ? <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-text-danger"><p role="status">{t(turn.error)}</p>{turn.alternatives?.length ? <section aria-label={t("Available alternatives")} className="mt-3 rounded-lg bg-white p-3 text-text-primary"><p className="font-semibold">{t("These times fit the full service. Choose one to review; nothing has been saved.")}</p><ul className="mt-2 space-y-2">{turn.alternatives.map((option,index)=><li key={index} className="rounded-lg border border-border p-2"><p data-no-translate>{new Intl.DateTimeFormat(turnLocale,{dateStyle:"medium",timeStyle:"short",timeZone:option.time_zone}).format(new Date(option.start))} · {option.professional_name} · {option.service_name}</p><p>{t("Duration (minutes)")}: {option.duration_minutes} · {t("Buffer (minutes)")}: {option.buffer_minutes}</p></li>)}</ul></section> : null}{turn.errorReference ? <p className="mt-1 break-words text-xs">{t("Support reference")}: <span data-no-translate>{turn.errorReference}</span></p> : null}<button type="button" disabled={busy} onClick={() => void submit(undefined, false, turn)} className="mt-2 min-h-11 rounded-lg border border-border bg-white px-3 font-semibold text-text-primary gc-disabled-control">{t("Retry message")}</button></div> : null}
                 {responseText || turn.navigate ? <div className="flex items-start gap-3"><Avatar value={avatar} small/><div className="max-w-[88%] rounded-2xl rounded-tl-md border border-border bg-white px-4 py-3 shadow-[0_4px_16px_rgba(13,17,20,.04)]">
                   {responseText ? <><p role={turn.request?.risk_class === 1 || !turn.request ? "status" : undefined} data-no-translate className="whitespace-pre-wrap break-words text-sm font-medium leading-6 text-text-primary">{responseText}</p><AssistantSpeech text={responseText} sessionKey={dictationSession} language={turn.assistant_message || turn.reply || turn.clarification ? turn.locale : locale} showExplanation={false}/></> : null}
                   {turn.navigate && destinations[turn.navigate] ? <Link className="mt-3 inline-flex min-h-10 items-center rounded-full bg-primary-hover px-4 text-xs font-bold text-white" href={destinations[turn.navigate][1]} onClick={() => { if (!desktop) dialog.current?.close(); }}>{t("Open {value0}", { value0: t(destinations[turn.navigate][0]) })}</Link> : null}
                 </div></div> : null}
 
+                {turn.request?.tool==="get_business_media" && business && (business.isOwner || business.permissions?.photos) && turn.id===turns.filter(item=>item.request?.tool==="get_business_media").at(-1)?.id ? <AssistantPhotoUpload key={business.id} businessId={business.id} locale={turnLocale} disabled={busy} onReady={(url,prompt)=>void submit("prepare_photo_change",false,undefined,prompt,{operation:"photo_add",record_id:null,changes_json:JSON.stringify({url})})}/> : null}
+                {turn.request?.tool === "get_earnings_summary" ? <AssistantFinanceReport value={turn.request.result} locale={turnLocale}/> : null}
                 {turn.request?.tool === "get_outstanding_balances" ? <AssistantBalances value={turn.request.result} onNavigate={() => { if (!desktop) dialog.current?.close(); }}/> : null}
-                {turn.request?.risk_class && turn.request.risk_class >= 3 && !turn.request.confirmed_at ? <section className="ml-0 rounded-2xl border border-border bg-white p-4 shadow-[0_6px_20px_rgba(13,17,20,.05)] sm:ml-11">
+                {turn.task_switch_required?<section className="rounded-xl border border-border bg-white p-3 text-sm"><p>{t("There is an unfinished task. End it before moving to this request?")}</p><button type="button" disabled={busy} onClick={()=>void endTask(turn)} className="min-h-11 rounded-lg bg-primary px-3 text-white">{t("End task and continue")}</button><button type="button" disabled={busy} onClick={()=>setTurns(previous=>previous.map(item=>item.id===turn.id?{...item,task_switch_required:false,notice:"The current task is still active."}:item))} className="min-h-11 px-3 underline">{t("Keep current task")}</button></section>:null}
+                {turn.request?.risk_class && turn.request.risk_class >= 3 && !turn.request.confirmed_at && !turn.abandoned ? <section className="ml-0 rounded-2xl border border-border bg-white p-4 shadow-[0_6px_20px_rgba(13,17,20,.05)] sm:ml-11">
                   <h3 className="text-base font-bold text-text-primary">{t("Review this draft")}</h3>
+                  {turn.request.tool === "prepare_professional_archive" ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This removes the professional from booking and disables their staff access. Booking and finance history are preserved.")}</p> : null}
                   {turn.request.tool === "prepare_manual_service_sale" ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This records payment you already received in Finances. Girlz Culture will not charge the client, send a receipt or create an appointment.")}</p> : null}
                   {turn.request.tool === "prepare_service" ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This service will be saved as a draft. Deposits follow platform rules.")}</p> : null}
                   {turn.request.tool === "prepare_business_profile_update" && ["tiktok_url", "instagram_url"].includes(String(turn.request.arguments.field)) ? <p className="mt-2 text-sm leading-6 text-text-primary">{t("This social link will be submitted for platform review.")}</p> : null}
-                  <div className="mt-4 rounded-xl bg-subtle p-4 text-text-primary">{turn.request.tool === "prepare_booking_reschedule_proposal" ? <AssistantReschedulePreview value={turn.request.execution_payload} locale={turnLocale}/> : <Facts value={{ ...turn.request.arguments, ...turn.request.execution_payload }}/>}</div>
+                  <div className="mt-4 rounded-xl bg-subtle p-4 text-text-primary">{turn.request.tool==="prepare_marketing_change"?<AssistantMarketingPreview value={turn.request.execution_payload} locale={turnLocale}/>:turn.request.tool==="prepare_team_controls"?<AssistantTeamPreview value={turn.request.execution_payload} locale={turnLocale}/>:turn.request.tool==="prepare_business_controls"?<AssistantControlsPreview value={turn.request.execution_payload} locale={turnLocale}/>:isCatalogTool(turn.request.tool)? <AssistantCatalogPreview value={turn.request.execution_payload} locale={turnLocale}/> : ["prepare_booking_progress","prepare_stock_change","prepare_photo_change","prepare_client_card_change","prepare_review_reply"].includes(turn.request.tool) ? <AssistantOperationPreview value={turn.request.execution_payload} locale={turnLocale}/> : turn.request.tool === "prepare_finance_record" ? <AssistantFinancePreview value={turn.request.execution_payload} locale={turnLocale}/> : turn.request.tool === "prepare_booking_reschedule_proposal" ? <AssistantReschedulePreview value={turn.request.execution_payload} locale={turnLocale}/> : <Facts value={{ ...turn.request.arguments, ...turn.request.execution_payload }}/>}</div>
                   {Object.keys(turn.request.before_summary).length ? <details className="mt-3 rounded-xl border border-border px-3"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-text-primary">{t("Current information")}</summary><div className="border-t border-border py-3"><Facts value={turn.request.before_summary} timeZone={String(turn.request.execution_payload.time_zone || turn.request.arguments.time_zone || "America/New_York")}/></div></details> : null}
                   {turn.request.tool === "prepare_business_policy_update" ? <label className="mt-4 flex gap-3 text-sm font-medium leading-5 text-text-primary"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-teal" checked={Boolean(reviewed[turn.id])} onChange={event => setReviewed({ ...reviewed, [turn.id]: event.target.checked })}/>{t("I reviewed this policy in its original language and understand that platform rules and legal rights take precedence.")}</label> : null}
+                  {turn.request.tool==='prepare_marketing_change'&&turn.request.arguments.operation==='marketing_publish'?<label data-no-translate className="mt-4 flex gap-3 text-sm"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={Boolean(reviewed[turn.id])} onChange={event=>setReviewed({...reviewed,[turn.id]:event.target.checked})}/>{assistantMarketingCopy(turnLocale).review}</label>:null}
                   {/* Keep foreground and background changes immediate so an enabled action stays readable throughout the state change. */}
-                  <button disabled={busy || (turn.request.tool === "prepare_business_policy_update" && !reviewed[turn.id])} onClick={() => void confirm(turn)} className="mt-4 min-h-11 rounded-full bg-primary-hover px-5 text-sm font-bold text-white shadow-sm transition-shadow hover:bg-primary-hover gc-disabled-control">{turn.request.tool === "prepare_booking_reschedule_proposal" ? <span data-no-translate>{rescheduleAssistantCopy(turnLocale).confirm}</span> : t(turn.request.tool === "prepare_manual_service_sale" ? "Record received payment" : turn.request.risk_class === 4 ? "Confirm this public action" : "Confirm this change")}</button>
+                  <button disabled={busy || ((turn.request.tool === "prepare_business_policy_update" || turn.request.tool==="prepare_marketing_change"&&turn.request.arguments.operation==="marketing_publish") && !reviewed[turn.id])} onClick={() => void confirm(turn)} className="mt-4 min-h-11 rounded-full bg-primary-hover px-5 text-sm font-bold text-white shadow-sm transition-shadow hover:bg-primary-hover gc-disabled-control">{turn.request.tool === "prepare_finance_record" ? <span data-no-translate>{assistantFinanceCopy(turnLocale).confirm}</span> : turn.request.tool === "prepare_booking_reschedule_proposal" ? <span data-no-translate>{rescheduleAssistantCopy(turnLocale).confirm}</span> : t(turn.request.tool === "prepare_manual_service_sale" ? "Record received payment" : ["prepare_marketing_change","prepare_team_controls","prepare_business_controls","prepare_service_change","prepare_professional_change","prepare_product_change","prepare_promotion_change","prepare_professional_archive","prepare_booking_progress","prepare_stock_change","prepare_photo_change","prepare_client_card_change","prepare_review_reply"].includes(turn.request.tool) ? "Confirm this change" : turn.request.risk_class === 4 ? "Confirm this public action" : "Confirm this change")}</button>
                 </section> : null}
 
-                {turn.notice ? <p role="status" className="ml-11 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-text-success">{turn.request?.tool === "prepare_booking_reschedule_proposal" ? <span data-no-translate>{rescheduleAssistantCopy(turnLocale)[String((turn.request.result as Row)?.status).toLowerCase() === "accepted" ? "accepted" : String((turn.request.result as Row)?.status).toLowerCase() === "pending" ? "pending" : "closed"]}</span> : t(turn.notice)}</p> : null}
+                {turn.notice ? <p role="status" className="ml-11 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-text-success">{turn.request?.tool === "prepare_finance_record" ? <span data-no-translate>{assistantFinanceCopy(turnLocale).saved}</span> : turn.request?.tool === "prepare_booking_reschedule_proposal" ? <span data-no-translate>{rescheduleAssistantCopy(turnLocale)[String((turn.request.result as Row)?.status).toLowerCase() === "accepted" ? "accepted" : String((turn.request.result as Row)?.status).toLowerCase() === "pending" ? "pending" : "closed"]}</span> : t(turn.notice)}</p> : null}
                 {suggestions.length ? <div className="ml-11 flex flex-wrap gap-2">{suggestions.slice(0, 3).map(suggestion => <button key={suggestion} type="button" onClick={() => setText(t(suggestion))} className="min-h-9 rounded-full border border-border bg-white px-3 text-xs font-semibold text-text-primary hover:border-teal">{t(suggestion)}</button>)}</div> : null}
               </article>;
             })}

@@ -8,15 +8,18 @@ import {profileCompletion} from "@/lib/ownerBusinessMetrics";
 import SalonOpenStatusControl from "./SalonOpenStatusControl";
 import PushSetup from "@/components/notifications/PushSetup";
 import BusinessMorningBrief from "./BusinessMorningBrief";
+import {businessLabels} from "@/lib/businessLabels";
+import {isSoloPlan} from "@/lib/plans";
 type Row=Record<string,unknown>;
 const box="min-w-0 rounded-2xl border border-border bg-white p-4 sm:p-5";
-export default function BusinessOverview({salon,bookings,reviews,styles,stylists,access,actorName,cancellationThreshold}:{salon:Row;bookings:Row[];reviews:Row[];styles:Row[];stylists:Row[];access:Record<string,boolean>|null;actorName:string;cancellationThreshold:number}){
+export default function BusinessOverview({salon,bookings,reviews,styles,stylists,access,actorName,cancellationThreshold,plan}:{plan:string;salon:Row;bookings:Row[];reviews:Row[];styles:Row[];stylists:Row[];access:Record<string,boolean>|null;actorName:string;cancellationThreshold:number}){
  const {translateSource:t,formatCurrency:money,formatDate,formatNumber:number}=useI18n();
  const [now]=useState(()=>Date.now()),[period,setPeriod]=useState<OverviewPeriod>("month"),[trend,setTrend]=useState<"appointments"|"completed_value_cents">("appointments");
  const timeZone=String(salon.time_zone||"America/New_York"),data=businessOverview(bookings,period,timeZone,now);
  const allowed=(key:string)=>access===null||Boolean(access[key]);
- const bookingAccess=allowed("bookings"),completion=profileCompletion(salon,styles.length,stylists.length);
- const checks:[string,boolean,string][]=[["Business information",Boolean(salon.name&&salon.phone),"my-page"],["Description",Boolean(salon.description),"my-page/description"],["Location",Boolean(salon.address_street),"my-page/address"],["Cover photo",Boolean(salon.cover_photo_url),"photos/cover"],["Styles & Pricing",styles.length>0,"styles"],["Stylists",stylists.length>0,"stylists"]];
+ const bookingAccess=allowed("bookings"),completion=profileCompletion(salon,styles.length,stylists.length,isSoloPlan(plan));
+ const labels=businessLabels(salon.business_type,isSoloPlan(plan));
+ const checks:[string,boolean,string][]=[["Business information",Boolean(salon.name&&salon.phone),"my-page"],["Description",Boolean(salon.description),"my-page/description"],["Location",Boolean(salon.address_street),"my-page/address"],["Cover photo",Boolean(salon.cover_photo_url),"photos/cover"],[labels.services,styles.length>0,"styles"],...(labels.team?[[labels.team,stylists.length>0,"stylists"] as [string,boolean,string]]:[])];
  const summary=[
   ["Appointments",bookingAccess?number(data.appointments):"—",CalendarDays],
   ["Identified clients",bookingAccess?number(data.identified_clients):"—",UsersRound],

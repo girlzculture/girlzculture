@@ -1,3 +1,4 @@
+import { migratedAssistantTools } from './helpers/assistant-migration-tools.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { typescriptLoader } from './helpers/load-typescript.mjs';
@@ -13,7 +14,7 @@ function fixture(options = {}) {
   const salon = { id: business, user_id: actor, name: 'Current Studio', description: 'Contact customer-private@example.test is private prose.', phone: '+1 (212) 555-0182', email: 'studio@example.test', address_street: '10 Main Street', address_line2: 'Suite 5', address_city: 'New York', address_state: 'NY', address_zip: '10001', languages: ['English', 'Français'], hours: { Monday: { open: '09:00', close: '17:00', closed: false } }, time_zone: 'America/New_York', slug: 'current-studio', vanity_slug: null, trust_info: { walk_ins_welcome: false, appointment_only: true }, is_discoverable: false, accepting_bookings: false, owner_unpublished_at: null, status: 'Approved', notification_preferences: { reviews: false, marketing: true }, gc_assistant_avatar: 'cat', ...options.salon };
   const user = { id: actor, user_metadata: { locale: 'fr', private_note: 'AUTH_SECRET' }, email: 'private-login@example.test' };
   const history = options.history || [];
-  const tables = { salons: [salon, { ...salon, id: foreign, user_id: foreign, name: 'FOREIGN_PRIVATE', email: 'foreign@example.test' }], salon_team_members: [{ id: 'membership', salon_id: business, user_id: actor, status: 'Active', stylist_id: null }], subscriptions: [{ salon_id: business, status: 'active', current_period_end: '2099-01-01T00:00:00Z' }], test_data_registry: options.testBusiness ? [{ id: 'test', record_type: 'salon', record_id: business }] : [], gc_assistant_requests: history, master_styles: [] };
+  const tables = { salons: [salon, { ...salon, id: foreign, user_id: foreign, name: 'FOREIGN_PRIVATE', email: 'foreign@example.test' }], salon_team_members: [{ id: 'membership', salon_id: business, user_id: actor, status: 'Active', stylist_id: null }], subscriptions: [{ salon_id: business, status: 'active', current_period_end: '2099-01-01T00:00:00Z' }], test_data_registry: options.testBusiness ? [{ id: 'test', record_type: 'salon', record_id: business }] : [], gc_assistant_requests: history, master_styles: [], engine_settings: [] };
   let grants = 0;
   const admin = {
     auth: { admin: { async getUserById(id) { calls.push({ auth: id }); assert.equal(id, actor); return options.authFailure ? { error: Error('Unavailable'), data: { user: null } } : { data: { user: options.foreignUser ? { ...user, id: foreign } : user }, error: null }; } } },
@@ -32,7 +33,7 @@ function fixture(options = {}) {
         select(value) { if (['salons', 'salon_team_members'].includes(table)) assert.notEqual(value, '*'); fields = value.split(','); return q; },
         eq(key, value) { filters.push([key, value]); return q; },
         in(key, values) { filters.push([key, values]); return q; },
-        order() { return q; }, limit() { return q; },
+        abortSignal() { return q; }, order() { return q; }, limit() { return q; },
         maybeSingle() { single = true; return q; }, update(value) { mutation = value; return q; },
         then(resolve, reject) { return Promise.resolve().then(() => {
           calls.push({ table, fields, filters, mutation }); options.onRead?.(table, tables);
@@ -167,6 +168,6 @@ test('185 appends precisely the settings tool and existing settings permission t
   assert.deepEqual(new Set(list(current, 'permission')), new Set([...list(oldPermissions, 'permission'), 'settings']));
   const money = readFileSync('supabase/migrations/20260919143452_assistant_authoritative_money_reads.sql', 'utf8');
   assert.deepEqual(new Set(list(money, 'tool')), new Set([...list(current, 'tool'), 'calculate_service_selection', 'get_booking_price_details']));
-  assert.deepEqual(new Set(list(money, 'tool')), new Set(Object.keys(fixture().load('src/lib/gcAssistantCore.ts').ASSISTANT_TOOLS)));
+  assert.deepEqual(migratedAssistantTools(), new Set(Object.keys(fixture().load('src/lib/gcAssistantCore.ts').ASSISTANT_TOOLS)));
   assert.doesNotMatch(current, /\bgrant\s+(select|update|insert|delete|execute)\b/i);
 });

@@ -41,7 +41,7 @@ for (const [locale,width,height] of [['en',390,844],['fr',768,1024],['es',1440,1
   for(const amount of [129.5,21,7.5])await expect(visibleRecord).toContainText(new Intl.NumberFormat(intlLocale(locale),{style:'currency',currency:'USD'}).format(amount));
   await expect(visibleRecord).toContainText(t('Failed'));
   f.records.billing_events=[];await page.reload();
-  const empty=history.getByText(t('No signed Stripe billing events have been received for this salon yet.'),{exact:true});
+  const empty=history.getByText(t('No signed Stripe billing events have been received for this business yet.'),{exact:true});
   await expect(empty).toBeVisible();
   expect(await history.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
   expect(f.actions).toEqual([]);expect(f.unexpected).toEqual([]);

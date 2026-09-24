@@ -1,4 +1,4 @@
-export const SUPPORTED_LOCALES = ["en", "es", "fr", "wo", "zh-CN"] as const;
+export const SUPPORTED_LOCALES = ["en", "es", "fr", "zh-CN"] as const;
 export type AppLocale = string;
 export type LocaleOption = { locale:string;display_name:string;native_name:string;intl_locale:string;text_direction:"ltr"|"rtl";is_default?:boolean;sort_order?:number };
 export const LOCALE_NAMES: Record<string,string> = { en:"English", es:"Español", fr:"Français", wo:"Wolof", "zh-CN":"中文（简体）" };
@@ -70,3 +70,9 @@ export function normalizeLocale(value:unknown):AppLocale {
 }
 export function localeDirection(locale:unknown):"ltr"|"rtl" { return RTL_LANGUAGE_CODES.has(normalizeLocale(locale).split("-")[0])?"rtl":"ltr"; }
 export function intlLocale(locale:unknown){const safe=normalizeLocale(locale);return INTL_LOCALES[safe]||safe;}
+
+/** Release interface choices only; do not use this to rewrite authored content. */
+export function interfaceLocale(value: unknown): AppLocale {
+  const normalized = normalizeLocale(typeof value === "string" ? value : "en");
+  return SUPPORTED_LOCALES.some(locale => locale === normalized) ? normalized : "en";
+}

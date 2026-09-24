@@ -1,3 +1,4 @@
+import {releaseInterfaceLocale,assertDeferredLocale} from './helpers/releaseLocales';
 import { expect } from '@playwright/test';
 import { test } from './helpers/hydration';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
@@ -7,9 +8,10 @@ import { customerSupportText } from '../../src/i18n/customer-support-source-cata
 test.use({ serviceWorkers: 'block' });
 const ticketId = '79d996ec-4ec4-408c-8b7c-e82e969b7da9';
 
-for (const locale of ['en', 'fr', 'es', 'wo', 'zh-CN']) {
-  test(`P0 customer support draft requires review and preserves the ticket reference in ${locale}`, async ({ page }) => {
-    const fixture = await p0OwnerFixture(page, { role: 'customer', seedSession: false, locale });
+for (const requestedLocale of ['en', 'fr', 'es', 'wo', 'zh-CN']) {
+  const locale=releaseInterfaceLocale(requestedLocale);
+  test(`P0 customer support draft requires review and preserves the ticket reference in ${requestedLocale==='wo'?'stored wo fallback to English':locale}`, async ({ page }) => {
+    const fixture = await p0OwnerFixture(page, { role: 'customer', seedSession: false, locale: requestedLocale });
     await page.addInitScript(({ key, session }) => localStorage.setItem(key, JSON.stringify(session)), { key: buildAuthStorageKeys(fixture.provider).customer, session: fixture.session });
     await page.route(`${fixture.provider}/rest/v1/**`, route => {
       const table = new URL(route.request().url()).pathname.split('/').at(-1);
@@ -27,6 +29,7 @@ for (const locale of ['en', 'fr', 'es', 'wo', 'zh-CN']) {
     await page.route('**/api/concierge/search', route => route.fulfill({ json: { salons: [], mode: 'deterministic' } }));
     await page.setViewportSize(locale === 'en' ? { width: 1440, height: 1000 } : locale === 'fr' ? { width: 768, height: 1024 } : locale === 'wo' ? { width: 844, height: 390 } : { width: 390, height: 844 });
     await page.goto('/account');
+    await assertDeferredLocale(page,requestedLocale);
     await page.getByRole('button', { name: 'GC Assistant', exact: true }).click();
     const dialog = page.locator('dialog');
     const text = (source: string) => customerSupportText(source, locale);

@@ -56,10 +56,28 @@ test('a late customer response cannot restore another account conversation or cl
   const app = harness(); const previous = app.search(); app.switchAccount(); const current = app.search();
   assert.equal(app.requests.length, 2);
   app.responses[0](Response.json({ clarification: 'Previous account preference' })); await previous;
-  assert.equal(app.conversation(), null);
+  assert.ok(app.conversation(), 'the current account message appears before the response');
+  assert.doesNotMatch(JSON.stringify(app.conversation()), /Previous account preference/);
+  assert.ok(app.find(node => node.props?.role === 'status'), 'the current account remains loading');
   assert.equal(app.find(node => node.type === 'button' && node.props.children === 'New conversation').props.disabled, true);
   app.responses[1](Response.json({ salons: [], mode: 'deterministic' })); await current;
   assert.ok(app.conversation());
+});
+
+test('public questions appear immediately and retry the captured request without duplicating the turn or clearing a later draft', async()=>{
+ const app=harness();const pending=app.search();
+ assert.match(JSON.stringify(app.conversation()),/My private preference/);
+ assert.equal(app.find(node=>node.type==='textarea').props.value,'');
+ assert.ok(app.find(node=>node.props?.role==='status'));
+ app.find(node=>node.type==='textarea').props.onChange({target:{value:'Next unsent question'}});
+ app.responses[0](Response.json({error:'Temporary search failure'},{status:503}));await pending;
+ const retry=app.find(node=>node.type==='button'&&node.props.children==='Retry this question');assert.ok(retry);
+ const retried=retry.props.onClick();assert.equal(app.requests.length,2);assert.equal(app.requests[1].body,app.requests[0].body);
+ assert.equal(app.find(node=>node.type==='support-handoff').props.turns.length,1);
+ app.responses[1](Response.json({salons:[],mode:'deterministic'}));
+ await retried;
+ assert.equal(app.find(node=>node.type==='textarea').props.value,'Next unsent question');
+ assert.equal(app.find(node=>node.type==='support-handoff').props.turns.length,1);
 });
 
 test('a fresh customer conversation resets context and retains localized follow-up wording', async () => {

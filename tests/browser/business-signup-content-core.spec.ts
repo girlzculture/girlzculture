@@ -48,7 +48,7 @@ test("business content round-trip retains edited media, copy, bounded presentati
   const persisted = decodeBusinessSignupContent({ [BUSINESS_SIGNUP_CONTENT_LABEL]: encodeBusinessSignupContent(content, { forPublication: true }) });
   expect(persisted).toEqual(content);
   expect(visibleBusinessCategories(persisted).map(category => category.id)).toEqual([
-    "nail-studio", "aesthetics-clinic", "tattoo-studio", "lash-brow-bar", "barbershop", "hair-salon-braiding", "other",
+    "nail-studio", "aesthetics-clinic", "tattoo-studio", "lash-brow-bar", "barbershop", "hair-salon-braiding",
   ]);
   expect(persisted.categories[0].id).toBe("hair-salon-braiding");
 });
@@ -152,7 +152,7 @@ test("category destination modes cannot send unimplemented businesses into the H
   for (const invalidPlan of ["", "invalid", "pro", ["starter", "growth"], undefined]) {
     expect(businessSignupCategoryHref(hair, invalidPlan)).toBe("/business/signup/hair");
   }
-  for (const category of content.categories.slice(1)) {
+  for (const category of visibleBusinessCategories(content).slice(1)) {
     expect(businessSignupCategoryHref(category, "premium")).toBe(`/business/waitlist?category=${category.id}`);
   }
   content.categories[1].mode = "live_application";
@@ -194,4 +194,15 @@ test("waitlist copy interpolation changes presentation without changing stable r
   expect(interpolateBusinessSignupTemplate("Join the {businessType} Waitlist", category.name)).toBe("Join the Nail Artists Waitlist");
   expect(interpolateBusinessSignupTemplate("[Business Type] — {businessType}", category.name)).toBe("Nail Artists — Nail Artists");
   expect(businessSignupCategoryHref(category)).toBe("/business/waitlist?category=nail-studio");
+});
+
+
+test("retired Other remains readable in an old CMS snapshot but cannot become a new choice", () => {
+ const content = draft();
+ const old = content.categories.find(category => category.id === "other")!;
+ old.visible = true;
+ const restored = decodeBusinessSignupContent({ [BUSINESS_SIGNUP_CONTENT_LABEL]: encodeBusinessSignupContent(content, { forPublication: true }) });
+ expect(restored.categories).toHaveLength(8);
+ expect(visibleBusinessCategories(restored).some(category => category.id === "other")).toBe(false);
+ expect(businessSignupCategoryHref(old)).toBeNull();
 });

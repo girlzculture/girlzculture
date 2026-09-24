@@ -1,6 +1,6 @@
 # Operational monitoring route inventory
 
-Updated: 2026-09-19. This inventory covers 166 API route files and is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
+Updated: 2026-09-23. This inventory covers 184 API route files and is enforced by `scripts/verify-operational-monitoring.mjs`; a route cannot be added without a classification and shared operational wrapper.
 
 ## Coverage rules
 
@@ -183,6 +183,24 @@ Updated: 2026-09-19. This inventory covers 166 API route files and is enforced b
 | `/api/stripe/webhook` | POST | provider-backed | Covered |
 | `/api/support` | POST, GET | provider-backed | Covered |
 
+| `/api/admin/ad-spaces` | GET, POST | protected | Covered |
+| `/api/admin/business-waitlist` | GET | protected | Covered |
+| `/api/admin/submissions/[id]/location-visit` | GET, POST | provider-backed | Covered |
+| `/api/booking/travel-quote` | POST | expected-only | Covered |
+| `/api/business/application/assistant` | POST | provider-backed | Covered |
+| `/api/business/application/progress` | GET, POST | provider-backed | Covered |
+| `/api/customer/bookings/[id]/location` | GET | protected | Covered |
+| `/api/salon/advertising` | GET, POST | protected | Covered |
+| `/api/salon/assistant/task` | GET, DELETE | protected | Covered |
+| `/api/salon/booking-report` | GET | protected | Covered |
+| `/api/salon/demo-page` | GET | protected | Covered |
+| `/api/salon/google-help` | GET, POST | protected | Covered |
+| `/api/salon/growth-settings` | GET, POST | protected | Covered |
+| `/api/salon/location` | GET, POST | protected | Covered |
+| `/api/salon/rebooking-settings` | GET, POST | protected | Covered |
+| `/api/salon/rebooking/process` | POST | protected | Covered |
+| `/api/salon/waitlist/openings` | POST | protected | Covered |
+
 ## Netlify functions
 
 | Function | Classification | Coverage |
@@ -191,6 +209,11 @@ Updated: 2026-09-19. This inventory covers 166 API route files and is enforced b
 | `media-cleanup.mjs` | provider-backed/system | Covered by `monitoredNetlifyFailure`; upstream bodies are never echoed |
 | `assistant-memory-cleanup.mjs` | provider-backed/system | Covered by `monitoredNetlifyFailure`; only expired opt-in context on a published Production deployment is removed |
 | `pickup-reservation-cleanup.mjs` | provider-backed/system | Covered by `monitoredNetlifyFailure`; upstream bodies are never echoed |
+
+| `google-profile-sync.ts` | provider-backed/system | Covered by `monitoredNetlifyFailure`; published Production/activation guards; no provider bodies or credentials returned |
+| `business-marketing-publish.ts` | provider-backed/system | Covered by `monitoredNetlifyFailure`; published Production/activation guards; no provider bodies or credentials returned |
+| `business-rebooking-reminders.ts` | provider-backed/system | Covered by `monitoredNetlifyFailure`; published Production/activation guards; no provider bodies or credentials returned |
+| `travel-quote-cleanup.mjs` | provider-backed/system | Covered by `monitoredNetlifyFailure`; published Production/activation guards; no provider bodies or credentials returned |
 
 ## Server actions
 

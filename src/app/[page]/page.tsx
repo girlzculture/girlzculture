@@ -16,7 +16,7 @@ const pages: Record<string, { title: string; body: string }> = {
   accessibility: { title: "Accessibility Statement", body: "" },
   "cookie-notice": { title: "Cookie & Tracking Notice", body: "" },
   "deposit-refund-policy": { title: "Deposit & Refund Policy", body: "" },
-  "salon-partner-agreement": { title: "Salon Partner Agreement", body: "" },
+  "salon-partner-agreement": { title: "Business Partner Agreement", body: "" },
   "photo-content-consent": { title: "Photo & Content Consent", body: "" },
   "message-monitoring-disclosure": { title: "Message Monitoring Disclosure", body: "" },
   "do-not-sell-or-share": { title: "Do Not Sell or Share My Information", body: "" },

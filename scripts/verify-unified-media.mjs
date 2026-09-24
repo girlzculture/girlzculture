@@ -309,7 +309,11 @@ const checks = [
   ],
   [
     !application.includes('bucket="application-media"') &&
-      application.includes("Photos are added after approval"),
+      !application.includes("<ImageUpload") &&
+      application.includes("Licenses & supporting documents") &&
+      application.includes("/api/salon/application/documents/prepare") &&
+      application.includes("/api/salon/application/documents/finalize") &&
+      application.includes("APPLICATION_DOCUMENT_MIME_TYPES"),
     "duplicate application media removed",
   ],
   [

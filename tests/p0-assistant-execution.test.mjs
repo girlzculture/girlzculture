@@ -299,3 +299,36 @@ test('calendar access alone cannot prepare a receipt or read finance selection v
   for(const [tool,args] of [['prepare_manual_service_sale',manualSaleArgs],['get_manual_sale_options',{}]])await assert.rejects(f.run(tool,args),/ASSISTANT_ACCESS_DENIED/);
   assert.equal(f.saved.length,0);assert.equal(f.calls.some(call=>call.name==='business_finance_entry_options'),false);
 });
+
+test('Master loose professional names preserve real IDs, ambiguity and tenant boundaries',async()=>{
+ const rows=[{id:'own-jasmine',salon_id:business,name:'Jasmine Walker',bio:'Original private bio'},{id:'own-jazmine',salon_id:business,name:'Jasmin White'},{id:'own-dominique',salon_id:business,name:'Dominique Andréa'},{id:'foreign',salon_id:actor,name:'Jasmin Private',bio:'FOREIGN PRIVATE'}];
+ const f=fixture({tables:{stylists:rows}});
+ const result=(await f.run('get_professionals',{query:'Jasmin'})).request.result;
+ assert.deepEqual(Array.from(result.professionals,x=>x.id).sort(),['own-jasmine','own-jazmine']);
+ assert.equal(result.inventory_total,3);assert.equal(result.matching_total,2);assert.equal(result.search_complete,true);
+ assert.equal(JSON.stringify(result).includes('FOREIGN PRIVATE'),false);
+ const misspelled=(await f.run('get_professionals',{query:'Dominqiue Andrea'})).request.result;
+ assert.equal(misspelled.professionals.length,1);assert.equal(misspelled.professionals[0].name,'Dominique Andréa');
+ assert.equal(misspelled.professionals[0].id,'own-dominique');
+ const foreign=(await f.run('get_professionals',{query:'Jasmin Private'})).request.result;
+ assert.equal(foreign.professionals.length,0,'a foreign identity is never approximated to an own professional from only its first name');
+});
+
+test('Master exact professional lookup survives the fuzzy inventory cap and escapes wildcard input',async()=>{
+ const rows=Array.from({length:1000},(_,i)=>({id:'own-'+i,salon_id:business,name:'A professional '+String(i).padStart(4,'0')}));
+ rows.push({id:'wanted',salon_id:business,name:'Z Name_100%'});
+ const f=fixture({tables:{stylists:rows}});
+ const found=(await f.run('get_professionals',{query:'Name_100%'})).request.result;
+ assert.deepEqual(Array.from(found.professionals,x=>x.id),['wanted']);assert.equal(found.inventory_total,1001);assert.equal(found.search_complete,false);
+ const missing=(await f.run('get_professionals',{query:'not present'})).request.result;
+ assert.equal(missing.match_status,'incomplete_search');
+});
+
+test('Master exact Boho and Dominican examples keep saved names prices and duration bounds',async()=>{
+ const f=fixture({tables:{styles:[{id:'boho',salon_id:business,name:'Boho / Knotless Braids',base_price:180,duration_min_hours:4,duration_max_hours:6},{id:'dominican',salon_id:business,name:'Dominican Blowout',base_price:75,duration_min_hours:1,duration_max_hours:1.5}]}});
+ for(const [query,id,name,price,min,max]of [['Boho braid','boho','Boho / Knotless Braids',180,4,6],['dominican','dominican','Dominican Blowout',75,1,1.5],['domincan','dominican','Dominican Blowout',75,1,1.5]]){
+  const result=(await f.run('get_services_and_prices',{query})).request.result;
+  assert.equal(result.services.length,1);const row=result.services[0];
+  assert.deepEqual([row.id,row.name,row.base_price,row.duration_min_hours,row.duration_max_hours],[id,name,price,min,max]);
+ }
+});

@@ -1,3 +1,4 @@
+import {loadNodeTypescript} from '../tests/helpers/load-node-typescript.mjs';
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -20,7 +21,7 @@ const compiledModule = { exports: {} };
 const sandbox = {
   module: compiledModule,
   exports: compiledModule.exports,
-  require: () => ({}),
+  require: name => ['@/lib/searchTimeWindow','@/lib/decisionSearchIntentCore'].includes(name)?loadNodeTypescript(process.cwd())(`src/lib/${name.split('/').at(-1)}.ts`):({}),
   process: { env: {} },
   console,
   Buffer,

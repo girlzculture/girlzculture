@@ -525,6 +525,10 @@ section {
     display: block !important;
   }
 
+  .gc-public-assistant-launcher {
+    bottom: calc(6rem + env(safe-area-inset-bottom));
+  }
+
   .gc-customer-bottom-nav-landscape-spacer {
     display: block !important;
     height: calc(5rem + env(safe-area-inset-bottom));

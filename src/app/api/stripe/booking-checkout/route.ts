@@ -1,3 +1,5 @@
+import { readCheckoutTravelQuote } from "@/lib/mobileBookingServer";
+import { totalWithTravel, TravelBookingError } from "@/lib/mobileBooking";
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { capturePlatformError } from "@/lib/platformErrors";
 import { bookingAvailability, nextAvailableSlot } from "@/lib/bookingAvailabilityServer";
@@ -50,7 +52,7 @@ async function POSTHandler(request: Request) {
 
     if (body.platform_policy_acknowledged !== true || (policyAtCheckout && body.business_policy_acknowledged !== true)) return Response.json({ code: "BOOKING_POLICY_ACKNOWLEDGEMENT_REQUIRED", error: "Review and acknowledge the business and Girlz Culture policies before continuing." }, { status: 400 });
 
-    const { data: salon, error: salonError } = await admin.from("salons").select("id,slug,name,status,is_discoverable,accepting_bookings,subscription_status,subscription_tier,time_zone,stripe_account_id,address_street,address_city,address_state,address_zip").eq("id", salonId).single();
+    const { data: salon, error: salonError } = await admin.from("salons").select("id,slug,name,status,is_discoverable,accepting_bookings,subscription_status,subscription_tier,time_zone,is_demo,service_location_type,offers_mobile,travel_fee_cents,location_settings_revision,stripe_account_id,address_street,address_city,address_state,address_zip").eq("id", salonId).single();
     if (salonError) throw new Error(`Unable to verify the salon: ${salonError.message}`);
     if (!salon || salon.status !== "Active" || salon.is_discoverable !== true || salon.accepting_bookings === false || !["active", "trialing"].includes(String(salon.subscription_status).toLowerCase())) throw new Error("This salon is not currently accepting marketplace bookings.");
     const { data: style, error: styleError } = await admin.from("styles").select("*,service_category:service_categories(slug)").eq("id", styleId).eq("salon_id", salonId).single();
@@ -59,6 +61,8 @@ async function POSTHandler(request: Request) {
     const guestName = cleanText(body.guest_name, 120);
     const guestEmail = cleanEmail(body.guest_email);
     const guestPhone = cleanUsPhone(body.guest_phone, true);
+    const travelQuote = await readCheckoutTravelQuote(admin,salon,body,customerId,guestEmail);
+    const travelFeeCents = travelQuote?.fee_cents || 0;
     const requestedLocale = normalizeLocale(cleanText(body.locale, 20));
     const { data: enabledLocale } = await admin
       .from("supported_locales")
@@ -171,6 +175,7 @@ async function POSTHandler(request: Request) {
     const codePrice = protectedBookingDiscount(subtotalBeforeSalonPromotion, deposit, promoPreview?.discount || 0);
     const discount = codePrice.discount;
     if (promoPreview) total = codePrice.total;
+    total=totalWithTravel(total,travelFeeCents);
     // Never create a payment/reservation for different terms than the customer saw.
     if (typeof body.expected_deposit !== "number" || typeof body.expected_total !== "number" || !Number.isFinite(body.expected_deposit) || !Number.isFinite(body.expected_total)
       || Math.round(body.expected_deposit * 100) !== Math.round(deposit * 100) || Math.round(body.expected_total * 100) !== Math.round(total * 100)) {
@@ -179,6 +184,7 @@ async function POSTHandler(request: Request) {
     const durationHours = Math.max(0.25, Number(style.duration_min_hours || style.duration_max_hours || 0) + genericDurationAdjustmentMinutes / 60);
     const bufferMinutes = Math.max(0, Number(style.buffer_minutes ?? liveAvailability.bufferMinutes ?? 15));
     const payload: Record<string, unknown> = {
+      ...(travelQuote ? {service_visit_mode:"mobile",travel_quote_id:travelQuote.id,travel_fee_cents:travelFeeCents} : {}),
       ...(waitlistOffer ? {waitlist_offer_id:waitlistOffer} : {}),
       business_policy_revision_id: policyAtCheckout?.id || null,
       business_policy_captured_at: new Date().toISOString(),
@@ -200,7 +206,7 @@ async function POSTHandler(request: Request) {
       duration_hours: durationHours,
       buffer_minutes: bufferMinutes,
       estimated_total: total,
-      subtotal_before_promotion: subtotalBeforeSalonPromotion,
+      subtotal_before_promotion: totalWithTravel(subtotalBeforeSalonPromotion,travelFeeCents),
       deposit_amount: deposit,
       deposit_percentage: depositPercentage,
       deposit_rule_snapshot: depositTerms,
@@ -502,8 +508,9 @@ async function POSTHandler(request: Request) {
     }
 
     if (deposit === 0 && !commerceIntentId) {
+      const bookingPayload=Object.fromEntries(Object.entries(payload).filter(([key])=>!["service_visit_mode","travel_quote_id","travel_fee_cents"].includes(key)));
       const { data: booking, error: bookingError } = await admin.from("bookings").insert({
-        ...payload,
+        ...bookingPayload,
         stripe_payment_id: null,
         stripe_checkout_session_id: `no_payment_required:${intentId}`,
         payment_method_label: "No payment required",
@@ -843,6 +850,9 @@ async function POSTHandler(request: Request) {
         p_redemption_id: salonPromotionRedemptionId,
       });
     }
+    const travelCode=error&&typeof error==="object"&&"message" in error?String(error.message):"";
+    if(/^TRAVEL_(ADDRESS_REQUIRED|QUOTE_EXPIRED|QUOTE_FORBIDDEN|TERMS_CHANGED|NOT_AVAILABLE)$/.test(travelCode))return Response.json({code:travelCode,error:"Review the appointment address and travel fee before continuing."},{status:409,headers:{"Cache-Control":"private, no-store"}});
+    if(error instanceof TravelBookingError) return Response.json({code:error.code,error:"Review the appointment address and travel fee before continuing."},{status:error.status,headers:{"Cache-Control":"private, no-store"}});
     noteOperationalFailure("Booking checkout failed", error);
     return errorResponse(error, "Unable to start secure checkout.");
   }

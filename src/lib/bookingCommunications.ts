@@ -133,10 +133,10 @@ function bookingIdentity(input: BookingCommunicationInput) {
   const theme = input.emailTheme || DEFAULT_EMAIL_THEME;
   return (
     row("Booking reference", bookingReference(booking), false, theme) +
-    row("Salon", input.salon.name, false, theme) +
+    row("Business", input.salon.name, false, theme) +
     row("Address", input.salon.full_address, false, theme) +
-    row("Salon phone", input.salon.phone, false, theme) +
-    row("Salon email", input.salon.email, false, theme)
+    row("Business phone", input.salon.phone, false, theme) +
+    row("Business email", input.salon.email, false, theme)
   );
 }
 
@@ -150,12 +150,12 @@ function appointmentDetails(input: BookingCommunicationInput) {
     ...selectedOptionLabels(booking.selected_options),
   ].filter(Boolean);
   return (
-    row("Service", style?.name || "Braiding service", false, theme) +
+    row("Service", style?.name || "Booked service", false, theme) +
     row("Selected options & add-ons", options.join(", ") || "None", false, theme) +
-    row("Hair / material", material?.name || material?.brand || "Not selected", false, theme) +
-    row("Stylist", stylist?.name || "Salon assigned", false, theme) +
+    row("Material", material?.name || material?.brand || "Not selected", false, theme) +
+    row("Professional", stylist?.name || "Assigned by the business", false, theme) +
     row("Appointment", input.when, false, theme) +
-    row("Salon timezone", input.salon.time_zone || "America/New_York", false, theme) +
+    row("Business timezone", input.salon.time_zone || "America/New_York", false, theme) +
     row("Estimated duration", input.duration, false, theme)
   );
 }
@@ -206,7 +206,7 @@ function priceDetails(input: BookingCommunicationInput) {
     row("Adjusted total", money(total), true, theme) +
     row("Reservation deposit", `${input.depositPercentage}%`, false, theme) +
     row("Deposit paid", money(deposit), false, theme) +
-    row("Balance due at salon", money(booking.balance_due), true, theme) +
+    row("Balance due to the business", money(booking.balance_due), true, theme) +
     row(
       "Payment method",
       booking.payment_method_label ||
@@ -255,13 +255,13 @@ export function renderSalonBookingConfirmation(
     row("Customer notes", booking.client_notes || "None", false, theme);
   const collectionRows =
     row("Deposit collected", money(booking.deposit_amount), false, theme) +
-    row("Collect at salon", money(booking.balance_due), true, theme);
+    row("Remaining balance to collect", money(booking.balance_due), true, theme);
   const content =
     card("Booking reference", bookingIdentity(input), theme) +
     card("Customer", customerRows, theme) +
     card("Appointment", appointmentDetails(input), theme) +
     card("Price breakdown", priceDetails(input), theme) +
-    card("Salon collection", collectionRows, theme) +
+    card("Business collection", collectionRows, theme) +
     `<div style="margin-top:18px">${button("Open booking", input.dashboardUrl || "", false, theme)}</div>`;
   return shell(
     "A new booking is confirmed",
@@ -293,12 +293,12 @@ export function renderBookingCancellation(
     row("Cancelled by", input.cancelledBy, false, theme) +
     row("Reason", input.reason, false, theme) +
     (input.customerMessage
-      ? row("Message from the salon", input.customerMessage, false, theme)
+      ? row("Message from the business", input.customerMessage, false, theme)
       : "") +
     row("Refund status", input.refundStatus, false, theme);
   const actions =
     input.audience === "customer"
-      ? `<div style="margin-top:18px">${button("Manage booking", input.manageUrl || "", false, theme)}${button("Find another salon", input.browseUrl || "", true, theme)}${button("Support", input.supportUrl || "", true, theme)}</div>`
+      ? `<div style="margin-top:18px">${button("Manage booking", input.manageUrl || "", false, theme)}${button("Find another business", input.browseUrl || "", true, theme)}${button("Support", input.supportUrl || "", true, theme)}</div>`
       : `<div style="margin-top:18px">${button("Open booking history", input.dashboardUrl || "", false, theme)}${button("Support", input.supportUrl || "", true, theme)}</div>`;
   return shell(
     "Appointment cancelled",

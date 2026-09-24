@@ -113,7 +113,7 @@ export default function BusinessSignupContentEditor({ content, change }: { conte
     </Group>
     <Group title="C. Business Selector"><Text label="Selector heading" value={content.selector.heading} max={160} change={heading => change({ ...content, selector: { ...content.selector, heading } })} /><Text label="Selector supporting text" value={content.selector.supportingText} max={500} change={supportingText => change({ ...content, selector: { ...content.selector, supportingText } })} /></Group>
     <Group title="D. Business Categories">
-      {content.categories.map(category => {
+      {content.categories.filter(category => category.id !== "other").map(category => {
         const update = (patch: Partial<typeof category>) => change({ ...content, categories: content.categories.map(item => item.id === category.id ? { ...category, ...patch } : item) });
         return <details key={category.id} className="rounded-lg border border-plum/15 p-4"><summary className="cursor-pointer font-bold text-plum">{category.name || category.id}</summary><div className="mt-4 space-y-4">
           <p className="text-xs text-text-secondary">Stable identity: {category.id}</p>

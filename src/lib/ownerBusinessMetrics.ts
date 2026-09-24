@@ -3,8 +3,9 @@ export const isBusinessAdded = (booking: Row) => booking.booking_origin === "bus
 export const BOOKING_SOURCE_LABELS: Record<string, string> = {
   marketplace: "Girlz Culture marketplace", phone: "Phone", walk_in: "Walk-in", instagram: "Instagram", whatsapp: "WhatsApp", other: "Other",
 };
-export function profileCompletion(salon: Row, services: number, professionals: number) {
-  return Math.round([salon.name, salon.description, salon.phone, salon.address_street, salon.cover_photo_url, services, professionals].filter(Boolean).length / 7 * 100);
+export function profileCompletion(salon: Row, services: number, professionals: number, independent = /^(Solo|Solo Pro)$/.test(String(salon.subscription_tier))) {
+  const fields = [salon.name, salon.description, salon.phone, salon.address_street, salon.cover_photo_url, services, ...(independent ? [] : [professionals])];
+  return Math.round(fields.filter(Boolean).length / fields.length * 100);
 }
 /** The existing dashboard definition is completed estimated booking value,
  * never a claim of cash revenue. Business-entered money is not GC GMV. */

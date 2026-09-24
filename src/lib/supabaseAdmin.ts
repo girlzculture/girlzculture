@@ -1,3 +1,4 @@
+import {isSampleEmail,isSamplePhone} from '@/lib/demoWorkspace';
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { formatInTimeZone } from "@/lib/dateTime";
 import { sendPushToUsers } from "@/lib/webPushServer";
@@ -223,11 +224,21 @@ export async function requireSalonOwner(request: Request) {
   if (!teamMember?.salon || !isActiveSalonTeamMembership(teamMember.status)) {
     throw new Error("Forbidden: this active salon-team identity is not linked to an active team membership.");
   }
+  const solo = await admin.rpc("salon_is_solo", { target_salon_id: teamMember.salon.id });
+  if (solo.error) throw solo.error;
+  if (solo.data) throw new Error("Forbidden: this business plan does not include staff access.");
   return { admin, user, salon: teamMember.salon, teamMember, isOwner: false };
+}
+
+export async function assertBusinessTeamAccess(context: Awaited<ReturnType<typeof requireSalonOwner>>) {
+  const result = await context.admin.rpc("salon_is_solo", { target_salon_id: context.salon.id });
+  if (result.error) throw result.error;
+  if (result.data) throw new Error("Forbidden: team features require a business team plan.");
 }
 
 export async function requireSalonPermission(request: Request, permission: string) {
   const context = await requireSalonOwner(request);
+  if (["stylists", "team", "team_payouts"].includes(permission)) await assertBusinessTeamAccess(context);
   if (!context.isOwner && !(context.teamMember?.permissions as Record<string, boolean> | undefined)?.[permission]) throw new Error("Forbidden: this salon role does not have access to this section.");
   return context;
 }
@@ -255,6 +266,7 @@ export async function sendEmail(
   category: TransactionalEmailCategory = "account",
   options: { fromName?: string; replyTo?: string; idempotencyKey?: string; signal?: AbortSignal } = {},
 ) {
+  if (isSampleEmail(to)) return {skipped:true,reason:"sample_data"};
   if (!process.env.RESEND_API_KEY || !to) return { skipped: true };
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -279,6 +291,7 @@ export async function sendEmail(
 }
 
 export async function sendSms(to: string, body: string) {
+  if(isSamplePhone(to))return {skipped:true,reason:"sample_data"};
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
   const from = process.env.TWILIO_PHONE_NUMBER;
@@ -841,7 +854,13 @@ export async function processBookingFollowups(){
 
 export async function processBookingReminders(){
   const admin=getSupabaseAdmin();const notification=await bookingNotificationSettings(admin);const results:Array<Record<string,unknown>>=[];
-  for(const reminderHours of notification.reminderHours){
+  const schedules=await admin.rpc("booking_reminder_hours_in_use");
+  if(schedules.error || !Array.isArray(schedules.data) || schedules.data.some((hour:unknown)=>!Number.isInteger(hour)||Number(hour)<1||Number(hour)>336)) {
+    const reference=await capturePlatformError({admin,error:Error("REMINDER_SCHEDULE_UNAVAILABLE"),feature:"booking-reminders",action:"load_business_schedules",actorRole:"system",safeMessage:"Business reminder schedules could not be loaded."});
+    return {configuredHours:[],processed:0,results:[{status:"failed",stage:"load_business_schedules",request_id:reference}],warnings:[]};
+  }
+  const configuredHours=[...new Set<number>(schedules.data)];
+  for(const reminderHours of configuredHours){
     const{data:bookings,error}=await admin.rpc("due_booking_reminders",{p_reminder_hours:reminderHours});
     if(error){
       const reference=await capturePlatformError({admin,error,feature:"booking-reminders",action:"load_due_bookings",actorRole:"system",provider:"supabase",safeMessage:"Due booking reminders could not be loaded."});
@@ -890,5 +909,5 @@ export async function processBookingReminders(){
       }),
     }));
   }
-  return{configuredHours:notification.reminderHours,processed:results.length,results,warnings:notification.warningReferences.map(reference=>({message:`Reminder configuration needs attention. Reference ${reference}.`,request_id:reference}))};
+  return{configuredHours,processed:results.length,results,warnings:notification.warningReferences.map(reference=>({message:`Reminder configuration needs attention. Reference ${reference}.`,request_id:reference}))};
 }

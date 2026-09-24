@@ -13,7 +13,7 @@ export function businessOverview(bookings: Row[], period: OverviewPeriod, timeZo
   if(period==="week") start.setUTCDate(start.getUTCDate()-((start.getUTCDay()+6)%7));
   if(period==="month") start.setUTCDate(1);
   const from = start.toISOString().slice(0,10);
-  const real = bookings.filter(row=>row.payment_mode!=="test");
+  const real = bookings.filter(row=>(row.payment_mode!=="test"||row.is_demo===true));
   const dated = real.map(row=>({row,day:businessDay(String(row.appointment_datetime||""),timeZone)})).filter(item=>item.day!==null);
   const selected = dated.filter(item=>item.day!>=from&&item.day!<=today).map(item=>item.row);
   const market = selected.filter(row=>row.booking_origin!=="business_added");

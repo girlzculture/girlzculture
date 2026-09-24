@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
+import {verifyAdvertisingConcurrency} from './verify-master-advertising-concurrency.mjs';
 import {verifyWaitlistConcurrency} from './verify-waitlist-concurrency.mjs';
 
 const databaseUrl = process.env.CLEAN_DATABASE_URL;
@@ -1300,3 +1301,39 @@ console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-appointment
 await verifyWaitlistConcurrency(databaseUrl,psql);
 
 console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-google-business-profile.sql")],"Google connection state, retry, disconnect and two-business isolation"));
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-mobile-booking.sql")],"Private mobile destination, immutable travel terms and retention"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-assistant-active-task.sql")],"Assistant active task continuity, confirmed completion and cancellation boundary"));
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-catalog-binding.sql")],"Assistant selected catalog service, exact time and reviewed confirmation"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-growth-controls.sql")],"Plan reminder and manual/targeted waitlist authority"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-finance.sql")],"Assistant finance preview, readback, replay and two-business isolation"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-booking-reports.sql")],"Current-plan monthly appointment reports and tenant/staff projections"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-rebooking-reminders.sql")],"Reviewed rebooking automation, current consent, no duplicate sends and demo exclusion"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-google-help.sql")],"Google setup assistance, reviewed support handoff and private-address isolation"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-advertising.sql")],"Advertising benefits, reviewed invoices, private-location discovery and tenant boundaries"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-operations.sql")],"Assistant reviewed stock, media, client cards and review replies"));
+
+await verifyAdvertisingConcurrency(databaseUrl,psql);
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-solo-upgrade.sql")],"Verified Solo-to-team entitlement projection and private address preservation"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-catalog.sql")],"Reviewed catalog publication, replay, revocation and same-business readback"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-controls.sql")],"Assistant reviewed settings, plan enforcement, authoritative readback and isolation"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-team.sql")],"Reviewed team permissions and payout arrangements, immutable history and tenant isolation"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-fulfillment.sql")],"Reviewed product fulfillment isolation, stale review, replay and immutable payment terms"));
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-booking-progress.sql")],"Reviewed booking progress, attendance, assignment and immutable payment terms"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-photo-upload.sql")],"Staged photo ownership, reviewed attachment, stale gallery and replay"));
+
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-marketing.sql")],"Owner marketing review, private sources, canonical publication and stale previews"));
+console.log(runPsql(["--file",path.join(root,"scripts","sql","verify-master-assistant-waitlist.sql")],"Reviewed waitlist offers, current scope, replay and no booking creation"));

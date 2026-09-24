@@ -29,41 +29,41 @@ async function GETHandler(request: Request) {
     const recordLimit = 2_000;
     let bookingsQuery = admin
       .from("bookings")
-      .select("*")
+      .select("*").eq("is_demo",false)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(recordLimit);
     let salonsQuery = admin
       .from("salons")
-      .select("id,name,address_city,address_state")
+      .select("id,name,address_city,address_state").eq("is_demo",false)
       .order("name")
       .limit(2_000);
     let billingQuery = admin
       .from("billing_events")
-      .select("*")
+      .select("*").eq("is_demo",false)
       .order("event_date", { ascending: false })
       .order("id", { ascending: false })
       .limit(recordLimit);
     let changesQuery = admin
       .from("subscription_change_requests")
-      .select("*")
+      .select("*").eq("is_demo",false)
       .order("requested_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(recordLimit);
     let productOrdersQuery = admin
       .from("product_orders")
-      .select("*,items:product_order_items(*),events:product_order_events(*),refunds:product_order_refunds(*)")
+      .select("*,items:product_order_items(*),events:product_order_events(*),refunds:product_order_refunds(*)").eq("is_demo",false)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(recordLimit);
     let productRefundsQuery = admin
       .from("product_order_refunds")
-      .select("*")
+      .select("*").eq("is_demo",false)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(recordLimit);
-    let stylesQuery = admin.from("styles").select("id,name").order("id").limit(2_000);
-    let stylistsQuery = admin.from("stylists").select("id,name").order("id").limit(2_000);
+    let stylesQuery = admin.from("styles").select("id,name").eq("is_demo",false).order("id").limit(2_000);
+    let stylistsQuery = admin.from("stylists").select("id,name").eq("is_demo",false).order("id").limit(2_000);
     if (salonId) {
       bookingsQuery = bookingsQuery.eq("salon_id", salonId);
       salonsQuery = salonsQuery.eq("id", salonId);
@@ -78,7 +78,7 @@ async function GETHandler(request: Request) {
       ? collectEveryFinancePage<Row>((from, to) =>
           admin
             .from("bookings")
-            .select("*")
+            .select("*").eq("is_demo",false)
             .eq("salon_id", salonId)
             .order("created_at", { ascending: false })
             .order("id", { ascending: false })
@@ -89,7 +89,7 @@ async function GETHandler(request: Request) {
       ? collectEveryFinancePage<Row>((from, to) =>
           admin
             .from("billing_events")
-            .select("*")
+            .select("*").eq("is_demo",false)
             .eq("salon_id", salonId)
             .order("event_date", { ascending: false })
             .order("id", { ascending: false })
@@ -100,7 +100,7 @@ async function GETHandler(request: Request) {
       ? collectEveryFinancePage<Row>((from, to) =>
           admin
             .from("subscription_change_requests")
-            .select("*")
+            .select("*").eq("is_demo",false)
             .eq("salon_id", salonId)
             .order("requested_at", { ascending: false })
             .order("id", { ascending: false })
@@ -111,7 +111,7 @@ async function GETHandler(request: Request) {
       ? collectEveryFinancePage<Row>((from, to) =>
           admin
             .from("product_orders")
-            .select("*,items:product_order_items(*),events:product_order_events(*),refunds:product_order_refunds(*)")
+            .select("*,items:product_order_items(*),events:product_order_events(*),refunds:product_order_refunds(*)").eq("is_demo",false)
             .eq("salon_id", salonId)
             .order("created_at", { ascending: false })
             .order("id", { ascending: false })
@@ -122,7 +122,7 @@ async function GETHandler(request: Request) {
       ? collectEveryFinancePage<Row>((from, to) =>
           admin
             .from("product_order_refunds")
-            .select("*")
+            .select("*").eq("is_demo",false)
             .eq("salon_id", salonId)
             .order("created_at", { ascending: false })
             .order("id", { ascending: false })
@@ -133,7 +133,7 @@ async function GETHandler(request: Request) {
       ? collectEveryFinancePage<Row>((from, to) =>
           admin
             .from("styles")
-            .select("id,name")
+            .select("id,name").eq("is_demo",false)
             .eq("salon_id", salonId)
             .order("id")
             .range(from, to),
@@ -143,7 +143,7 @@ async function GETHandler(request: Request) {
       ? collectEveryFinancePage<Row>((from, to) =>
           admin
             .from("stylists")
-            .select("id,name")
+            .select("id,name").eq("is_demo",false)
             .eq("salon_id", salonId)
             .order("id")
             .range(from, to),

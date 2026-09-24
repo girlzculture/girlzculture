@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from "react";
 import {getSessionForScope} from "@/lib/supabase";
 import {useI18n} from "@/components/i18n/LocaleProvider";
 import {readApiResponse} from "@/lib/apiResponseClient";
+import BusinessGoogleHelp from './BusinessGoogleHelp';
 type Row=Record<string,unknown>;
 type State={available:boolean;status:string;auto_sync?:boolean;last_success_at?:string;last_error?:string;operations?:Array<{id:string;kind:string;status:string;created_at:string}>};
 type Choice={account:string;name:string;title:string;address:Row};
@@ -37,7 +38,7 @@ export default function GoogleBusinessProfileSettings({businessId,photos=[]}:{bu
   if(typeof item==="object")return t("Selected photo");
   return String(item);
  }
- return <section aria-label={t("Google Business Profile")} className="space-y-5 rounded-2xl border border-border bg-white p-5">
+ return <><section aria-label={t("Google Business Profile")} className="space-y-5 rounded-2xl border border-border bg-white p-5">
   <h2 className="font-serif text-2xl">{t("Google Business Profile")}</h2>
   {error?<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm">{error}</p>:null}
   {notice?<p role="status" className="rounded-xl bg-primary/5 p-3 text-sm">{notice}</p>:null}
@@ -65,5 +66,5 @@ export default function GoogleBusinessProfileSettings({businessId,photos=[]}:{bu
    {state.status!=="disconnected"?<button disabled={busy} className={control} onClick={()=>void action(async()=>{const result=await api({action:"disconnect"});clear();await refresh();setNotice(t(result.revoked?"Disconnected. Background synchronization has stopped.":"Disconnected locally. Remove Girlz Culture access in your Google account if revocation could not be confirmed."));})}>{t("Disconnect Google profile")}</button>:null}
   </>:null}
   <button disabled={busy} className={control} onClick={()=>void action(refresh)}>{t("Refresh")}</button>
- </section>;
+ </section><BusinessGoogleHelp key={`help:${businessId}`} businessId={businessId}/></>;
 }

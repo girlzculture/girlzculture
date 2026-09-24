@@ -46,13 +46,13 @@ test("business media defaults to independent images with neutral positioning and
   page.on("request", request => { if (request.resourceType() === "media") mediaRequests.push(request.url()); });
   await page.goto("/business/signup");
   const photos = page.locator(".business-photo img");
-  await expect(photos).toHaveCount(9);
+  await expect(photos).toHaveCount(8);
   const hero = page.locator(".business-hero-media img");
   await expect(hero).toHaveCount(1);
   await expect(hero).toHaveAttribute("src", heroPoster);
   const cards = page.locator(".business-category img");
-  await expect(cards).toHaveCount(8);
-  expect(new Set(await cards.evaluateAll(images => images.map(image => image.getAttribute("src")))).size).toBe(8);
+  await expect(cards).toHaveCount(7);
+  expect(new Set(await cards.evaluateAll(images => images.map(image => image.getAttribute("src")))).size).toBe(7);
   for (const photo of await cards.all()) {
     await expect(photo).toHaveAttribute("src", /^\/images\/business\/[a-z]+-service\.avif$/);
   }

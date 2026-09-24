@@ -9,6 +9,10 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const booking = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', public_reference: 'GC123', guest_name: 'Sarah Save', appointment_datetime: '2026-09-24T19:00:00Z', status: 'Confirmed', style: { name: 'Save' }, stylist: { name: 'Aminata' } };
 
 for (const [tool, permission, args, result, key, field, expected] of [
+  ['get_appointment_waitlist','bookings',{record_id:booking.id},{requests:[{id:booking.id,service_name:'Own service',status:'waiting'}],total:1,total_is_capped:false,list_limit:200,openings:[],offered:false},'requests','status','waiting'],
+  ['get_marketing_records','promotions',{record_id:booking.id},{posts:[{id:booking.id,status:'draft',copies:{fr:{title:'Nos tresses',body:'Texte original',tags:['#Tresses']}}}],total:1,list_limit:25,external_posting:false},'posts','status','draft'],
+  ['get_business_stock','products',{query:'oil'},{products:[{id:booking.id,name:'Owned oil',inventory_quantity:8,kind:'product'}],supplies:[],inventory_total:12,matching_total:1,capped_per_kind:30},'products','inventory_quantity',8],
+  ['get_finance_records','finance_manage',{start:'2026-09-01T00:00:00Z',end:'2026-10-01T00:00:00Z'},{records:[{id:booking.id,kind:'receipt',amount_cents:2500}],totals:{receipt:1},recorded_only:true},'records','amount_cents',2500],
   ['get_booking_messages', 'bookings', { booking_id: booking.id }, { messages: [{ id: 'own-message', original_body: 'Please keep my original braid length.', body: 'Older fallback text', source_locale: 'en', sender_role: 'customer', created_at: '2026-09-19T12:00:00Z' }], total: 1, capped_at: 100, customer_participant: true }, 'messages', 'original_body', 'Please keep my original braid length.'],
   ['get_reviews', 'reviews', { start: '2026-09-01T00:00:00Z', end: '2026-10-01T00:00:00Z' }, { reviews: [{ id: 'own-review', rating_overall: 4, written_review: 'Careful service and a longer wait.', salon_reply: 'Thank you for the feedback.', display_name: 'Original reviewer', moderation_status: 'Published', created_at: '2026-09-19T12:00:00Z' }], total: 1, capped_at: 100 }, 'reviews', 'written_review', 'Careful service and a longer wait.'],
   ['get_customers', 'bookings', { start: '2026-09-01T00:00:00Z', end: '2026-10-01T00:00:00Z' }, { customers: [{ name: 'Sarah Save', booking_id: booking.id, customer_id: 'own-account', booking_origin: 'marketplace' }], scope: 'customers_of_these_bookings' }, 'customers', 'name', 'Sarah Save'],
@@ -145,6 +149,7 @@ function fixture(options = {}) {
         limit(n) { filters.push(['limit', n]); return query; },
         update(value) { mutation = value; return query; },
         maybeSingle() { return query; },
+        abortSignal() {return query;},
         then(resolve, reject) { return Promise.resolve().then(() => {
           calls.push({ table, filters });
           if (table === 'ai_automation_features') return { data: { is_enabled: options.enabled !== false, provider_key: 'openai', model_key: options.model || 'fixture-model', timeout_ms: 20000 } };
@@ -154,6 +159,7 @@ function fixture(options = {}) {
             const requested = filters.find(row => row[0] === 'in' && row[1] === 'id')[2];
             return { data: history.filter(row => requested.includes(row.id)) };
           }
+          if (table === 'engine_settings') return {data:options.agentSettings||[]};
           if (table === 'master_styles') return { data: options.catalog || [{ id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', name: 'Knotless Braids' }] };
           if (table === 'bookings') {
             assert.ok(filters.some(row => row[0] === 'eq' && row[1] === 'salon_id' && row[2] === 'business-A'));
@@ -194,7 +200,7 @@ function fixture(options = {}) {
     },
   });
   const { planOwnerRequest } = load('src/lib/gcAssistantPlanningServer.ts');
-  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ context:{admin,salon:{id:'business-A',time_zone:'America/New_York'},user:{id:'owner-A'},isOwner:!options.assigned,teamMember:options.assigned?{stylist_id:options.assigned}:null}, admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: options.previousRequestIds || history.map(row => row.id), conversationRequestIds: options.conversationRequestIds, conversation: options.conversation, answerOnly: options.answerOnly, page: options.page });
+  const run = (locale = 'fr', text = 'Tell Sarah she can come at 3 instead.') => planOwnerRequest({ context:{admin,salon:{id:'business-A',time_zone:'America/New_York'},user:{id:'owner-A'},isOwner:!options.assigned,teamMember:options.assigned?{stylist_id:options.assigned}:null}, admin, salonId: 'business-A', userId: 'owner-A', locale, text, timeZone: 'America/New_York', previousRequestIds: options.previousRequestIds || history.map(row => row.id), conversationRequestIds: options.conversationRequestIds, conversation: options.conversation, answerOnly: options.answerOnly, page: options.page, trackTask: options.trackTask, activeTask: options.activeTask });
   return { run, calls, requests, updates, inputMeasurements };
 }
 
@@ -265,7 +271,20 @@ test('shared planner definitions preserve the complete pre-factoring owner schem
   const schema = ownerPlannerSchema(new Set(all), false), expanded = expandedPlannerSchema(schema);
   // Captured from origin/main 8a4ee043 before factoring, including descriptions,
   // strict required fields, patterns, limits, enum order and all 41 tool choices.
-  assert.equal(createHash('sha256').update(JSON.stringify(expanded)).digest('hex'), '4f14e29e4c130ff87827c54d3c8b7873f5281584a5c27ff23a7ce443f6472d52');
+  // The manual-appointment plan now carries explicit service/stylist preference
+  // fields so terse follow-ups can preserve “any” versus named selections.
+  // Master Build adds reviewed archive and ledger actions. Preserve the frozen legacy
+  // contract exactly, then validate the complete expanded tool set below.
+  const archive=expanded.properties.decision.anyOf.filter(row=>row.properties.tool?.enum[0]==='prepare_professional_archive');
+  assert.equal(archive.length,1);assert.deepEqual(archive[0].properties.args,JSON.parse(JSON.stringify(ASSISTANT_TOOLS.prepare_professional_archive.schema)));
+  const legacy=structuredClone(expanded);legacy.properties.decision.anyOf=legacy.properties.decision.anyOf.filter(row=>!['get_marketing_records','prepare_marketing_change','get_appointment_waitlist','prepare_booking_progress','get_team_controls','prepare_team_controls','prepare_service_change','prepare_professional_change','prepare_product_change','prepare_promotion_change','get_business_controls','prepare_business_controls','prepare_professional_archive','get_finance_records','prepare_finance_record','get_business_stock','prepare_stock_change','prepare_photo_change','prepare_client_card_change','prepare_review_reply'].includes(row.properties.tool?.enum[0]));
+  const productDescription=legacy.properties.decision.anyOf.find(row=>row.properties.tool?.enum[0]==='get_products');
+  assert.ok(productDescription.description.includes('prepare_stock_change product_fulfillment'));
+  productDescription.description=productDescription.description.replace('For reviewed fulfillment use prepare_stock_change product_fulfillment; nothing performed.','Review the Products order workflow for fulfillment; no action was performed.');
+  const financialDescription=legacy.properties.decision.anyOf.find(row=>row.properties.tool?.enum[0]==='get_earnings_summary');
+  assert.match(financialDescription.description,/use get_finance_records and prepare_finance_record/);
+  financialDescription.description=financialDescription.description.replace('use get_finance_records and prepare_finance_record for reviewed expenses, received balances and money already returned. Other provider operations remain in the controlled Finances workflow.','navigate to Finances for all other individual records or financial actions.');
+  assert.equal(createHash('sha256').update(JSON.stringify(legacy)).digest('hex'), 'cc7c1c67ea8d9a275e6a369d686cdaf12ce26a05f5586948ffea171cce5e9d6a');
   assert.ok(Buffer.byteLength(JSON.stringify(schema)) < Buffer.byteLength(JSON.stringify(expanded)) - 7000);
   for (const granted of [[], ...all.map(permission => [permission]), all, all.filter(permission => permission !== 'client_history'), all.filter(permission => permission !== 'my_page')]) {
     const current = ownerPlannerSchema(new Set(granted), false), unfolded = expandedPlannerSchema(current);
@@ -342,7 +361,8 @@ test('shared planner definitions fit projected photo service calendar history an
   t.diagnostic(JSON.stringify({ actualBytes, originalBytes, margin: 64000 - actualBytes, projectedResults: Buffer.byteLength(JSON.stringify(context.previous)), catalogBytes: Buffer.byteLength(JSON.stringify(catalog)), historyCount: history.length, conversationTurns: conversation.length }));
   assert.ok(originalBytes > 64000, 'this normal sequence must reproduce the original guard, not merely show an arbitrary size reduction');
   assert.ok(actualBytes <= 64000);
-  assert.deepEqual(context.conversation, conversation); assert.deepEqual(context.platform_catalog_for_new_service_drafts, catalog);
+  assert.deepEqual(context.conversation, conversation); assert.deepEqual(context.platform_catalog_for_new_service_drafts.columns, ["id","name"]);
+  assert.deepEqual(context.platform_catalog_for_new_service_drafts.rows.map(values=>{assert.equal(values.length,2);return Object.fromEntries(context.platform_catalog_for_new_service_drafts.columns.map((key,index)=>[key,values[index]]));}), catalog);
   assert.equal(context.previous.length, 6); assert.equal(context.previous[0].result.gallery_count, 3);
   assert.equal(context.previous[1].result.services[0].id, id(91)); assert.equal(context.previous[1].result.services[0].price_display_max, 420);
   assert.deepEqual(context.previous[2].result.schedule_opportunities, JSON.parse(JSON.stringify(opportunities)));
@@ -1069,4 +1089,48 @@ test('actual contribution projection retains measured dates values counts and ac
   const f=fixture({answerOnly,history:[{tool,permission:tool==='get_business_summary'?'overview':'earnings',arguments:{},result:{service_contribution:summary}}],...(answerOnly?{output:{reply:'Review the measured service contribution.'}}:{})});await f.run('en','Which own service should I review?');
   const out=JSON.parse(f.requests[0].messages[1].content).previous[0].result.service_contribution;assert.deepEqual(out.period,period);assert.equal(out.as_of,value.as_of);assert.equal(out.recommendation_count,1);assert.equal(out.recommendations[0].service_name,'Own reviewed service');assert.equal(out.recommendations[0].contribution_cents,5700);assert.equal(out.recommendations[0].completed_count,2);assert.equal(out.recommendations[0].previous_count,3);assert.equal(out.recommendations[0].href,'/salon/dashboard/services/'+service);assert.doesNotMatch(JSON.stringify(out),/PRIVATE_COST_REVIEW|allocations|customer/);
  }
+});
+
+ test('published business-agent behavior reaches both phases without adding tools or changing tenant scope',async()=>{
+  for(const answerOnly of [false,true]){
+   const f=fixture({answerOnly,agentSettings:[{setting_key:'agents.business.instructions',published_value:'Use a short friendly tone.'}],...(answerOnly?{output:{reply:'Aucun avis publié.'},history:[{tool:'get_reviews',permission:'reviews',arguments:{},result:{reviews:[],total:0}}],historyRead:{reviews:[],total:0}}:{})});
+   await f.run();assert.match(f.requests[0].messages[0].content,/Use a short friendly tone/);
+   const config=f.calls.find(c=>c.table==='engine_settings');assert.ok(config.filters.some(f=>f[0]==='eq'&&f[1]==='status'&&f[2]==='Published'));
+   assert.deepEqual(Array.from(config.filters.find(f=>f[0]==='in')[2]),['agents.business.instructions','agents.business.tool_guidance','agents.business.routing']);
+  }
+ });
+
+
+test('active task retains the exact original appointment across long follow-ups and refresh', async()=>{
+ const original='Create a walk-in for Alma Aba, Thursday September 24, 3:30 PM, any stylist, any service';
+ const activeTask={id:'task-a',tool:'prepare_manual_appointment',permission:'bookings',revision:18,request_ids:[],user_context:Array.from({length:18},(_,i)=>({request_id:`turn-${i}`,text:i?`Keep the same appointment detail ${i}`:original}))};
+ const f=fixture({trackTask:true,activeTask,wireOutput:{decision:{clarification:'I will retain 3:30 PM for Alma Aba.'},task_tool:'prepare_manual_appointment'}});
+ const result=await f.run('en','Keep the original time.');
+ assert.equal(result.task_tool,'prepare_manual_appointment');
+ const sent=JSON.parse(f.requests[0].messages[1].content);
+ assert.equal(sent.active_task.user_context.length,18);
+ assert.equal(sent.active_task.user_context[0].text,original);
+ assert.ok(f.requests[0].response_format.json_schema.schema.required.includes('task_tool'));
+});
+
+
+test('client edit history is removed before the model when a field grant or assigned client is revoked', async () => {
+  for (const answerOnly of [false,true]) for (const state of ['allowed','notes','formula','edit','assignment']) {
+    const permissions={client_history:true,client_edit:state!=='edit',client_notes:state!=='notes',client_formulas:state!=='formula'};
+    const f=fixture({answerOnly,clientDenied:state==='assignment',clientRead:{permissions},
+      history:[{tool:'prepare_client_card_change',permission:'client_history',arguments:{operation:'client_card',record_id:booking.id,changes_json:JSON.stringify({locale:'en',patch:{notes:'PRIVATE_CARD_PROSE',formula:{technique:'PRIVATE_FORMULA'}}})},result:{private:'PRIVATE_CARD_PROSE'}}, ...(answerOnly?[{tool:'get_business_stock',permission:'products',arguments:{query:''},result:{products:[],supplies:[]}}]:[])],
+      conversation:[{role:'assistant',text:'PRIVATE_CARD_PROSE'}],
+      ...(answerOnly?{previousRequestIds:['request-1'],conversationRequestIds:['request-0'],output:{reply:'The current authorized record is available.'}}:{})});
+    await f.run('en','What about that private note?');
+    assert.ok(f.calls.some(call=>call.name==='read_business_client_card'));
+    const sent=JSON.stringify(f.requests[0].messages);
+    if(state==='allowed')assert.match(sent,/PRIVATE_CARD_PROSE/);
+    else assert.doesNotMatch(sent,/PRIVATE_CARD_PROSE|PRIVATE_FORMULA/);
+  }
+});
+
+for(const answerOnly of [false,true])test(`marketing data and conversation are removed after access loss in ${answerOnly?'answer':'planner'}`,async()=>{
+ const f=fixture({answerOnly,historyReadDenied:true,history:[{tool:'get_marketing_records',permission:'promotions',arguments:{record_id:booking.id},result:{posts:[{title:'REVOKED_MARKETING_COPY'}],total:1}}],conversation:[{role:'assistant',text:'REVOKED_MARKETING_COPY'}],...(answerOnly?{output:{reply:'The record is unavailable.'}}:{})});
+ if(answerOnly){await assert.rejects(f.run('fr','Et cette publication ?'),error=>error.code==='ASSISTANT_INVALID_PLAN');assert.equal(f.requests.length,0);return;}
+ await f.run('fr','Et cette publication ?');assert.doesNotMatch(JSON.stringify(f.requests),/REVOKED_MARKETING_COPY/);assert.equal(JSON.parse(f.requests[0].messages[1].content).previous.length,0);
 });

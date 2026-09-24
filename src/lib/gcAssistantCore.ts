@@ -1,3 +1,7 @@
+import {ASSISTANT_TEAM_CHANGES} from '@/lib/assistantTeam';
+import {ASSISTANT_CONTROLS,type AssistantControl} from "@/lib/assistantControls";
+import {ASSISTANT_CATALOG,isCatalogTool} from "@/lib/assistantCatalog";
+import {ASSISTANT_OPERATIONS,operationTool,type AssistantOperation} from "@/lib/assistantOperations";
 import { validateBusinessPolicy } from "@/lib/businessPolicyCore";
 import { LENGTH_OPTIONS } from "@/lib/salonPresets";
 
@@ -18,10 +22,27 @@ const policy = object({ business_policy_text: { type: ["string", "null"], maxLen
 const date = { ...string(10), pattern: "^\\d{4}-\\d{2}-\\d{2}$" };
 const manualAppointment = {
   guest_name: { ...string(120), minLength: 1 }, guest_phone: string(40), guest_email: string(254),
-  style_id: nullableId, service_name: string(120), duration_minutes: { type: ["integer", "null"], minimum: 15, maximum: 1440 } as ToolSchema,
-  stylist_id: nullableId, date, time: clockTime, source: enumeration("phone", "walk_in", "instagram", "whatsapp", "other"), notes: string(1200),
+  style_id: nullableId, service_name: string(120), service_preference: enumeration("named", "any", "custom"), duration_minutes: { type: ["integer", "null"], minimum: 15, maximum: 1440 } as ToolSchema,
+  stylist_id: nullableId, stylist_preference: enumeration("named", "any", "unspecified"), date, time: clockTime, source: enumeration("phone", "walk_in", "instagram", "whatsapp", "other"), notes: string(1200),
 };
 export const ASSISTANT_TOOLS = {
+  get_appointment_waitlist:{risk:1,permission:"bookings",schema:object({record_id:nullableId})},
+  get_marketing_records:{risk:1,permission:"promotions",schema:object({record_id:nullableId})},
+  prepare_marketing_change:{risk:4,permission:"promotions",schema:object({operation:enumeration("marketing_draft","marketing_publish","marketing_cancel"),record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
+  get_team_controls:{risk:1,permission:"settings",schema:object({})},
+  prepare_team_controls:{risk:4,permission:"settings",schema:object({operation:enumeration("permissions","arrangement"),record_id:uuid,changes_json:{...string(6000),minLength:2}})},
+  get_business_controls:{risk:1,permission:"settings",schema:object({section:enumeration(...Object.keys(ASSISTANT_CONTROLS))})},
+  prepare_business_controls:{risk:4,permission:"settings",schema:object({section:enumeration(...Object.keys(ASSISTANT_CONTROLS)),changes_json:{...string(6000),minLength:2}})},
+  prepare_service_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_service_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
+  prepare_professional_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_professional_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
+  prepare_product_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_product_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
+  prepare_promotion_change: {risk:4,permission:ASSISTANT_CATALOG.prepare_promotion_change.permission,schema:object({record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
+  get_business_stock: {risk:1,permission:"products",schema:object({query:string(120)})},
+  prepare_booking_progress: {risk:4,permission:"bookings",schema:object({operation:enumeration("booking_service","booking_attendance","waitlist_offer"),record_id:uuid,changes_json:{...string(6000),minLength:2}})},
+  prepare_stock_change: {risk:4,permission:"products",schema:object({operation:enumeration(...Object.keys(ASSISTANT_OPERATIONS).filter(name=>operationTool(name)==="prepare_stock_change")),record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
+  prepare_photo_change: {risk:4,permission:"photos",schema:object({operation:enumeration(...Object.keys(ASSISTANT_OPERATIONS).filter(name=>operationTool(name)==="prepare_photo_change")),record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
+  prepare_client_card_change: {risk:4,permission:"client_history",schema:object({operation:enumeration(...Object.keys(ASSISTANT_OPERATIONS).filter(name=>operationTool(name)==="prepare_client_card_change")),record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
+  prepare_review_reply: {risk:4,permission:"reviews",schema:object({operation:enumeration(...Object.keys(ASSISTANT_OPERATIONS).filter(name=>operationTool(name)==="prepare_review_reply")),record_id:nullableId,changes_json:{...string(6000),minLength:2}})},
   get_business_summary: { risk: 1, permission: "overview", schema: object(range) },
   get_bookings: { risk: 1, permission: "bookings", schema: object(range) },
   get_availability: { risk: 1, permission: "availability", schema: object({ style_id: nullableId, stylist_id: nullableId, date: { ...string(10), pattern: "^\\d{4}-\\d{2}-\\d{2}$" }, days: { type: "integer", minimum: 1, maximum: 7 }, selected_options: { type: "array", maxItems: 12, items: object({ group_id: { ...string(40), minLength: 1 }, values: { type: "array", items: { ...string(80), minLength: 1 }, maxItems: 12 } }) } }) },
@@ -42,6 +63,8 @@ export const ASSISTANT_TOOLS = {
   get_promotions: { risk: 1, permission: "promotions", schema: object({}) },
   get_plan_status: { risk: 1, permission: "overview", schema: object({}) },
   get_profile_completion: { risk: 1, permission: "overview", schema: object({}) },
+  get_finance_records: {risk:1,permission:"finance_manage",schema:object(range)},
+  prepare_finance_record: {risk:4,permission:"finance_manage",schema:object({action:enumeration("expense","receipt","refund"),record_id:nullableId,record_kind:{type:["string","null"],enum:["sale","booking","order","receipt",null]},amount_cents:{type:"integer",minimum:1,maximum:100000000},date,time:clockTime,method:{type:["string","null"],enum:["cash","card","transfer","other",null]},category:{type:["string","null"],minLength:1,maxLength:80},treatment:{type:["string","null"],enum:["operating","inventory_asset",null]},note:{...string(1200),minLength:1},money_already_moved:{type:"boolean",enum:[true]}})},
   get_manual_sale_options: { risk: 1, permission: "finance_log", schema: object({}) },
   prepare_manual_service_sale: { risk: 4, permission: "finance_log", schema: object({ service_id: uuid, stylist_id: uuid, amount_cents: { type: "integer", minimum: 1, maximum: 100000000 }, method: enumeration("cash", "card", "transfer", "other"), source: enumeration("walk_in", "phone", "social", "other"), date, time: clockTime, client_name: { type: ["string", "null"], maxLength: 120 }, payment_received: { type: "boolean", enum: [true] } }) },
   get_outstanding_balances: { risk: 1, permission: "earnings", schema: object(range) },
@@ -54,6 +77,7 @@ export const ASSISTANT_TOOLS = {
   prepare_manual_cancellation: { risk: 3, permission: "bookings", schema: object({ booking_id: uuid, reason: { ...string(300), minLength: 1 } }) },
   prepare_business_hours: { risk: 3, permission: "availability", schema: object({ hours }) },
   prepare_service_edit: { risk: 3, permission: "styles", schema: object({ style_id: uuid, name: { ...string(120), minLength: 1 }, price: number(0, 100000), duration_hours: number(0.25, 24), buffer_minutes: { type: "integer", minimum: 0, maximum: 180 } }) },
+  prepare_professional_archive: { risk: 4, permission: "stylists", schema: object({ stylist_id: uuid }) },
   prepare_professional_draft: { risk: 3, permission: "stylists", schema: object({ id: nullableId, name: { ...string(120), minLength: 1 }, bio: string(500), specialties: { type: "array", items: string(80), maxItems: 20 }, years_experience: { type: ["number", "null"], minimum: 0, maximum: 70 } }) },
   prepare_product_draft: { risk: 3, permission: "products", schema: object({ id: nullableId, name: { ...string(120), minLength: 1 }, description: string(1000), price: number(0, 100000) }) },
   prepare_promotion_draft: { risk: 3, permission: "promotions", schema: object({ id: nullableId, title: { ...string(160), minLength: 1 }, description: string(1000), promotion_type: enumeration("percentage", "fixed", "descriptive"), discount_value: number(0, 100000), ...range, time_zone: string(80) }) },
@@ -101,14 +125,46 @@ export function validateTool(name: unknown, input: unknown) {
   if (typeof name !== "string" || !Object.hasOwn(ASSISTANT_TOOLS, name)) throw new AssistantError("ASSISTANT_UNKNOWN_TOOL");
   const tool = name as AssistantTool;
   const schema: ToolSchema = ASSISTANT_TOOLS[tool].schema;
-  const candidate = tool === "prepare_business_policy_update" && input && typeof input === "object" && "policy" in input && input.policy && typeof input.policy === "object"
+  const candidate = tool === "prepare_manual_appointment" && input && typeof input === "object" && !Array.isArray(input)
+    ? { service_preference: "named", stylist_preference: "unspecified", ...input as Record<string, unknown> }
+    : tool === "prepare_business_policy_update" && input && typeof input === "object" && "policy" in input && input.policy && typeof input.policy === "object"
     ? { ...input, policy: {
       ...(!Object.hasOwn(input.policy, "refund_satisfaction") && !Object.hasOwn(input.policy, "refund_terms") ? { refund_satisfaction: "contact_business", refund_terms: "" } : {}),
       business_policy_text: null,
       ...input.policy,
     } } : tool === "get_availability" && input && typeof input === "object" && !Array.isArray(input) ? { days: 1, selected_options: [], ...input } : input;
   assertSchema(candidate, schema);
-  const args = input as Record<string, unknown>;
+  const args = candidate as Record<string, unknown>;
+  if(isCatalogTool(tool)){
+    let changes:unknown;try{changes=JSON.parse(String((candidate as Record<string,unknown>).changes_json));}catch{throw new AssistantError("ASSISTANT_INVALID_INPUT");}
+    assertSchema(changes,ASSISTANT_CATALOG[tool].schema);
+    if(!changes||Object.keys(changes).length===0)throw new AssistantError("ASSISTANT_INVALID_INPUT");
+  }
+  if (["prepare_marketing_change","prepare_booking_progress","prepare_stock_change","prepare_photo_change","prepare_client_card_change","prepare_review_reply"].includes(tool)) {
+    let changes:unknown;try{changes=JSON.parse(String(args.changes_json));}catch{throw new AssistantError("ASSISTANT_INVALID_INPUT");}
+    assertSchema(changes,ASSISTANT_OPERATIONS[args.operation as AssistantOperation].schema);
+    if(args.operation==="booking_service"&&(changes as {attested:boolean}).attested!==true)throw new AssistantError("ASSISTANT_INVALID_INPUT");
+    if(args.operation==="booking_attendance"&&((changes as {action:string;kind:unknown}).action==="confirm"?!(changes as {kind:unknown}).kind:(changes as {kind:unknown}).kind!==null))throw new AssistantError("ASSISTANT_INVALID_INPUT");
+    const noId=String(args.operation).startsWith("photo_")||args.operation==="supply_create";
+    if(args.operation!=="marketing_draft" && (noId ? args.record_id!==null : !args.record_id))throw new AssistantError("ASSISTANT_INVALID_INPUT");
+    if(args.operation==="client_card"&&!Object.keys((changes as {patch:object}).patch).length)throw new AssistantError("ASSISTANT_INVALID_INPUT");
+  }
+  if(tool === "prepare_team_controls") {
+    let changes:unknown;try{changes=JSON.parse(String(args.changes_json));}catch{throw new AssistantError("ASSISTANT_INVALID_INPUT");}
+    assertSchema(changes,ASSISTANT_TEAM_CHANGES[args.operation as keyof typeof ASSISTANT_TEAM_CHANGES]);
+    if(!changes||!Object.keys(changes).length||args.operation==="permissions"&&Object.keys(changes).length===1&&Object.hasOwn(changes,"permissions")&&!Object.keys((changes as {permissions:object}).permissions).length)throw new AssistantError("ASSISTANT_INVALID_INPUT");
+  }
+  if(tool === "prepare_business_controls") {
+    let changes:unknown;try{changes=JSON.parse(String(args.changes_json));}catch{throw new AssistantError("ASSISTANT_INVALID_INPUT");}
+    const properties=ASSISTANT_CONTROLS[args.section as AssistantControl];
+    assertSchema(changes,{type:"object",properties,required:[],additionalProperties:false});
+    if(!changes||!Object.keys(changes).length)throw new AssistantError("ASSISTANT_INVALID_INPUT");
+  }
+  if (tool === "prepare_finance_record") {
+    const expense=args.action==="expense", refund=args.action==="refund";
+    if(expense ? args.record_id!==null||args.record_kind!==null||args.method!==null||!args.category||!args.treatment
+      : args.category!==null||args.treatment!==null||!args.record_id||(refund?args.record_kind!=="receipt"||args.method!==null:!["sale","booking","order"].includes(String(args.record_kind))||!args.method)) throw new AssistantError("ASSISTANT_INVALID_INPUT");
+  }
   if (tool === "get_availability") {
     const groups = (candidate as { selected_options: { group_id: string; values: string[] }[] }).selected_options;
     if (new Set(groups.map(group => group.group_id)).size !== groups.length || groups.some(group => new Set(group.values).size !== group.values.length) || !args.style_id && (Number(args.days ?? 1) !== 1 || groups.length)) throw new AssistantError("ASSISTANT_INVALID_INPUT");

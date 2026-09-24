@@ -1,6 +1,7 @@
+import {isCatalogTool} from "@/lib/assistantCatalog";
 import "server-only";
 import type { requireSalonOwner } from "@/lib/supabaseAdmin";
-import { AssistantError } from "@/lib/gcAssistantCore";
+import { AssistantError, validateTool } from "@/lib/gcAssistantCore";
 
 type Context = Awaited<ReturnType<typeof requireSalonOwner>>;
 
@@ -16,7 +17,67 @@ export function assistantRequestedProfessional(context: Context, requested: unkn
 }
 
 export async function assertAssistantProposalScope(context: Context, tool: string, args: Record<string, unknown>) {
+  if(tool==='prepare_marketing_change'){
+    if(!context.isOwner)throw new AssistantError('ASSISTANT_ACCESS_DENIED',403);
+    const read=await context.admin.rpc('read_gc_business_marketing',{p_salon:context.salon.id,p_actor:context.user.id,p_record:args.record_id});
+    if(read.error||read.data?.salon_id!==context.salon.id)throw new AssistantError('ASSISTANT_ACCESS_DENIED',403);
+  }
+  // Recheck narrow private-field grants before replaying old proposals or prose.
+  // SQL checks authorization again at confirmation, including assigned clients.
+  if (tool === "prepare_client_card_change") {
+    validateTool(tool, args);
+    const current = await context.admin.rpc("read_business_client_card", {
+      p_salon: context.salon.id, p_actor: context.user.id, p_booking: args.record_id,
+    });
+    if (current.error) {
+      if (/CLIENT_(NOT_FOUND|ACCESS_DENIED)/.test(current.error.message)) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
+      throw current.error;
+    }
+    const permissions = current.data?.permissions;
+    const patch = (JSON.parse(String(args.changes_json)) as {patch: Record<string, unknown>}).patch;
+    const fields: Record<string, string> = {preferences: "client_history", notes: "client_notes", cautions: "client_cautions", formula: "client_formulas"};
+    if (!permissions?.client_history || !permissions.client_edit ||
+      Object.keys(patch).some(field => !permissions[fields[field]])) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
+  }
+  if(tool==="prepare_team_controls"){
+    validateTool(tool,args);
+    if(!context.isOwner)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
+    const scope=await context.admin.rpc("assert_gc_team_target",{p_salon:context.salon.id,p_actor:context.user.id,p_operation:args.operation,p_record:args.record_id});
+    if(scope.error||scope.data?.salon_id!==context.salon.id)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
+  }
+  if(tool==="prepare_business_controls"){
+    if(!context.isOwner)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
+    const scope=await context.admin.rpc("read_gc_business_controls",{p_salon:context.salon.id,p_actor:context.user.id,p_section:args.section});
+    if(scope.error||scope.data?.salon_id!==context.salon.id)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
+  }
+  if(isCatalogTool(tool)){
+    validateTool(tool,args);
+    const scoped=await context.admin.rpc("preview_gc_catalog_change",{p_salon:context.salon.id,p_actor:context.user.id,p_tool:tool,p_args:args});
+    if(scoped.error){if(/ASSISTANT_(ACCESS_DENIED|RECORD_NOT_FOUND)/.test(scoped.error.message))throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);throw scoped.error;}
+    if(scoped.data?.salon_id!==context.salon.id)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
+  }
+  if(tool==="prepare_stock_change"&&args.operation==="product_fulfillment"){
+    const current=await context.admin.from("product_orders").select("id").eq("salon_id",context.salon.id).eq("id",args.record_id).maybeSingle();
+    if(current.error)throw current.error;
+    if(!current.data)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
+  }
   const assigned = assistantAssignedProfessional(context);
+  if(tool==="prepare_booking_progress"&&args.operation==="waitlist_offer"){
+    validateTool(tool,args);
+    const choice=JSON.parse(String(args.changes_json));
+    if(assigned&&choice.stylist_id!==assigned)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
+    const scope=await context.admin.rpc("read_business_waitlist",{p_salon:context.salon.id,p_user:context.user.id});
+    if(scope.error||!Array.isArray(scope.data)||!scope.data.some(row=>row.id===args.record_id))throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
+    return;
+  }
+  if(tool==="prepare_booking_progress"){
+    validateTool(tool,args);
+    let query=context.admin.from("bookings").select("id").eq("salon_id",context.salon.id).eq("id",args.record_id);
+    if(assigned)query=query.eq("stylist_id",assigned);
+    const current=await query.maybeSingle();
+    if(current.error)throw current.error;
+    if(!current.data)throw new AssistantError("ASSISTANT_ACCESS_DENIED",403);
+  }
   if (!assigned) return;
   if (args.booking_id) {
     const record = await context.admin.from("bookings").select("id").eq("salon_id", context.salon.id).eq("id", args.booking_id).eq("stylist_id", assigned).maybeSingle();

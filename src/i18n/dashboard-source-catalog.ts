@@ -1,3 +1,4 @@
+import { masterBuildMessages } from "@/i18n/master-build-source-catalog";
 /*
  * Reviewed, offline-safe baseline for the salon dashboard. Engine-published
  * source translations are merged over this catalog at runtime. User-entered
@@ -216,8 +217,8 @@ const operationalMoneyMessages = (column: 1 | 2 | 3): SourceCatalog => Object.fr
 );
 
 export const DASHBOARD_SOURCE_MESSAGES: Record<string, SourceCatalog> = {
-  es: { ...P0_OWNER_SOURCE_MESSAGES.es, ...es, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.es, ...GCIA_SOURCE_MESSAGES.es, ...DASHBOARD_REDESIGN_SOURCE_MESSAGES.es, ...operationalMoneyMessages(2) },
-  fr: { ...P0_OWNER_SOURCE_MESSAGES.fr, ...fr, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.fr, ...GCIA_SOURCE_MESSAGES.fr, ...DASHBOARD_REDESIGN_SOURCE_MESSAGES.fr, ...operationalMoneyMessages(1) },
+  es: { ...P0_OWNER_SOURCE_MESSAGES.es, ...es, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.es, ...GCIA_SOURCE_MESSAGES.es, ...DASHBOARD_REDESIGN_SOURCE_MESSAGES.es, ...operationalMoneyMessages(2), ...masterBuildMessages(2) },
+  fr: { ...P0_OWNER_SOURCE_MESSAGES.fr, ...fr, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.fr, ...GCIA_SOURCE_MESSAGES.fr, ...DASHBOARD_REDESIGN_SOURCE_MESSAGES.fr, ...operationalMoneyMessages(1), ...masterBuildMessages(1) },
   wo: { ...P0_OWNER_SOURCE_MESSAGES.wo, ...wo, ...LAUNCH_WORKSPACE_SOURCE_MESSAGES.wo, ...GCIA_SOURCE_MESSAGES.wo },
-  "zh-CN": { ...P0_OWNER_SOURCE_MESSAGES["zh-CN"], ...LAUNCH_WORKSPACE_SOURCE_MESSAGES["zh-CN"], ...GCIA_SOURCE_MESSAGES["zh-CN"], ...DASHBOARD_REDESIGN_SOURCE_MESSAGES["zh-CN"], ...operationalMoneyMessages(3) },
+  "zh-CN": { ...P0_OWNER_SOURCE_MESSAGES["zh-CN"], ...LAUNCH_WORKSPACE_SOURCE_MESSAGES["zh-CN"], ...GCIA_SOURCE_MESSAGES["zh-CN"], ...DASHBOARD_REDESIGN_SOURCE_MESSAGES["zh-CN"], ...operationalMoneyMessages(3), ...masterBuildMessages(3) },
 };

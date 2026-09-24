@@ -1,3 +1,4 @@
+import {demoExternalActionResponse} from '@/lib/demoWorkspace';
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import {
   parseOfficialPlan,
@@ -146,6 +147,7 @@ async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request, "subscription-plan-change", 8, 10 * 60_000);
     const context = await requireSalonOwner(request);
+    const demoBlocked=demoExternalActionResponse(context.salon);if(demoBlocked)return demoBlocked;
     const { admin, user, salon, isOwner } = context;
     monitoringAdmin = admin;
     salonId = salon.id;

@@ -1,3 +1,4 @@
+import {releaseInterfaceLocale,assertDeferredLocale} from './helpers/releaseLocales';
 import { expect } from '@playwright/test';
 import { test, screenshotCaret } from './helpers/hydration';
 import { p0OwnerFixture } from './helpers/p0OwnerFixture';
@@ -45,13 +46,14 @@ for (const [width, height] of [[390, 844], [768, 900], [1440, 900], [844, 390]])
 // Scripted API contracts exercise the real drawer and confirmation flow. They
 // are NOT provider natural-language acceptance. SQL and server tests separately
 // prove permission checks, atomic authoritative writes and idempotency.
-for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
-  test(`P0 Assistant all skills and governed fallback in ${locale}`, async ({ page }, testInfo) => {
+for (const requestedLocale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
+  const locale=releaseInterfaceLocale(requestedLocale);
+  test(`P0 Assistant all skills and governed fallback in ${requestedLocale==='wo'?'stored wo fallback to English':locale}`, async ({ page }, testInfo) => {
     test.setTimeout(120_000);
-    const fixture = await p0OwnerFixture(page, { populated: true });
+    const fixture = await p0OwnerFixture(page, { populated: true, locale: requestedLocale });
     const t = (value: string) => DASHBOARD_SOURCE_MESSAGES[locale]?.[value] || value;
     await page.setViewportSize({ width: 390, height: 844 });
-    const gallery = `docs/screenshots/p0/${testInfo.project.name}/skills-${locale}`;
+    const gallery = `docs/screenshots/p0/${testInfo.project.name}/skills-${requestedLocale}`;
     await mkdir(gallery, { recursive: true });
     const hours = Object.fromEntries(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => [day, { open: '09:00', close: day === 'Wednesday' ? '16:00' : '19:00', closed: day === 'Sunday' }]));
     const range = { start: '2027-01-05T18:00:00Z', end: '2027-01-05T21:00:00Z' };
@@ -86,6 +88,7 @@ for (const locale of ['en', 'fr', 'wo', 'es', 'zh-CN']) {
     });
     await page.goto('/salon/dashboard/my-page/business-policies');
     await page.locator('select').filter({ has: page.locator('option[value="zh-CN"]') }).first().selectOption(locale);
+    await assertDeferredLocale(page,requestedLocale);
     await expect.poll(fixture.accountLocale).toBe(locale);
     await page.screenshot({ path: `${gallery}/closed.png`, ...screenshotCaret });
     await page.getByRole('button', { name: 'GC Assistant', exact: true }).click();

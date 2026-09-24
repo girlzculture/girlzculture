@@ -76,3 +76,9 @@ for viewports below 768px, reconstructed from the approved mobile reference.
 The picture element preserves both faces without extreme zoom. Uploaded CMS
 images continue to use the platform's canonical mobile/tablet/desktop renditions;
 replacing the default hero does not keep the default mobile photo.
+
+The six unopened-category `*-service.jpg` files are compatibility exports of the
+matching AVIF photograph (Sharp JPEG quality 92, no crop or resizing). The new
+coming-soon page uses the JPEG directly, preserving the selected category image
+in WebKit installations without AVIF support and avoiding a pre-hydration image
+error that can occur before a React fallback handler is attached.

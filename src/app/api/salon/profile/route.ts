@@ -180,6 +180,9 @@ async function PATCHHandler(request: Request) {
     if (!context.isOwner && permissions.some(permission => !(context.teamMember?.permissions as Record<string, boolean> | undefined)?.[permission])) {
       throw new Error("Forbidden: this salon role cannot update these profile fields.");
     }
+    if (context.salon.service_location_type && Object.keys(body).some(key => ["address_street", "address_line2", "address_city", "address_state", "address_zip"].includes(key))) {
+      return Response.json({ error: "Your verified address needs a location review before it can change. Use Location & travel to manage privacy and travel settings." }, {status:409});
+    }
     const patch = sanitizePatch(body);
     const publicCopy = [patch.name, patch.description]
       .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))

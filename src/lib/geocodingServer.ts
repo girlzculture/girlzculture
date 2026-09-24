@@ -15,6 +15,7 @@ type SalonAddress = {
   geocode_status?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  service_location_type?: string | null;
 };
 
 type GoogleAddressComponent = { long_name: string; short_name: string; types: string[] };
@@ -62,9 +63,20 @@ function confidenceFailure(results: GoogleResult[]) {
 
 export async function geocodeSalonAddress(salonId: string, options: { force?: boolean } = {}) {
   const admin = getSupabaseAdmin();
-  const { data, error } = await admin.from("salons").select("id,address_street,address_line2,address_city,address_state,address_zip,address_country,address_fingerprint,geocode_status,latitude,longitude").eq("id", salonId).single();
+  const { data, error } = await admin.from("salons").select("id,address_street,address_line2,address_city,address_state,address_zip,address_country,address_fingerprint,geocode_status,latitude,longitude,service_location_type").eq("id", salonId).single();
   if (error || !data) throw error || new Error("Salon not found.");
-  const salon = data as SalonAddress;
+  const publicSalon = data as SalonAddress;
+  const privateLocation = publicSalon.service_location_type
+    ? await admin.from("business_verification_locations").select("*").eq("salon_id",salonId).single()
+    : null;
+  if(privateLocation?.error)throw privateLocation.error;
+  const salon = (privateLocation?.data ? {...publicSalon,...privateLocation.data,id:salonId} : publicSalon) as SalonAddress;
+  const addressSnapshot = {address_street:salon.address_street??null,address_line2:salon.address_line2??null,address_city:salon.address_city??null,address_state:salon.address_state??null,address_zip:salon.address_zip??null};
+  async function saveGeocode(values:Record<string,unknown>){
+    return privateLocation
+      ? admin.rpc("commit_business_location_geocode",{p_salon:salonId,p_address:addressSnapshot,p_result:values})
+      : admin.from("salons").update(values).eq("id",salonId);
+  }
   const currentFingerprint = fingerprint(salon);
   if (!options.force && salon.geocode_status === "success" && salon.address_fingerprint === currentFingerprint && validCoordinates({ lat: Number(salon.latitude), lng: Number(salon.longitude) })) {
     return { status: "success" as const, skipped: true };
@@ -74,7 +86,7 @@ export async function geocodeSalonAddress(salonId: string, options: { force?: bo
   if (!key) throw new Error("Server geocoding is not configured.");
   const query = addressText(salon);
   if (!salon.address_street || !salon.address_city || !salon.address_state || !salon.address_zip) {
-    const { error: reviewError } = await admin.from("salons").update({ geocode_status: "needs_review", address_needs_review: true, geocode_failure_reason: "Structured address is incomplete.", latitude: null, longitude: null, geocoded_at: null }).eq("id", salonId);
+    const { error: reviewError } = await saveGeocode({ geocode_status: "needs_review", address_needs_review: true, geocode_failure_reason: "Structured address is incomplete.", latitude: null, longitude: null, geocoded_at: null });
     if (reviewError) throw reviewError;
     return { status: "needs_review" as const, reason: "Complete every required address field." };
   }
@@ -92,7 +104,7 @@ export async function geocodeSalonAddress(salonId: string, options: { force?: bo
   const results = body.results || [];
   const failure = confidenceFailure(results);
   if (failure) {
-    const { error: reviewError } = await admin.from("salons").update({ geocode_status: "needs_review", address_needs_review: true, geocode_failure_reason: failure, latitude: null, longitude: null, formatted_address: null, geocoded_at: new Date().toISOString(), address_fingerprint: currentFingerprint, market_id: null, borough: null }).eq("id", salonId);
+    const { error: reviewError } = await saveGeocode({ geocode_status: "needs_review", address_needs_review: true, geocode_failure_reason: failure, latitude: null, longitude: null, formatted_address: null, geocoded_at: new Date().toISOString(), address_fingerprint: currentFingerprint, market_id: null, borough: null });
     if (reviewError) throw reviewError;
     return { status: "needs_review" as const, reason: "Review the street address and try again." };
   }
@@ -111,7 +123,7 @@ export async function geocodeSalonAddress(salonId: string, options: { force?: bo
   const nearestDistance = preferred ? distanceMiles(coordinates, { lat: Number(preferred.center_latitude), lng: Number(preferred.center_longitude) }) : Number.POSITIVE_INFINITY;
   const marketId = nearestDistance <= 75 ? preferred?.id || null : null;
 
-  const { error: updateError } = await admin.from("salons").update({
+  const { error: updateError } = await saveGeocode({
     latitude: coordinates.lat,
     longitude: coordinates.lng,
     formatted_address: result.formatted_address,
@@ -122,7 +134,26 @@ export async function geocodeSalonAddress(salonId: string, options: { force?: bo
     geocoded_at: new Date().toISOString(),
     market_id: marketId,
     borough,
-  }).eq("id", salonId);
+  });
   if (updateError) throw updateError;
   return { status: "success" as const, coordinates, formattedAddress: result.formatted_address, borough, marketId };
+}
+
+/** Customer-supplied appointment address only. No provider response or address
+ * is logged, and a low-confidence match cannot establish mobile eligibility. */
+export async function geocodeCustomerServiceAddress(address: import('@/lib/mobileBooking').TravelAddress) {
+  const key=process.env.GOOGLE_MAPS_SERVER_API_KEY;
+  if(!key)throw Error('TRAVEL_CHECK_UNAVAILABLE');
+  const url=new URL('https://maps.googleapis.com/maps/api/geocode/json');
+  url.searchParams.set('address',addressText({id:'customer-service-address',...address}));
+  url.searchParams.set('components','country:US');url.searchParams.set('key',key);
+  const response=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(8000)});
+  if(!response.ok)throw Error('TRAVEL_CHECK_UNAVAILABLE');
+  const body=await response.json() as {status:string;results?:GoogleResult[]};
+  if(!['OK','ZERO_RESULTS'].includes(body.status))throw Error('TRAVEL_CHECK_UNAVAILABLE');
+  const rows=body.results||[];
+  if(confidenceFailure(rows))throw Error('TRAVEL_ADDRESS_INVALID');
+  const point=rows[0].geometry.location;
+  if(!validCoordinates(point))throw Error('TRAVEL_ADDRESS_INVALID');
+  return point;
 }

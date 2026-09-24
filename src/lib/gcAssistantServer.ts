@@ -1,3 +1,13 @@
+import {readAssistantWaitlist,prepareAssistantWaitlist} from '@/lib/assistantWaitlistServer';
+import {readAssistantTeam,prepareAssistantTeam} from '@/lib/assistantTeamServer';
+import {readAssistantControls,prepareAssistantControls} from "@/lib/assistantControlsServer";
+import {isCatalogTool} from "@/lib/assistantCatalog";
+import {prepareAssistantCatalog} from "@/lib/assistantCatalogServer";
+import {readAssistantStock,readAssistantMarketing,prepareAssistantOperation} from "@/lib/assistantOperationsServer";
+import {readAssistantFinanceRecords,prepareAssistantFinanceRecord} from "@/lib/assistantFinanceRecordsServer";
+import { searchPublishedKnowledge } from "@/lib/publishedKnowledgeServer";
+export { searchPublishedKnowledge } from "@/lib/publishedKnowledgeServer";
+import { prepareProfessionalArchive } from "@/lib/assistantProfessionalArchive";
 import { readAssistantServiceCalculation } from "@/lib/assistantServiceCalculation";
 import { readAssistantBookingPrice } from "@/lib/assistantBookingPriceRead";
 import "server-only";
@@ -29,66 +39,6 @@ type Row = Record<string, unknown>;
 const digest = (input: unknown) => createHash("sha256").update(stableJson(input)).digest("hex");
 const selected = (row: Row, keys: string[]) => Object.fromEntries(keys.map(key => [key, row[key] ?? null]));
 
-function safeKnowledgeText(value: unknown, maxLength = 600) {
-  return typeof value === "string"
-    ? value.replace(/[\u0000-\u001f\u007f]/gu, " ").replace(/\s+/gu, " ").trim().slice(0, maxLength)
-    : "";
-}
-
-function knowledgeSegments(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
-  const page = value as Row;
-  const slug = safeKnowledgeText(page.slug, 120);
-  if (slug && !/^[a-z0-9]+(?:[-/][a-z0-9]+)*$/u.test(slug)) return [];
-  const pageTitle = safeKnowledgeText(page.title || page.hero_title || slug, 160);
-  const segments: { title: string; question: string; answer: string; href: string }[] = [];
-  const add = (question: unknown, answer: unknown) => {
-    const cleanQuestion = safeKnowledgeText(question, 180);
-    const cleanAnswer = safeKnowledgeText(answer, 700);
-    if (cleanAnswer) segments.push({ title: pageTitle, question: cleanQuestion || pageTitle, answer: cleanAnswer, href: slug ? `/${slug}` : "/help" });
-  };
-  add(page.hero_title || pageTitle, page.hero_subtitle);
-  for (const sectionValue of Array.isArray(page.sections) ? page.sections.slice(0, 40) : []) {
-    if (!sectionValue || typeof sectionValue !== "object" || Array.isArray(sectionValue)) continue;
-    const section = sectionValue as Row;
-    if (section.is_visible === false) continue;
-    const title = safeKnowledgeText(section.title || pageTitle, 180);
-    // Preserve FAQ line boundaries until each question/answer pair is split.
-    const body = typeof section.body === "string" ? section.body.slice(0, 6000) : "";
-    if (!body) continue;
-    const lines = body.split(/\n+/u).map(line => line.trim()).filter(Boolean).slice(0, 80);
-    for (const line of lines) {
-      const [question, ...answer] = line.split("::");
-      if (answer.length) add(question, answer.join("::"));
-      else add(title, line);
-    }
-  }
-  return segments;
-}
-
-export async function searchPublishedKnowledge(context: Pick<Context, "admin">, queryValue: unknown) {
-  const query = safeKnowledgeText(queryValue, 240).toLocaleLowerCase();
-  const tokens = [...new Set(query.split(/[^\p{L}\p{N}]+/u).filter(token => token.length > 1))].slice(0, 12);
-  if (!query || !tokens.length) throw new AssistantError("ASSISTANT_INVALID_INPUT");
-  // Read only general platform guidance. Never load the full public page
-  // inventory, business profiles or a user-supplied URL into owner context.
-  const published = await Promise.all(["help", "faq", "how-it-works", "pricing", "terms", "privacy"].map(slug => context.admin.rpc("get_public_content_page", { p_slug: slug })));
-  const failure = published.find(result => result.error);
-  if (failure?.error) throw failure.error;
-  const pages = published.map(result => result.data).filter(Boolean);
-  const scored = pages.flatMap(knowledgeSegments).map(segment => {
-    const haystack = `${segment.title} ${segment.question} ${segment.answer}`.toLocaleLowerCase();
-    const score = (haystack.includes(query) ? 20 : 0) + tokens.reduce((total, token) => total + (haystack.includes(token) ? 2 : 0), 0);
-    return { ...segment, score };
-  }).filter(segment => segment.score > 0).sort((left, right) => right.score - left.score || left.question.localeCompare(right.question));
-  const seen = new Set<string>();
-  const matches = scored.filter(segment => {
-    const key = `${segment.href}:${segment.question}:${segment.answer}`;
-    if (seen.has(key)) return false;
-    seen.add(key); return true;
-  }).slice(0, 5).map(segment => ({ title: segment.title, question: segment.question, answer: segment.answer, href: segment.href }));
-  return { query, matches, total: matches.length, source: "published_girlz_culture_content" };
-}
 export async function assertAssistantAccess(context: Context, permission: string) {
   const { admin, salon, user } = context;
   const access = await admin.rpc("p0_actor_has_permission", { p_salon: salon.id, p_user: user.id, p_permission: permission });
@@ -114,6 +64,12 @@ export async function readAssistantData(context: Context, tool: AssistantTool, a
   if (tool === "calculate_service_selection") return readAssistantServiceCalculation(context, args);
   if (tool === "get_booking_price_details") return readAssistantBookingPrice(context, args);
   if (tool === "get_outstanding_balances") return readAssistantOutstandingBalances(context, args);
+  if (tool === "get_appointment_waitlist") return readAssistantWaitlist(context,args);
+  if (tool === "get_team_controls") return readAssistantTeam(context);
+  if (tool === "get_business_controls") return readAssistantControls(context,args);
+  if (tool === "get_marketing_records") return readAssistantMarketing(context,args);
+  if (tool === "get_business_stock") return readAssistantStock(context,args);
+  if (tool === "get_finance_records") return readAssistantFinanceRecords(context,args);
   if (tool === "get_manual_sale_options") return readManualSaleOptions(context);
   if (tool === "search_platform_knowledge") return searchPublishedKnowledge(context, args.query);
   if (tool === "get_client_record") return readBusinessClientCard(context, String(args.booking_id));
@@ -158,6 +114,13 @@ export async function readAssistantData(context: Context, tool: AssistantTool, a
 }
 
 async function prepare(context: Context, tool: AssistantTool, args: Row) {
+  if(tool==="prepare_team_controls")return prepareAssistantTeam(context,args);
+  if(tool==="prepare_business_controls")return prepareAssistantControls(context,args);
+  if(isCatalogTool(tool))return prepareAssistantCatalog(context,tool,args);
+  if(tool==="prepare_booking_progress"&&args.operation==="waitlist_offer")return prepareAssistantWaitlist(context,args);
+  if(["prepare_marketing_change","prepare_booking_progress","prepare_stock_change","prepare_photo_change","prepare_client_card_change","prepare_review_reply"].includes(tool)) return prepareAssistantOperation(context,args);
+  if (tool === "prepare_finance_record") return prepareAssistantFinanceRecord(context,args);
+  if (tool === "prepare_professional_archive") return prepareProfessionalArchive(context, args);
   if (tool === "prepare_booking_reschedule_proposal") return prepareAssistantBookingReschedule(context, args);
   if (tool === "prepare_manual_service_sale") return prepareManualSale(context, args);
   const { admin, salon } = context;
@@ -244,7 +207,7 @@ export async function executeAssistantTool(context: Context, input: { requestId:
   return { request: checked.risk === 1 ? { ...saved.data, result } : saved.data, preview_required: checked.risk >= 3, notices: prepared.notices, assistant_message: presentation.message, suggestions: presentation.suggestions };
 }
 
-export async function confirmAssistantTool(context: Context, requestId: string, previewDigest: string, policyReviewed: boolean) {
+export async function confirmAssistantTool(context: Context, requestId: string, previewDigest: string, policyReviewed: boolean, marketingReviewed = false) {
   const row = await context.admin.from("gc_assistant_requests").select("tool,arguments,execution_payload,permission,confirmed_at").eq("id", requestId).eq("salon_id", context.salon.id).eq("requested_by", context.user.id).maybeSingle();
   if (row.error) throw row.error;
   if (!row.data) throw new AssistantError("ASSISTANT_REQUEST_NOT_FOUND", 404);
@@ -252,6 +215,7 @@ export async function confirmAssistantTool(context: Context, requestId: string, 
   await assertAssistantAccess(context, checked.permission);
   await assertAssistantProposalScope(context, checked.tool, checked.args);
   if (checked.tool === "prepare_business_policy_update" && !policyReviewed) throw new AssistantError("ASSISTANT_POLICY_REVIEW_REQUIRED", 409);
+  if(checked.tool==='prepare_marketing_change' && checked.args.operation==='marketing_publish' && !marketingReviewed)throw new AssistantError('ASSISTANT_MARKETING_REVIEW_REQUIRED',409);
   // Re-run deterministic catalog/moderation checks at execution time as well.
   if (!row.data.confirmed_at) {
     const fresh = await prepare(context, checked.tool, checked.args);

@@ -20,7 +20,7 @@ export default function SalonOpenStatusControl({ salon, compact=false }: { salon
     setMessage("");
     try {
       const session = await getSessionForScope("salon");
-      if (!session) throw new Error("Your salon session expired.");
+      if (!session) throw new Error("Your business session expired.");
       const response = await fetch("/api/salon/open-status", {
         method: "POST",
         headers: {
@@ -54,7 +54,7 @@ export default function SalonOpenStatusControl({ salon, compact=false }: { salon
           <p className="text-xs text-ink/70">
             {closed
               ? "Current override expires automatically at salon-local midnight."
-              : "No same-day salon-wide override is active."}
+              : "No same-day business-wide override is active."}
           </p>
           {message ? <p role="status" className="mt-1 text-sm font-medium text-plum">{message}</p> : null}
         </div>

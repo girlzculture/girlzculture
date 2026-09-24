@@ -36,6 +36,7 @@ import OwnerRealtimeAlertBridge from "@/components/owner/OwnerRealtimeAlertBridg
 import WorkspaceToolbar from "@/components/dashboard/WorkspaceToolbar";
 import { getSessionForScope } from "@/lib/supabase";
 import { readApiResponse } from "@/lib/apiResponseClient";
+import { businessLabels } from "@/lib/businessLabels";
 
 export type DashboardSection =
   | "overview"
@@ -57,7 +58,7 @@ const nav = [
   ["overview", "Overview", Home],
   ["my-page", "My Page", UserRound],
   ["photos", "Photos", Images],
-  ["styles", "Styles & Pricing", Scissors],
+  ["styles", "Services & Pricing", Scissors],
   ["stylists", "Stylists", UsersRound],
   ["products", "Products", Package],
   ["availability", "Availability & Calendar", CalendarDays],
@@ -81,6 +82,9 @@ export default function OwnerDashboardShell({
   avatar,
   notifications = [],
   access = null,
+  independent = false,
+  sampleBusiness=false,
+  businessType,
 }: {
   children: React.ReactNode;
   section: DashboardSection;
@@ -89,8 +93,12 @@ export default function OwnerDashboardShell({
   avatar?: string | null;
   notifications?: DashboardNotification[];
   access?: Record<string, boolean> | null;
+  independent?: boolean;
+  sampleBusiness?:boolean;
+  businessType?:string;
 }) {
-  const { locale } = useI18n();
+  const { locale, translateSource } = useI18n();
+  const labels=businessLabels(businessType,independent);
   const assistantDocked = useAssistantDocked();
   const [notificationCounts, setNotificationCounts] = useState<
     Record<string, number>
@@ -135,10 +143,10 @@ export default function OwnerDashboardShell({
   }, [refreshActionableBookingCount]);
 
   const canAccess = (id: string) =>
-    access === null ||
+    !(independent && id === "stylists") && (access === null ||
     (id !== "subscription" &&
-      Boolean(access[id === "messages" ? "bookings" : id.replace("-", "_")] || id === "earnings" && (access.earnings_own || access.finance_log || access.finance_manage)));
-  const visibleNav = nav.filter(([id]) => canAccess(id));
+      Boolean(access[id === "messages" ? "bookings" : id.replace("-", "_")] || id === "earnings" && (access.earnings_own || access.finance_log || access.finance_manage))));
+  const visibleNav = nav.filter(([id]) => canAccess(id)).map(([id,label,Icon])=>[id,translateSource(id==='stylists'?labels.team||'Team':id==='styles'?labels.services:label),Icon] as const);
   const homeHref = visibleNav.length
     ? hrefFor(visibleNav[0][0])
     : "/business/login";
@@ -178,7 +186,7 @@ export default function OwnerDashboardShell({
         >
           <span className="text-[26px]">Girlz Culture</span>
         </Link>
-        <nav aria-label="Salon owner navigation" className="mt-7 space-y-1">
+        <nav aria-label="Business owner navigation" className="mt-7 space-y-1">
           {visibleNav.map(([id, label, Icon]) => {
             const active = section === id;
             const count = navBadge(id);
@@ -255,7 +263,7 @@ export default function OwnerDashboardShell({
           <LanguageSelector compact className="order-2 mr-auto sm:order-none sm:mr-0" />
           <div className="flex items-center gap-2">
             <Link
-              href={`/salon/${salonSlug}`}
+              href={sampleBusiness?'/salon/dashboard/demo-page':`/salon/${salonSlug}`}
               className="hidden items-center gap-1 text-xs font-semibold text-text-link xl:inline-flex"
             >
               View Public Page
@@ -290,6 +298,7 @@ export default function OwnerDashboardShell({
           <div className="order-2 sm:order-none"><GcAssistantLauncher /></div>
         </header>
         <main data-owner-workspace className={`min-w-0 overflow-x-hidden px-4 pb-24 pt-5 sm:px-5 lg:pb-8 ${assistantDocked ? "xl:mr-[336px]" : ""}`}>
+          {sampleBusiness?<aside role="note" className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm"><strong>Private demonstration — sample data</strong><p>Fictional clients, bookings and financial records. Payments, invitations and external notifications are disabled.</p></aside>:null}
           {children}
         </main>
       </div>

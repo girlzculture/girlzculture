@@ -1,9 +1,27 @@
+import {checkedTaskTool} from '@/lib/assistantActiveTask';
 import { ASSISTANT_TOOLS, AssistantError, validateTool, type AssistantTool } from "@/lib/gcAssistantCore";
 import { ASSISTANT_LANGUAGES, isAssistantLanguage, type AssistantLanguage } from "@/lib/assistantLanguage";
 
 const destinations = ["overview", "profile", "photos", "services", "imports", "professionals", "products", "availability", "policies", "bookings", "messages", "reviews", "earnings", "promotions", "subscription", "settings", "support", "security"] as const;
 const purposes: Record<AssistantTool, string> = {
+  get_appointment_waitlist:"Own waitlist: null ID lists; own request ID gives currently available openings. No booking/charge. Review waitlist_offer before notification.",
+  get_marketing_records:"Owner posts: null ID=list, own ID=copies/status. Read sources separately.",
+  prepare_marketing_change:"Read own sources/post. marketing_draft:{source:{photo_urls,service_id,promotion_id,booking_id},copies:{en,fr,es,zh-CN:{title,body,tags}}}; null ID=create. marketing_publish:{scheduled_at,expires_at} ISO; human translation/media-rights checkbox. marketing_cancel:{}. No external posting.",
+  prepare_booking_progress: "Read own booking. booking_service:{action:check_in/start/complete,reason_code,reason_detail,attested:true}; owner attests actual early/late reason. booking_attendance:{action:confirm/void/reinstate,kind:no_show/late_cancellation(confirm) else null,reason}. Review; own incidents, no cancel/charge/notice. waitlist_offer:read get_appointment_waitlist; request ID plus {source_booking_id,stylist_id} from opening; confirms customer notification only.",
+  get_team_controls: "Owner:users/grants,professionals,payout agreements,totals.",
+  prepare_team_controls: "Read get_team_controls. Owner review: permissions(team-user ID):grants/status Active/Inactive. arrangement(professional ID):effective_from today/future YYYY-MM-DD; kind commission:basis before_discount/after_discount,percent 0–100; booth/employee:integer amount_cents,period week/month; none:no terms. Include all four terms; unused=null. Preserve other grants/history. No payments/invites.",
+  get_business_controls: "Owner settings/plan/defaults/targets; no implied consent/delivery.",
+  prepare_business_controls: "Owner:read settings, patch only requested fields, retain bookings. deposits:rate,threshold_amount/rate,repeat_incident_count/rate,incident_window_days; nullable pairs,own incidents. growth:reminder_hours(null=default),waitlist_service_ids/professional_ids. rebooking:enabled,absence_days,minimum_visits,service_ids. profile:name,phone,languages; verified-email flow separately. notifications:reviews,marketing. booking:slot_minutes,buffer_minutes. location:home_address_public,public_neighborhood,offers_mobile,travel_radius_miles,travel_fee_cents; no verified-address edits. Review address disclosure/future opted-in reminders; no inferred consent/sends/provider action.",
   get_outstanding_balances: "Read current authorized unpaid records with minimal client display names. Requires finance, bookings and client-history permissions together. Use for who owes money. Completed unpaid balances are separate from pending/future agreed amounts, never presumed overdue. Names may be absent; do not invent identity or group unrelated clients by similar names. Lists are capped but counts/totals include the authorized records. Use the returned exact Finances links; do not send reminders or collect money.",
+  prepare_service_change: "Read services. Patch catalog/price/duration/draft; size_options,length_options,addons:[{label,price_add}]; included_items:string[]; style_materials:[{name,price,longevity_weeks,quality_grade}]. Only requested lists/approved options. Null ID=create:catalog name/ID,price,both durations. is_draft=false publishes.",
+  prepare_professional_change: "Read professionals/services/hours. Patch name,bio,specialties,years_experience,is_draft,assigned_service_ids(own,null=all,[]=none),availability(null=business hours; else Mon–Sun:{open,close,closed}). Null ID=create; is_draft=false publishes. No login/grants; archive tool.",
+  prepare_product_change: "Read products; patch name,description,price,sale_price,sku,is_visible,in_person_only,product_status Draft/Active/Archived,pickup_enabled,pickup_prep_minutes,shipping_enabled,shipping_price,shipping_profile,weight_ounces,max_quantity_per_order. Null record_id=create:name/price. Explicit fulfillment choices; separate stock tools. No provider action.",
+  prepare_promotion_change: "Read own promotions/targets; patch title,description,public_headline,promotion_type percentage/fixed/descriptive,discount_value,discount_label,starts_at,ends_at,timezone,status Draft/Active/Paused/Archived,target_scope salon/services/products,target_ids. Null=create:title,type,value,dates,timezone. Active publishes; pause retains history. Protect deposits.",
+  get_business_stock: "Own products/supplies. Empty query lists; max30/kind, complete totals. Narrow missing targets; quantities/revisions are recorded.",
+  prepare_stock_change: "Read stock; changes_json restock:{kind,quantity,cost_cents,note}; correction/consumption:{kind,quantity,note}; settings:{kind,track_inventory,low_stock_threshold,note}; supply_create:{name,unit,quantity,low_stock_threshold,note}; supply_archive:{note}. kind product/supply; own record_id,null=create. Known counts/costs. product_fulfillment:read get_products; order UUID; {fulfillment_status,carrier,tracking_number,note}; nullable prose; carrier/tracking only Shipped. No cancel/refund/payment/notification.",
+  prepare_photo_change: "get_business_media:read/upload. photo_details:{url,category,title,caption,featured,source_locale}; photo_add/cover/remove:{url}. category services|before_after|space|team|client_love|other. Own URL; add requires finalized upload; record_id=null. Remove=unlink.",
+  prepare_client_card_change: "Read get_client_record; own booking ID. client_card:{locale,patch:{preferences,notes,cautions,formula:{instructions,color,size,length,technique,duration_minutes}}}. Requested fields only; no merges/grants.",
+  prepare_review_reply: "Read get_reviews; own UUID. review_reply:{reply}; owner-approved wording, confirm before publish.",
   get_business_summary: "Schedule opportunities, when available, cover the current next seven days independently of the requested historical summary range. Service contribution, when available, uses the exact requested completed local-calendar period and requires fresh finance, booking and service permissions; owner-recorded costs do not establish net profit, demand or capacity. Returning-client advice uses its own current lookback window and explicit completed-visit criteria; its counts are recommendations, never contact permission. Read appointment counts, recorded no-shows, completed booking value and authorized service/professional workload for a date range. Includes comparison with the preceding equal elapsed duration; use its exact timestamps, not an assumed calendar period. A null value is unavailable, not zero. Workload and booking value are not settled revenue or forecasts.",
   get_bookings: "Read appointments and their authoritative IDs for a date range.",
   get_availability: "Read this business's current calendar. For a specific own service, requires Services plus Availability access: provide exact saved option choices; ask for required choices rather than assume. One to seven dates, conservative maximum saved duration plus selected adjustments and buffer. Count overlapping start-time alternatives, never additional appointments, demand or profit. Preserve date, time zone, total/shown/excerpt and exact calendar links. No customer eligibility or reservation is established. For a general calendar use null style_id, days=1 and selected_options=[].",
@@ -18,23 +36,26 @@ const purposes: Record<AssistantTool, string> = {
   get_customers: "Read customers associated with this business's appointments in a date range.",
   get_client_record: "Read this business's private client visit history from an already resolved booking ID. Backend field permissions independently govern formulas, preferences/notes, cautions, photos and spend. Staff with a linked stylist see only their assigned visits. Null fields are unavailable, not absent facts. Never infer that a client has no allergy from an inaccessible or empty caution field. Photo metadata does not establish image contents. Original formulas, quantities and cautions must retain their meaning. Updates use the client card in Bookings; never send private client notes to customer chat.",
   get_professionals: "Read team members and their authoritative IDs. Empty query lists the professionals.",
-  get_products: "Read this business's catalog, fulfillment settings, private supplies and stock alerts, plus current recorded order/pickup references, dates, statuses and item snapshots without customer or financial detail. Use query='' for operational orders; a name filters the catalog only, never the separate all-time order total. Lists/items can be excerpts, not complete status counts; missing evidence is unavailable, not zero. Test-mode orders are not live activity. Untracked stock is not zero. Review the Products order workflow for fulfillment; no action was performed. Use get_earnings_summary for verified product money; never infer revenue from stock, quantities or recorded payment status.",
+  get_products: "Read this business's catalog, fulfillment settings, private supplies and stock alerts, plus current recorded order/pickup references, dates, statuses and item snapshots without customer or financial detail. Use query='' for operational orders; a name filters the catalog only, never the separate all-time order total. Lists/items can be excerpts, not complete status counts; missing evidence is unavailable, not zero. Test-mode orders are not live activity. Untracked stock is not zero. For reviewed fulfillment use prepare_stock_change product_fulfillment; nothing performed. Use get_earnings_summary for verified product money; never infer revenue from stock, quantities or recorded payment status.",
   get_booking_messages: "Read the conversation for an already resolved booking ID.",
   get_reviews: "Read customer reviews in a date range.",
   get_promotions: "Read current own-business offers, saved conditions, date/activation state and selected targets resolved only from authorized own catalogs. Active now is not customer/checkout eligibility. Counts distinguish complete lists, excerpts and unavailable target detail. Terms may be excerpted; omitted conditions are not absent. This list does not calculate savings, deposits or balances: do not invent a quote from a percentage or base price. Exact customer/use-limit eligibility and required service options need the canonical booking workflow; existing bookings retain their original agreed terms.",
   get_plan_status: "Read the current subscription, canonical plan features/prices and limits for a scheduled downgrade. Use for entitlement and plan-comparison questions. Business usage may be unavailable; never forecast sales or change billing.",
   get_profile_completion: "Read how complete this business's profile is.",
+  get_finance_records: "Own period ledger/IDs/counts, no contacts. Clarify ambiguous writes; not bank/provider settlement proof. Finance-manage only.",
+  prepare_finance_record: "Record explicitly moved money; no charge/refund/transfer/notification. Exact amount,date/time,note,confirmation required. Expense:category,treatment operating/inventory_asset; record_id,record_kind,method=null. Receipt:resolved own sale/booking/order ID,actual method; category,treatment=null. Refund:original own receipt ID,kind=receipt; category,treatment,method=null. Never infer IDs/payment; refund requests are not proof of return.",
   get_manual_sale_options: "Read only authorized own-business service and professional IDs/names for recording a payment already received. Does not include clients, prices, other businesses or appointment availability. Read this first; ask if the service or person is ambiguous.",
   prepare_manual_service_sale: "Prepare one completed service sale and receipt in the existing Finances ledger. This records payment already received; it never charges a customer, creates an appointment or sends a receipt. Requires an explicit received amount/method/date/time/source and resolved own service/professional. Do not infer that a named person is the professional rather than the client. Anonymous clients are allowed: client_name=null. Ask whether an ambiguous walk-in means a future appointment or an already paid sale. Confirmation is mandatory.",
-  get_earnings_summary: "Read current authorized business operating books, or only the actor's own stylist earnings when that is their permission. The start-inclusive/end-exclusive timestamps resolve to calendar reporting days in the business timezone. Completed sales follow completion date; receipts/refunds follow payment date. Deposits, methods and sources overlap and must never be added as separate sales. Includes recorded external sales/payments, live verified product orders, expenses and snapshotted compensation. Rankings are computed over the complete authorized period before excerpts: professionals rank by recorded commission earned plus wages due, not service turnover or payments already received; unassigned amounts are excluded explicitly. Preserve tied-leader counts and excerpt flags; own-stylist scope never establishes a business-wide winner. Expense rankings use recorded operating expenses, with inventory purchases separate. Unpaid and compensation positions are as of the end date, including earlier records. Test or unverified provider payments are not actual receipts. Service contribution is available only for the exact completed local-calendar period with finance, booking and service permissions. It uses owner-reviewed recorded costs and is not verified net profit, demand or spare capacity. Profit uses recorded costs and is qualified when costs are incomplete. Never infer zero missing costs, exact profit margins, fees, bank payouts or another business's figures. Use prepare_manual_service_sale only for explicitly received service payments; navigate to Finances for all other individual records or financial actions.",
+  get_earnings_summary: "Read current authorized business operating books, or only the actor's own stylist earnings when that is their permission. The start-inclusive/end-exclusive timestamps resolve to calendar reporting days in the business timezone. Completed sales follow completion date; receipts/refunds follow payment date. Deposits, methods and sources overlap and must never be added as separate sales. Includes recorded external sales/payments, live verified product orders, expenses and snapshotted compensation. Rankings are computed over the complete authorized period before excerpts: professionals rank by recorded commission earned plus wages due, not service turnover or payments already received; unassigned amounts are excluded explicitly. Preserve tied-leader counts and excerpt flags; own-stylist scope never establishes a business-wide winner. Expense rankings use recorded operating expenses, with inventory purchases separate. Unpaid and compensation positions are as of the end date, including earlier records. Test or unverified provider payments are not actual receipts. Service contribution is available only for the exact completed local-calendar period with finance, booking and service permissions. It uses owner-reviewed recorded costs and is not verified net profit, demand or spare capacity. Profit uses recorded costs and is qualified when costs are incomplete. Never infer zero missing costs, exact profit margins, fees, bank payouts or another business's figures. Use prepare_manual_service_sale only for explicitly received service payments; use get_finance_records and prepare_finance_record for reviewed expenses, received balances and money already returned. Other provider operations remain in the controlled Finances workflow.",
   get_upcoming_appointments: "Read upcoming appointments in a date range.",
   get_calendar_gaps: "Read calendar openings on a date, optionally for one professional.",
-  prepare_manual_appointment: "Prepare a business-added appointment after resolving services, duration, professional and available time. Owner confirmation is still required.",
+  prepare_manual_appointment: "Prepare a business-added appointment after resolving services, duration, professional and available time. Use service_preference=any or stylist_preference=any only when the owner explicitly says any; the server selects a safe own-business default. Owner confirmation is still required.",
   prepare_manual_reschedule: "Prepare a time change for an existing business-added appointment. Never reschedule marketplace bookings with this tool.",
   prepare_booking_reschedule_proposal: "Prepare one alternative time for a resolved marketplace booking with its current professional and unchanged payment terms. Requires a clear date, time and reason. Owner confirmation sends a proposal; only customer acceptance changes the appointment. Never infer consent or use this tool for a business-added appointment.",
   prepare_manual_cancellation: "Prepare cancellation of an existing business-added appointment, with a stated reason.",
   prepare_business_hours: "Prepare all seven days of opening hours using known values; ask about missing days.",
   prepare_service_edit: "Prepare edits to an existing draft service using its verified business service ID.",
+  prepare_professional_archive: "Owner-only removal from bookable professionals. Resolve the own professional ID with get_professionals first. Prepares an archive and disables linked staff access after explicit confirmation; preserves booking and finance history. Upcoming appointments must be reassigned first. Does not delete records, cancel appointments, contact clients or issue payments.",
   prepare_professional_draft: "Prepare a new or existing draft professional record.",
   prepare_product_draft: "Prepare a new or existing draft product record.",
   prepare_promotion_draft: "Prepare a promotion draft. Does not activate a paid campaign.",
@@ -69,8 +90,13 @@ function withSharedDefinitions<T extends Record<string, unknown>>(schema: T): T 
     Object.values(node).forEach(collect);
   }
   collect(schema);
-  const shared = new Map([...repeated].filter(([key, node]) => key.length >= 80 && node.count > 1)
-    .map(([key, node], index) => [key, { ...node, name: `shared${index}` }]));
+  // Price each local reference and definition using its actual serialized size;
+  // the old fixed estimate missed profitable sharing of short repeated nodes.
+  const candidates = [...repeated].filter(([key, node], index) => {
+    const name=index.toString(36),reference=JSON.stringify({$ref:`#/$defs/${name}`});
+    return key.length*(node.count-1)>reference.length*node.count+JSON.stringify(name).length+2;
+  });
+  const shared = new Map(candidates.map(([key,node],index)=>[key,{...node,name:index.toString(36)}]));
   if (!shared.size) return schema;
   function rewrite(value: unknown, definitionRoot = false): unknown {
     if (Array.isArray(value)) return value.map(child => rewrite(child));
@@ -81,17 +107,36 @@ function withSharedDefinitions<T extends Record<string, unknown>>(schema: T): T 
   }
   const $defs = Object.fromEntries([...shared.values()].map(node => [node.name, rewrite(node.value, true)]));
   const compact = { ...rewrite(schema, true) as T, $defs };
+  // Factoring a parent reduces its children's reference counts. Recompute the
+  // actual saving, including the definition entry, rather than retaining a
+  // short definition merely because two references survive.
+  for (;;) {
+    const counts=new Map<string,number>();
+    const count=(value:unknown):void=>{if(Array.isArray(value)){value.forEach(count);return;}if(!value||typeof value!=="object")return;for(const [key,child] of Object.entries(value)){if(key==="$ref"&&typeof child==="string")counts.set(child,(counts.get(child)||0)+1);else count(child);}};
+    count(compact);
+    const singleton=Object.keys($defs).find(name=>{
+      const count=counts.get(`#/$defs/${name}`)||0;
+      const valueBytes=JSON.stringify($defs[name]).length;
+      const referenceBytes=JSON.stringify({$ref:`#/$defs/${name}`}).length;
+      return count*(valueBytes-referenceBytes)<=valueBytes+JSON.stringify(name).length+2;
+    });
+    if(!singleton)break;
+    const replace=(value:unknown):unknown=>{if(Array.isArray(value))return value.map(replace);if(!value||typeof value!=="object")return value;const node=value as Record<string,unknown>;if(node.$ref===`#/$defs/${singleton}`)return $defs[singleton];return Object.fromEntries(Object.entries(node).map(([key,child])=>[key,replace(child)]));};
+    for(const [key,value] of Object.entries(compact))if(key!=="$defs")(compact as Record<string,unknown>)[key]=replace(value);
+    for(const name of Object.keys($defs))if(name!==singleton)$defs[name]=replace($defs[name]);
+    delete $defs[singleton];
+  }
   return JSON.stringify(compact).length < JSON.stringify(schema).length ? compact : schema;
 }
 
 /** A single discriminated decision prevents the provider from emitting a tool
  * and a clarification/navigation together. The answer phase has no tool shape. */
-export function ownerPlannerSchema(granted: ReadonlySet<string>, answerOnly: boolean) {
+export function ownerPlannerSchema(granted: ReadonlySet<string>, answerOnly: boolean, trackTask = false) {
   if (answerOnly) return object({ reply: { type: "string", minLength: 1, maxLength: 900, description: "A complete, concise answer based only on the current authorized read. Prefer two to four short sentences; do not start a list that cannot fit." } });
   const tools = Object.entries(ASSISTANT_TOOLS).filter(([name, definition]) => granted.has(definition.permission) && (name !== "get_outstanding_balances" || granted.has("bookings") && granted.has("client_history")) && (name !== "calculate_service_selection" || granted.has("my_page")) && (name !== "get_booking_price_details" || granted.has("earnings") && granted.has("client_history"))).map(([name, definition]) => object({
     tool: { type: "string", enum: [name] }, args: definition.schema,
   }, purposes[name as AssistantTool]));
-  return withSharedDefinitions(object({ language_switch: { type: ["string", "null"], enum: [null, ...ASSISTANT_LANGUAGES], description: "Only an explicit request in the current user message to change the response language sets this code. Otherwise null; preserve the existing response language." }, decision: { anyOf: [
+  return withSharedDefinitions(object({ ...(trackTask?{task_tool:{type:['string','null'],enum:[null,...Object.entries(ASSISTANT_TOOLS).filter(([,d])=>d.risk>=3&&granted.has(d.permission)).map(([tool])=>tool)],description:'The unfinished business action this request advances, including clarifications and reads needed before preparation. Preserve the active task while continuing it. Null for an unrelated new question or when no action is being worked on. Only explicit owner confirmation executes or completes an action.'}}:{}), language_switch: { type: ["string", "null"], enum: [null, ...ASSISTANT_LANGUAGES], description: "Only an explicit request in the current user message to change the response language sets this code. Otherwise null; preserve the existing response language." }, decision: { anyOf: [
     ...tools,
     object({ clarification: { type: "string", minLength: 1, maxLength: 240 } }, "Ask one necessary missing-detail question, or greet the owner. Never answer business-data questions here."),
     object({ navigate: { type: "string", enum: destinations } }, "Open a controlled dashboard workflow when requested, or for financial/security actions that cannot be prepared here."),
@@ -109,21 +154,23 @@ const isObject = (value: unknown): value is Record<string, unknown> => Boolean(v
 // responses. This checks readable content, not factual or semantic correctness.
 const hasProseContent = (value: string) => /[\p{L}\p{N}]/u.test(value);
 
-export function parseOwnerPlannerResponse(text: string, granted: ReadonlySet<string>, answerOnly: boolean) {
+export function parseOwnerPlannerResponse(text: string, granted: ReadonlySet<string>, answerOnly: boolean, trackTask = false) {
   let payload: unknown;
   try { payload = JSON.parse(text); } catch { throw new AssistantPlannerError("JSON"); }
   const key = answerOnly ? "reply" : "decision";
-  if (!isObject(payload) || Object.keys(payload).length !== (answerOnly ? 1 : 2) || !Object.hasOwn(payload, key) || (!answerOnly && payload.language_switch !== null && !isAssistantLanguage(payload.language_switch))) throw new AssistantPlannerError("ENVELOPE");
-  const result: { plan: { tool: string; args: Record<string, unknown> } | null; reply: string | null; clarification: string | null; navigate: string | null; language_switch: AssistantLanguage | null } = { plan: null, reply: null, clarification: null, navigate: null, language_switch: answerOnly ? null : payload.language_switch as AssistantLanguage | null };
+  if (!isObject(payload) || Object.keys(payload).length !== (answerOnly ? 1 : trackTask ? 3 : 2) || !Object.hasOwn(payload, key) || (!answerOnly && payload.language_switch !== null && !isAssistantLanguage(payload.language_switch))) throw new AssistantPlannerError("ENVELOPE");
+  const result: { plan: { tool: string; args: Record<string, unknown> } | null; reply: string | null; clarification: string | null; navigate: string | null; task_tool?: AssistantTool|null; language_switch: AssistantLanguage | null } = { plan: null, reply: null, clarification: null, navigate: null, language_switch: answerOnly ? null : payload.language_switch as AssistantLanguage | null };
   if (answerOnly) {
     if (typeof payload.reply !== "string" || !payload.reply.trim() || payload.reply.length > 900 || !hasProseContent(payload.reply)) throw new AssistantPlannerError("ANSWER");
     result.reply = payload.reply; return result;
   }
+  if(trackTask){result.task_tool=checkedTaskTool(payload.task_tool);if(result.task_tool&&!granted.has(ASSISTANT_TOOLS[result.task_tool].permission))throw new AssistantError('ASSISTANT_ACCESS_DENIED',403);}
   const decision = payload.decision;
   if (!isObject(decision)) throw new AssistantPlannerError("DECISION");
   const keys = Object.keys(decision);
   if (keys.length === 2 && Object.hasOwn(decision, "tool") && Object.hasOwn(decision, "args")) {
     const checked = validateTool(decision.tool, decision.args);
+    if(trackTask&&checked.risk>=3&&result.task_tool!==checked.tool)throw new AssistantPlannerError('DECISION');
     if (checked.tool === "get_availability" && checked.args.style_id && !granted.has("styles")) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
     if (!granted.has(checked.permission)) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
     if (checked.tool === "calculate_service_selection" && (!granted.has("my_page") || checked.args.promotion_id && !granted.has("promotions")) || checked.tool === "get_booking_price_details" && (!granted.has("earnings") || !granted.has("client_history"))) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);

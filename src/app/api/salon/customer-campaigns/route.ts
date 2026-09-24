@@ -1,3 +1,4 @@
+import {demoExternalActionResponse} from "@/lib/demoWorkspace";
 import { requireSalonPermission } from "@/lib/supabaseAdmin";
 import { campaignAction, CampaignError } from "@/lib/businessCustomerCampaigns";
 import { readCustomerCampaignWorkspace, sendNextCustomerCampaignEmail } from "@/lib/businessCustomerCampaignServer";
@@ -15,6 +16,7 @@ async function handle(request: Request) {
   let action: ReturnType<typeof campaignAction> | undefined;
   if (request.method === "POST") {
    action = campaignAction(await request.json());
+   if(context.salon.is_demo===true && !["save","cancel"].includes(action.action)) return demoExternalActionResponse(context.salon)!;
    const common = { p_salon: scope.salonId, p_actor: scope.actorId, p_id: action.id };
    let result;
    if (action.action === "save") result = await scope.admin.rpc("save_customer_campaign", { ...common, p_post: action.post_id, p_post_revision: action.post_revision, p_customers: action.customer_ids });

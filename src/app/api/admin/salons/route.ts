@@ -122,14 +122,14 @@ async function GETHandler(request: Request) {
 
     const [listResult, deletedResult, totalResult, activeResult, pendingResult, newResult, suspendedResult, offboardedResult, addressReviewResult, marketResult] = await Promise.all([
       admin.rpc("admin_list_businesses", rpcParams),
-      admin.from("salons").select("id").not("deleted_at", "is", null),
-      admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null),
-      admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("status", "Active"),
-      admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("status", "Pending"),
-      admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("status", "New"),
-      admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("status", "Suspended"),
-      admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("status", "Offboarded"),
-      admin.from("salons").select("id", { count: "exact", head: true }).is("deleted_at", null).eq("address_needs_review", true),
+      admin.from("salons").select("id").eq("is_demo",false).not("deleted_at", "is", null),
+      admin.from("salons").select("id", { count: "exact", head: true }).eq("is_demo",false).is("deleted_at", null),
+      admin.from("salons").select("id", { count: "exact", head: true }).eq("is_demo",false).is("deleted_at", null).eq("status", "Active"),
+      admin.from("salons").select("id", { count: "exact", head: true }).eq("is_demo",false).is("deleted_at", null).eq("status", "Pending"),
+      admin.from("salons").select("id", { count: "exact", head: true }).eq("is_demo",false).is("deleted_at", null).eq("status", "New"),
+      admin.from("salons").select("id", { count: "exact", head: true }).eq("is_demo",false).is("deleted_at", null).eq("status", "Suspended"),
+      admin.from("salons").select("id", { count: "exact", head: true }).eq("is_demo",false).is("deleted_at", null).eq("status", "Offboarded"),
+      admin.from("salons").select("id", { count: "exact", head: true }).eq("is_demo",false).is("deleted_at", null).eq("address_needs_review", true),
       admin.from("location_markets").select("id,state_code,name,market_type,center_latitude,center_longitude").eq("is_active", true).order("state_code").order("name"),
     ]);
     if (listResult.error) throw listResult.error;

@@ -64,12 +64,18 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
     const respond = (json: unknown, status = 200) => route.fulfill({ json, status });
     if (path === "/api/i18n") return route.continue();
     if (path === "/api/i18n/preference") { accountLocale = req.postDataJSON().locale; return respond({ locale: accountLocale }); }
+    if (req.method() === "GET" && path === "/api/salon/growth-settings") return respond({settings:{revision:0,plan:'starter',reminder_hours:null,effective_reminder_hours:[24,2],reminder_limit:0,waitlist_mode:'manual',waitlist_service_ids:[],waitlist_professional_ids:[],services:[],professionals:[]}});
     if (path === "/api/salon/workspace") return respond({ salon: business, isOwner: true, isTeamMember: false, permissions: {}, records });
     // Existing fixtures supply no seven-day calendar evidence; dedicated
     // opportunity cases provide that response instead of inventing zero capacity.
     if (req.method() === "GET" && path === "/api/salon/schedule-opportunities") return respond({code:"SCHEDULE_HOURS_UNAVAILABLE"},409);
     // These generic fixtures do not supply a complete linked visit history.
     // Dedicated returning-client cases provide verified evidence explicitly.
+    // This generic workspace has no complete monthly aggregate. Dedicated report tests provide it.
+    if (req.method() === "GET" && path === "/api/salon/booking-report") return respond({code:"REPORT_UNAVAILABLE"},503);
+    if (req.method() === "GET" && path === "/api/salon/rebooking-settings") return respond({code:"REBOOKING_UNAVAILABLE"},503);
+    if (req.method() === "GET" && path === "/api/salon/advertising") return respond({ads:{salon_id:business.id,is_demo:false,eligible:false,benefits:{plan:'starter',discount_percent:0,credit_available_cents:0,period_start:'2026-07-01T00:00:00Z',period_end:'2026-10-01T00:00:00Z',early_hours:0},offers:[],reservations:[]}});
+    if (req.method() === "GET" && path === "/api/salon/google-help") return respond({help:{salon_id:business.id,level:'guide',is_demo:false,fingerprint:'00000000000000000000000000000000',fields:null,review:null,requests:[]}});
     if (req.method() === "GET" && path === "/api/salon/rebooking-advice") return respond({code:"REBOOKING_UNAVAILABLE"},503);
     if (req.method() === "GET" && path === "/api/salon/service-contribution") {
       const query=new URL(req.url()).searchParams;
@@ -165,6 +171,7 @@ export async function p0OwnerFixture(page: Page, options: { planning?: boolean; 
         return respond({ revision: row, verified: true });
       }
     }
+    if (path === "/api/salon/assistant/task" && req.method() === "GET") return respond({active_task:null});
     if (path === "/api/salon/assistant") {
       const input = req.postDataJSON(); actions.push(input);
       if (input.action === "plan") {

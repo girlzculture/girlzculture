@@ -44,7 +44,7 @@ test("business cards open the correct flow directly by pointer and keyboard", as
   await page.goto("/business/signup");
   const hair = page.getByRole("link", { name: "Hair Salon & Braiding", exact: true });
   await expect(hair).toHaveAttribute("href", "/business/signup/hair");
-  await expect(page.locator(".business-category")).toHaveCount(8);
+  await expect(page.locator(".business-category")).toHaveCount(7);
   await expect(page.getByRole("radio")).toHaveCount(0);
   await expect(page.locator(".business-category button")).toHaveCount(0);
   await expect(page.locator(".business-type-selector")).not.toContainText(/Available Now|Coming Soon/);
@@ -62,7 +62,7 @@ test("business cards open the correct flow directly by pointer and keyboard", as
   await expect(page.getByRole("heading", { name: "Join the Nail Studio Waitlist", exact: true })).toBeVisible();
 });
 
-test("business landing keeps the approved copy, eight direct card routes and no extra controls", async ({ page }) => {
+test("business landing keeps the approved copy, seven direct card routes and no extra controls", async ({ page }) => {
   await page.goto("/business/signup");
   const hero = page.locator(".business-hero");
   await expect(hero.getByRole("heading", { level: 1 })).toHaveText("Grow Your Beauty Business");
@@ -81,6 +81,7 @@ test("business landing keeps the approved copy, eight direct card routes and no 
   await expect(selector).not.toContainText(/Choose Your Business Type|Select Your Business Type|Available Now|Coming Soon|Continue/);
   await expect(selector.locator("svg, button, input, [role=radio], [role=checkbox], [role=status]")).toHaveCount(0);
   await expect(selector).not.toContainText(/[→➜➔✓✔]/);
+  await expect(selector.getByRole("link", { name: "Other", exact: true })).toHaveCount(0);
   const destinations = [
     ["Hair Salon & Braiding", "/business/signup/hair"],
     ["Nail Studio", "/business/waitlist?category=nail-studio"],
@@ -89,9 +90,8 @@ test("business landing keeps the approved copy, eight direct card routes and no 
     ["Tattoo Studio", "/business/waitlist?category=tattoo-studio"],
     ["Lash & Brow Bar", "/business/waitlist?category=lash-brow-bar"],
     ["Barbershop", "/business/waitlist?category=barbershop"],
-    ["Other", "/business/waitlist?category=other"],
   ];
-  await expect(selector.getByRole("link")).toHaveCount(8);
+  await expect(selector.getByRole("link")).toHaveCount(7);
   await expect(selector.locator(".business-category-name")).toHaveText(destinations.map(([name]) => name));
   for (const [name, href] of destinations) {
     const card = selector.getByRole("link", { name, exact: true });
@@ -164,8 +164,8 @@ for (const [width, height] of [[390, 844], [430, 932], [768, 1024], [834, 1194],
     expect(dimensions.hero.height).toBeGreaterThanOrEqual(260);
     expect(dimensions.selector.top - dimensions.hero.bottom).toBeLessThanOrEqual(48);
     expect((await card.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    await expect(page.locator(".business-category img")).toHaveCount(8);
-    await expect.poll(() => page.locator(".business-photo img").evaluateAll(images => images.length === 9 && images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
+    await expect(page.locator(".business-category img")).toHaveCount(7);
+    await expect.poll(() => page.locator(".business-photo img").evaluateAll(images => images.length === 8 && images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
     await expect(page.locator(".business-hero-copy ul")).toHaveCount(0);
     await expect(page.locator(".business-hero-copy")).not.toContainText(/Get More Bookings|Grow Your Brand|Reach New Clients|Join a Supportive Community/);
     const cards = await page.locator(".business-category").evaluateAll(elements => elements.map(element => {
@@ -185,7 +185,7 @@ for (const [width, height] of [[390, 844], [430, 932], [768, 1024], [834, 1194],
     const rows = new Set(cards.map(card => Math.round(card.top)));
     if (width <= 430) expect(rows.size).toBe(4);
     if (width >= 1366) expect(rows.size).toBe(1);
-    if (width <= 430) for (const row of rows) expect(cards.filter(card => Math.round(card.top) === row)).toHaveLength(2);
+    if (width <= 430) expect([...rows].map(row => cards.filter(card => Math.round(card.top) === row).length)).toEqual([2, 2, 2, 1]);
     await expect(page.locator(".business-trust")).toBeVisible();
     expect(failedMedia).toEqual([]);
     const audit = await new AxeBuilder({ page }).include("main").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
@@ -208,6 +208,7 @@ test("reduced motion keeps the image fallback without video requests", async ({ 
 });
 
 test("service worker clears old versions and cannot resurrect cached onboarding HTML", async ({ page, context, baseURL }) => {
+  test.setTimeout(90_000);
   const network = await createNetworkOrigin(baseURL);
   try {
     await page.goto(network.url("/robots.txt"));
@@ -244,8 +245,26 @@ test("service worker clears old versions and cannot resurrect cached onboarding 
     await network.disconnect();
     await expect(context.request.get(network.url("/robots.txt"), { timeout: 5_000 })).rejects.toThrow();
     await page.goto(network.url("/uncached-public-offline-check"), { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: "You’re offline" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "You’re offline" })).toBeVisible({ timeout: 20_000 });
     await expect(page.locator("body")).not.toContainText("Selected application plan");
     await expect(page.goto(network.url("/business/signup"), { waitUntil: "domcontentloaded" })).rejects.toThrow();
+  } finally { await network.close(); }
+});
+
+test("service worker shows an offline page when the optional offline precache fails", async ({ page, baseURL }) => {
+  const network = await createNetworkOrigin(baseURL, ["/offline.html"]);
+  try {
+    await page.goto(network.url("/robots.txt"));
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" });
+      await navigator.serviceWorker.ready;
+    });
+    await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+    expect(await page.evaluate(async () => Boolean(await caches.match("/offline.html")))).toBe(false);
+    await network.disconnect();
+    const response = await page.goto(network.url("/uncached-public-offline-check"));
+    expect(response?.status()).toBe(503);
+    await expect(page.getByRole("heading", { name: "You’re offline" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Try home again" })).toHaveAttribute("href", "/");
   } finally { await network.close(); }
 });

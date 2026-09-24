@@ -15,12 +15,12 @@ import {
 
 async function contextFor(request: Request, id: string) {
   const context = await requireAdminPermission(request, "bookings");
-  const { data: booking, error } = await context.admin.from("bookings").select("*").eq("id", id).single();
+  const { data: booking, error } = await context.admin.from("bookings").select("*").eq("is_demo",false).eq("id", id).single();
   if (error || !booking) throw new Error("Booking not found.");
   const [salonResult, stylesResult, stylistsResult, auditResult] = await Promise.all([
-    context.admin.from("salons").select("id,name,time_zone,email,phone,user_id").eq("id", booking.salon_id).single(),
-    context.admin.from("styles").select("id,name,duration_min_hours,buffer_minutes").eq("salon_id", booking.salon_id).order("name"),
-    context.admin.from("stylists").select("id,name").eq("salon_id", booking.salon_id).eq("is_active", true).order("name"),
+    context.admin.from("salons").select("id,name,time_zone,email,phone,user_id").eq("is_demo",false).eq("id", booking.salon_id).single(),
+    context.admin.from("styles").select("id,name,duration_min_hours,buffer_minutes").eq("is_demo",false).eq("salon_id", booking.salon_id).order("name"),
+    context.admin.from("stylists").select("id,name").eq("is_demo",false).eq("salon_id", booking.salon_id).eq("is_active", true).order("name"),
     context.admin.from("booking_audit_log").select("id,action,reason,actor_role,created_at").eq("booking_id", id).order("created_at", { ascending: false }).limit(25),
   ]);
   if (salonResult.error) throw salonResult.error;

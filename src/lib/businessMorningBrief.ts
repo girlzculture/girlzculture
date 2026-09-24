@@ -1,6 +1,6 @@
 import {assertOperatingBooksScope, type OperatingBooks} from "@/lib/businessFinanceCore";
 
-export type BriefAppointment={id:string;salon_id:string;appointment_datetime:string;blocked_until:string|null;duration_hours:number|null;status:string;guest_name:string|null;stylist_id:string|null;manual_service_name:string|null;style_id:string|null;payment_mode:string|null};
+export type BriefAppointment={is_demo?:boolean;id:string;salon_id:string;appointment_datetime:string;blocked_until:string|null;duration_hours:number|null;status:string;guest_name:string|null;stylist_id:string|null;manual_service_name:string|null;style_id:string|null;payment_mode:string|null};
 export type BriefMoney={expected_cents:number;deposit_cents:number;received_cents:number;balance_cents:number};
 export type BriefSection<T>={status:"ok";value:T}|{status:"unavailable";request_id:string};
 export type MorningBrief={date:string;time_zone:string;generated_at:string;appointments:BriefSection<{items:Array<{id:string;at:string;client:string|null;service:string|null;professional:string|null;status:string}>;cancelled:number;no_shows:number;overlaps:number;unassigned:number;overdue:number}>;money:BriefSection<BriefMoney>;availability:BriefSection<{gaps:Array<{start:string;end:string;professional_name:string|null}>;waitlist_opportunities:number}>;inventory:BriefSection<Array<{name:string;quantity:number|null}>>;followups:BriefSection<Array<{booking_id:string;client:string|null}>>};

@@ -253,13 +253,15 @@ test("responsive menus keep every control inside a scrollable viewport panel", a
     await menu.getByText("Explore", { exact: true }).click();
     await menu.getByText("For Businesses", { exact: true }).click();
     for (const name of [
-      "Pricing",
-      "Browse Styles",
-      "Find Salons",
-      "How It Works",
+      "Pricing & Plans",
+      "Browse Services",
+      "Browse Businesses",
+      "Near You",
+      "Why Girlz Culture",
+      "Help Center",
       "About Us",
       "Blog",
-      "Partner With Us",
+      "Apply to Join",
       "Log in",
       "Sign up",
     ]) {

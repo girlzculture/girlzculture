@@ -1,3 +1,8 @@
+import {assistantWaitlistCopy} from '@/i18n/assistant-waitlist-copy';
+import {assistantMarketingCopy} from '@/i18n/assistant-marketing-copy';
+import {assistantTeamCopy} from '@/i18n/assistant-team-copy';
+import {assistantOperationsCopy} from "@/i18n/assistant-operations-copy";
+import {assistantFinanceCopy} from "@/i18n/assistant-finance-record-copy";
 import { assistantMoneyReadText } from "@/i18n/assistant-money-read-copy";
 import { manualSaleText } from "@/i18n/assistant-manual-sale-source-catalog";
 import { assistantBalancesCopy } from "@/i18n/assistant-balances-copy";
@@ -64,6 +69,13 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
   const t = (source: string, values?: Record<string, string | number>) => launchWorkspaceText(source, language, values);
   const suggest = (items: string[]) => items.map(source => t(source));
 
+  if(tool === "get_appointment_waitlist")return {message:assistantWaitlistCopy(locale).read.replace("{count}",String(number(result.total)))};
+  if(tool === "get_marketing_records")return {message:assistantMarketingCopy(locale).read.replace("{count}",String(number(result.total)))};
+  if(tool === "get_team_controls")return {message:assistantTeamCopy(locale).read};
+  if(tool === "get_business_stock") {
+    const words=assistantOperationsCopy(locale),products=rows(result.products),supplies=rows(result.supplies);
+    return {message:products.length+supplies.length?`${words.stock}: ${Number(result.matching_total??products.length+supplies.length)}.`:words.empty};
+  }
   if (tool === "calculate_service_selection" || tool === "get_booking_price_details") {
     if (result.available !== true) return { message: assistantMoneyReadText("missing", locale) };
     const money = row(tool === "calculate_service_selection" ? result.money : result.original), current = row(result.current);
@@ -78,7 +90,7 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
   if (tool === "get_services_and_prices") {
     const services = rows(result.services);
     const count = Math.max(number(result.matching_total ?? result.total), services.length);
-    if (!count && result.match_status === "incomplete_search") return { message: t("Only part of your catalog was searched. Open Styles & Pricing to check the remaining services."), suggestions: suggest(["Open Styles & Pricing"]) };
+    if (!count && result.match_status === "incomplete_search") return { message: t("Only part of your catalog was searched. Open Services & Pricing to check the remaining services."), suggestions: suggest(["Open Services & Pricing"]) };
     if (!count && number(result.inventory_total) > 0) return { message: t("No service matched this search. Your catalog contains {count} services.", { count: number(result.inventory_total) }), suggestions: suggest(["Find a service"]) };
     if (!count) return { message: words.none, suggestions: suggest(["Add a service", "Import a spreadsheet"]) };
     const summaries = services.slice(0, 4).map(service => {
@@ -90,7 +102,7 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
       return `${name}${price || duration ? ` (${[price, duration].filter(Boolean).join(", ")})` : ""}`;
     });
     return {
-      message: [result.match_status === "related" ? t("These are related services, not an exact name match. Confirm the service before making changes.") : "", result.search_complete === false ? t("Only part of your catalog was searched. Open Styles & Pricing to check the remaining services.") : "", result.query ? t("Matching services: {count}. {details}", { count, details: list(summaries, locale) }) : words.services(count, list(summaries, locale), Math.max(0, count - summaries.length))].filter(Boolean).join(" "),
+      message: [result.match_status === "related" ? t("These are related services, not an exact name match. Confirm the service before making changes.") : "", result.search_complete === false ? t("Only part of your catalog was searched. Open Services & Pricing to check the remaining services.") : "", result.query ? t("Matching services: {count}. {details}", { count, details: list(summaries, locale) }) : words.services(count, list(summaries, locale), Math.max(0, count - summaries.length))].filter(Boolean).join(" "),
       suggestions: suggest(["Find a service", "Prepare a price change", "Import a spreadsheet"]),
     };
   }
@@ -176,6 +188,7 @@ export function presentAssistantResult(tool: string, value: unknown, locale = "e
     return { message: words.summary(number(result.bookings), number(result.upcoming), currency(result.completed_booking_value, locale) || t("not available")), suggestions: suggest(["Show upcoming bookings", "Find calendar gaps", "Open overview"]) };
   }
 
+  if(tool==="get_finance_records") return {message:`${assistantFinanceCopy(locale).found}: ${Object.values(row(result.totals)).reduce<number>((sum,value)=>sum+number(value),0)}.`};
   const lists: Record<string, [string, string]> = {
     get_professionals: ["professionals", "professional"], get_products: ["products", "product"], get_customers: ["customers", "customer"],
     get_reviews: ["reviews", "review"], get_promotions: ["promotions", "promotion"], get_booking_messages: ["messages", "message"],

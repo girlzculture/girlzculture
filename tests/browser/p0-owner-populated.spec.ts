@@ -204,3 +204,20 @@ test(`P0 populated owner route audit ${locale} at ${width}px`, async ({ page }, 
   expect(results.filter(row => row.untranslated.length || row.overflow || row.violations.length)).toEqual([]);
 });
 }
+
+for(const width of [390,1440])test(`P0 populated owner material grade preserves legacy and published choices at ${width}px`,async({page})=>{
+ const f=await p0OwnerFixture(page,{populated:true});await page.setViewportSize({width,height:900});
+ let materials=[{name:'Kanekalon (standard)',price:5,longevity_weeks:4,quality_grade:'Best'}];
+ await page.route('**/api/config?keys=catalog.size_options**',r=>r.fulfill({json:{config:{'catalog.material_quality_grades':['Good','Better','Premium','Luxury']}}}));
+ await page.route('**/api/salon/records?table=style_materials**',r=>r.fulfill({json:{records:materials}}));
+ await page.route('**/api/salon/records/save',r=>{
+  const body=r.request().postDataJSON();expect(body.table).toBe('styles');expect(body.id).toBe(f.ids.service);
+  materials=body.values.style_materials;Object.assign(f.records.styles[0],body.values);
+  return r.fulfill({json:{record:f.records.styles[0],verified:true}});
+ });
+ await page.goto(`/salon/dashboard/styles/${f.ids.service}`);const quality=page.getByRole('combobox',{name:'Quality',exact:true});
+ await expect(quality).toHaveValue('Best');await expect(quality.locator('option[value=Premium]')).toHaveCount(1);
+ await page.getByRole('button',{name:'Save Service',exact:true}).click();await expect(page.getByText('Saved and verified.',{exact:true})).toBeVisible();expect(materials[0].quality_grade).toBe('Best');
+ await quality.selectOption('Premium');await page.getByRole('button',{name:'Save Service',exact:true}).click();await expect.poll(()=>materials[0].quality_grade).toBe('Premium');
+ await page.reload();await expect(quality).toHaveValue('Premium');expect(materials[0].price).toBe(5);
+});

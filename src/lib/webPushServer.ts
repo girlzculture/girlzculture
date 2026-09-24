@@ -142,9 +142,13 @@ async function deliver(subscription: StoredPushSubscription, payload: PushPayloa
 }
 
 export async function sendPushToUsers(userIds: string[], payload: PushPayload) {
-  const ids = [...new Set(userIds.filter(Boolean))];
+  let ids = [...new Set(userIds.filter(Boolean))];
   if (!ids.length) return { skipped: true, delivered: 0, failed: 0, revoked: 0 };
   const admin = getPushAdmin();
+  const sampleActors=await admin.rpc("demo_delivery_actor_ids",{p_users:ids});
+  if(sampleActors.error)throw sampleActors.error;
+  ids=ids.filter(id=>!(sampleActors.data||[]).includes(id));
+  if(!ids.length)return {skipped:true,delivered:0,failed:0,revoked:0};
   const { data, error } = await admin
     .from("push_subscriptions")
     .select("id,user_id,salon_id,endpoint,p256dh,auth_secret")

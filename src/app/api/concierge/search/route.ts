@@ -17,12 +17,15 @@ async function POSTHandler(request: Request) {
     let body: Record<string, unknown>;
     try { body = JSON.parse(raw); } catch { rejectRequest("Send a valid search request."); }
     if (!body || typeof body !== "object" || Array.isArray(body)) rejectRequest("Send a valid search request.");
+    if(Object.keys(body).some(key=>!["prompt","language","previous_intent","latitude","longitude","website"].includes(key)))rejectRequest("Send only public search criteria.");
     rejectBot(body);
+    if(typeof body.prompt!=="string"||body.prompt.length>600)rejectRequest("Keep your question under 600 characters.",413);
     const prompt = cleanText(body.prompt, 600);
-    if (prompt.length < 3) rejectRequest("Describe the style, location, or appointment you want.");
+    if (prompt.length < 3 || !/\p{L}/u.test(prompt)) rejectRequest("Describe the business, service, location, or appointment you want.");
     const coordinates = { lat: Number(body.latitude), lng: Number(body.longitude) };
     const origin = body.latitude != null && body.longitude != null && validCoordinates(coordinates) ? coordinates : null;
     const language = cleanText(body.language, 20) || "en";
+    if(!["en","fr","es","zh-CN"].includes(language))rejectRequest("Choose an available response language.");
     let previousIntent;
     try { previousIntent = body.previous_intent ? parseConciergeIntent(body.previous_intent) : undefined; } catch { rejectRequest("Start a new conversation; the previous search details are invalid."); }
     const result = await runBeautyConcierge({ prompt, language, origin, request, previousIntent });

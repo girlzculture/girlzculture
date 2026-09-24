@@ -70,7 +70,8 @@ const workflow = read(
 assert.match(workflow, /npm run verify:final-completion/);
 assert.match(workflow, /npm run verify:database-clean/);
 assert.match(workflow, /npm run verify:monitoring/);
-assert.match(workflow, /npx playwright test/);
+assert.match(workflow, /node scripts\/run-browser-shards\.mjs/);
+assert.match(workflow, /node scripts\/verify-browser-shard-results\.mjs/);
 assert.match(workflow, /npm audit --audit-level=high/);
 assert.match(workflow, /sk_test_/);
 assert.doesNotMatch(workflow, /sk_live_/);

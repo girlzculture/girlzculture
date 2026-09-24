@@ -30,7 +30,7 @@ export default function SalonSpreadsheetPanel({
   const [preview, setPreview] = useState<ImportedRecord[] | null>(null);
   const [reviewed, setReviewed] = useState(false);
   const [previewPage, setPreviewPage] = useState(0);
-  const label = kind === "services" ? "Styles & Pricing" : "Products";
+  const label = kind === "services" ? "Services & Pricing" : "Products";
 
   function selectSheet(sheet: Sheet) {
     const columns: Record<string, number> = {};

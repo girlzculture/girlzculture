@@ -63,7 +63,7 @@ async function PATCHHandler(request: Request) {
     const config = sanitize(await request.json());
     const { error } = await admin.from("admin_settings").upsert({ key: "salon_lifecycle", value: config, updated_at: new Date().toISOString() });
     if (error) throw error;
-    const { data: salons, error: salonError } = await admin.from("salons").select("id").limit(10_000);
+    const { data: salons, error: salonError } = await admin.from("salons").select("id").eq("is_demo",false).limit(10_000);
     if (salonError) throw salonError;
     const failures: string[] = [];
     for (const salon of salons || []) {

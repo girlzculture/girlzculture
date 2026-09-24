@@ -47,7 +47,13 @@ const salonRecordSave = readFileSync(
   "utf8",
 );
 
-assert.deepEqual(PLAN_ORDER, ["Starter", "Growth", "Premium"]);
+assert.deepEqual(PLAN_ORDER, ["Solo", "Solo Pro", "Starter", "Growth", "Premium"]);
+for (const [plan, products, promotions] of [["Solo", 10, 1], ["Solo Pro", 30, 3]]) {
+  assert.equal(SUBSCRIPTION_PLANS[plan].entitlements.productListings.limit, products);
+  assert.equal(SUBSCRIPTION_PLANS[plan].entitlements.customerPromotions.limit, promotions);
+  assert.equal(SUBSCRIPTION_PLANS[plan].entitlements.bookableCalendars, 1);
+  assert.equal(SUBSCRIPTION_PLANS[plan].entitlements.teamPayouts, false);
+}
 assert.equal(canonicalPlanForStored("Basic"), "Starter");
 assert.equal(SUBSCRIPTION_PLANS.Starter.entitlements.productListings.limit, 10);
 assert.equal(SUBSCRIPTION_PLANS.Growth.entitlements.productListings.limit, 30);

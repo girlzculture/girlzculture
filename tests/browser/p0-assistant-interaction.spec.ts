@@ -18,7 +18,7 @@ for (const [width, height] of [[390, 844], [768, 900], [1440, 900], [844, 390]])
       const panel = await assistant.boundingBox();
       expect(workspace!.x + workspace!.width).toBeLessThanOrEqual(panel!.x);
       await assistant.locator('textarea').fill('Keep this draft across my pages');
-      await page.getByRole('navigation', { name: 'Salon owner navigation', exact: true }).getByRole('link', { name: 'Photos', exact: true }).click();
+      await page.getByRole('navigation', { name: 'Business owner navigation', exact: true }).getByRole('link', { name: 'Photos', exact: true }).click();
       await expect(page).toHaveURL(/\/salon\/dashboard\/photos$/);
       await expect(assistant).toBeVisible();
       await expect(assistant.locator('textarea')).toHaveValue('Keep this draft across my pages');

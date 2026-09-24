@@ -2,7 +2,8 @@ import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitori
 import {
   BUNDLED_MESSAGES,
   ENGLISH_MESSAGES,
-  normalizeLocale,
+  interfaceLocale,
+  SUPPORTED_LOCALES,
 } from "@/i18n/catalog";
 import { GENERATED_SOURCE_MESSAGES } from "@/i18n/generated-source-messages";
 import { DASHBOARD_SOURCE_MESSAGES } from "@/i18n/dashboard-source-catalog";
@@ -37,19 +38,10 @@ const FALLBACK_LOCALES = [
     is_default: false,
     sort_order: 3,
   },
-  {
-    locale: "wo",
-    display_name: "Wolof",
-    native_name: "Wolof",
-    intl_locale: "wo-SN",
-    text_direction: "ltr",
-    is_default: false,
-    sort_order: 4,
-  },
 ];
 
 async function GETHandler(request: Request) {
-  const requested = normalizeLocale(
+  const requested = interfaceLocale(
     new URL(request.url).searchParams.get("locale"),
   );
   try {
@@ -63,7 +55,7 @@ async function GETHandler(request: Request) {
       .is("archived_at", null)
       .order("sort_order");
     if (localeError) throw localeError;
-    const enabled = locales || [];
+    const enabled = (locales || []).filter(item => SUPPORTED_LOCALES.some(locale => locale === item.locale));
     const defaultLocale =
       enabled.find((item) => item.is_default)?.locale || "en";
     const locale = enabled.some((item) => item.locale === requested)

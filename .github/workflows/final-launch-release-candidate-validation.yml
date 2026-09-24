@@ -72,15 +72,16 @@ jobs:
   browser-acceptance:
     if: ${{ github.event_name != 'workflow_dispatch' || (inputs.billing_sandbox_mode || 'off') == 'off' }}
     runs-on: ubuntu-latest
-    # Run 35412096899: shard 3 passed 277 tests in 42m, but setup and artifact
-    # upload exceeded the old 45m job envelope. Per-test timeouts stay unchanged.
+    # Run 35931222779 exhausted 60m at test 507 on its third shard. Reuse
+    # the eight-job runner measured at <=39m for the expanded 1,722-test set.
+    # Each job owns its build, ports, fixture, one worker and result log.
     timeout-minutes: 60
     permissions:
       contents: read
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     env:
       NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:3105
       NEXT_PUBLIC_SUPABASE_ANON_KEY: acceptance-fixture-anon-key
@@ -90,6 +91,8 @@ jobs:
       NEXT_PUBLIC_ENABLE_ACCEPTANCE_HARNESS: "true"
       CUSTOMER_MARKETPLACE_LIVE: "true"
       PLAYWRIGHT_USE_PRODUCTION_SERVER: "true"
+      PLAYWRIGHT_BROWSER_SHARDS: "8"
+      PLAYWRIGHT_SHARD_INDEX: ${{ matrix.shard }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -98,10 +101,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium firefox webkit
-      - name: Build with isolated browser fixture configuration
-        run: npm run build
-      - name: Exercise every browser test across three independent shards
-        run: npx playwright test --shard=${{ matrix.shard }}/3
+      - name: Build and exercise one isolated browser shard
+        run: node scripts/run-browser-shards.mjs
       - name: Upload fixture gallery and browser evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@v5
@@ -109,8 +110,9 @@ jobs:
           name: p0-browser-shard-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             docs/screenshots/p0
-            playwright-report
-            test-results
+            playwright-shards/shard-*.json
+            playwright-shards/shard-*.log
+            playwright-shards/shard-*-results
           if-no-files-found: warn
           retention-days: 14
 
@@ -165,6 +167,19 @@ jobs:
 
       - name: Install locked dependencies
         run: npm ci
+
+      - name: Download every release browser shard
+        uses: actions/download-artifact@v5
+        with:
+          pattern: p0-browser-shard-*-${{ github.run_id }}-*
+          merge-multiple: false
+          path: browser-artifacts
+
+      - name: Select the latest attempt of every exact-run shard
+        run: node scripts/collect-browser-shard-results.mjs p0-browser-shard
+
+      - name: Require complete exactly-once release browser coverage
+        run: node scripts/verify-browser-shard-results.mjs
 
       - name: Require zero high or critical advisories in the full dependency tree
         run: npm audit --audit-level=high

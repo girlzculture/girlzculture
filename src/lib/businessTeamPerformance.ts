@@ -17,7 +17,7 @@ export function professionalPerformance(rows: Row[],salonId:string,stylistId:str
  const today=businessDay(now,timeZone)!,start=today.slice(0,8)+"01",seen=new Set<string>();
  const appointments=rows.filter(row=>{
   const day=businessDay(String(row.appointment_datetime||""),timeZone),id=String(row.id||"");
-  if(!id||seen.has(id)||row.salon_id!==salonId||row.stylist_id!==stylistId||row.payment_mode==="test"||!day||day<start||day>today)return false;
+  if(!id||seen.has(id)||row.salon_id!==salonId||row.stylist_id!==stylistId||(row.payment_mode==="test"&&row.is_demo!==true)||!day||day<start||day>today)return false;
   seen.add(id);return true;
  });
  const completed=appointments.filter(row=>/^completed$/i.test(String(row.status)));

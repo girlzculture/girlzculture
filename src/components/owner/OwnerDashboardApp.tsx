@@ -1,4 +1,10 @@
 "use client";
+import BusinessGrowthControls from "./BusinessGrowthControls";
+import BusinessRebookingControls from "./BusinessRebookingControls";
+import BusinessLocationControls from "@/components/owner/BusinessLocationControls";
+import BookedMobileLocation from "@/components/booking/BookedMobileLocation";
+import {businessLabels} from "@/lib/businessLabels";
+import { isSoloPlan } from "@/lib/plans";
 
 import BookingChangeProposal from "./BookingChangeProposal";
 import ReviewsWorkspace from "./ReviewsWorkspace";
@@ -19,6 +25,7 @@ import BusinessPhotoLibrary from "@/components/owner/BusinessPhotoLibrary";
 import BusinessOverview from "@/components/owner/BusinessOverview";
 import ProductsWorkspace from "@/components/owner/ProductsWorkspace";
 import BusinessFinances from "@/components/owner/BusinessFinances";
+import BusinessAdvertising from "@/components/owner/BusinessAdvertising";
 import SubscriptionPaymentMethod from "@/components/owner/SubscriptionPaymentMethod";
 import BusinessReferrals, { SubscriptionReferralNavigation } from "@/components/owner/BusinessReferrals";
 import type { BusinessPhotoMetadata } from "@/lib/businessPhotoMetadata";
@@ -233,7 +240,7 @@ export default function OwnerDashboardApp({
   const [cancellationReasons, setCancellationReasons] = useState([
     "Customer requested cancellation",
     "Stylist unavailable",
-    "Salon closure",
+    "Business closure",
     "Scheduling conflict",
     "Service issue",
     "Payment issue",
@@ -243,7 +250,7 @@ export default function OwnerDashboardApp({
     useState([
       "Appointment availability changed",
       "Stylist is unavailable",
-      "Salon closure or schedule change",
+      "Business closure or schedule change",
       "Service cannot be completed as scheduled",
       "Customer requested cancellation",
       "Payment could not be completed",
@@ -266,7 +273,7 @@ export default function OwnerDashboardApp({
       if (!live) return;
       if (!session || !userId) {
         setError(
-          "Sign in with your salon-owner account. Admin and salon sessions are kept separate, so an admin login will not replace this session.",
+          "Sign in with your business-owner account. Admin and business sessions are kept separate, so an admin login will not replace this session.",
         );
         setLoading(false);
         return;
@@ -279,14 +286,14 @@ export default function OwnerDashboardApp({
       if (!live) return;
       if (!s) {
         setError(
-          "This session is not linked to a salon-owner account. Use the salon-owner login for this dashboard.",
+          "This session is not linked to a business-owner account. Use the business-owner login for this dashboard.",
         );
         setLoading(false);
         return;
       }
       const salonId = String(s.id || "");
       if (!salonId)
-        throw new Error("This salon profile is missing its identifier.");
+        throw new Error("This business profile is missing its identifier.");
       setSalon(s as Salon);
       const displayName = session.user.user_metadata?.full_name || session.user.user_metadata?.first_name || session.user.user_metadata?.name;
       setActorName(typeof displayName === "string" ? displayName.trim().split(/\s+/)[0].slice(0,80) : "");
@@ -388,7 +395,7 @@ export default function OwnerDashboardApp({
               setRealtimeNotice(
                 scopedApiErrorMessage(
                   error,
-                  "Your salon session has expired. Sign in again to resume live updates.",
+                  "Your business session has expired. Sign in again to resume live updates.",
                 ),
               );
               return "terminal";
@@ -463,8 +470,8 @@ export default function OwnerDashboardApp({
         scopedApiErrorMessage(
           error,
           error instanceof ScopedApiError && error.authenticationFailure
-            ? "Your salon session has expired. Sign in again."
-            : "The salon workspace is temporarily unavailable. Please try again in a moment.",
+            ? "Your business session has expired. Sign in again."
+            : "The business workspace is temporarily unavailable. Please try again in a moment.",
         ),
       );
       setLoading(false);
@@ -504,7 +511,7 @@ export default function OwnerDashboardApp({
     try {
       const session = await getSessionForScope("salon");
       if (!session)
-        throw new Error("Your salon session expired. Please sign in again.");
+        throw new Error("Your business session expired. Please sign in again.");
       const response = await fetch("/api/salon/profile", {
         method: "PATCH",
         headers: {
@@ -515,7 +522,7 @@ export default function OwnerDashboardApp({
       });
       const body = (await readApiResponse(
         response,
-        "We couldn't save this salon change.",
+        "We couldn't save this business change.",
       )) as {
         salon?: Salon;
         error?: string;
@@ -573,7 +580,7 @@ export default function OwnerDashboardApp({
           );
           setNotice("Address saved and map location verified.");
         }
-      } else setNotice("Changes saved to your public salon page.");
+      } else setNotice("Changes saved to your public business page.");
     } catch (saveError) {
       setNotice(
         saveError instanceof Error
@@ -592,7 +599,7 @@ export default function OwnerDashboardApp({
     try {
       const session = await getSessionForScope("salon");
       if (!session)
-        throw new Error("Your salon session expired. Please sign in again.");
+        throw new Error("Your business session expired. Please sign in again.");
       const response = await fetch("/api/salon/records/save", {
         method: "POST",
         headers: {
@@ -603,7 +610,7 @@ export default function OwnerDashboardApp({
       });
       const body = (await readApiResponse(
         response,
-        "We couldn't save this salon record.",
+        "We couldn't save this business record.",
       )) as {
         record?: Row;
         error?: string;
@@ -635,13 +642,13 @@ export default function OwnerDashboardApp({
   ) {
     if (
       !window.confirm(
-        i18n.translateSource("Remove this record from the public salon experience? Booking history will be preserved."),
+        i18n.translateSource("Remove this record from the public business page? Booking history will be preserved."),
       )
     )
       return;
     try {
       const session = await getSessionForScope("salon");
-      if (!session) throw new Error("Your salon session expired.");
+      if (!session) throw new Error("Your business session expired.");
       const response = await fetch("/api/salon/records", {
         method: "POST",
         headers: {
@@ -651,7 +658,7 @@ export default function OwnerDashboardApp({
         body: JSON.stringify({
           table,
           id,
-          reason: "Removed from salon dashboard",
+          reason: "Removed from business dashboard",
         }),
       });
       const body = await response.json();
@@ -721,7 +728,7 @@ export default function OwnerDashboardApp({
         <div className="max-w-xl rounded-[22px] border border-red-200 bg-white p-9 text-center shadow-[0_20px_60px_rgba(13,17,20,.08)]">
           <LockKeyhole className="mx-auto text-magenta" size={42} />
           <h1 className="mt-5 font-serif text-4xl font-semibold text-plum">
-            Salon access is restricted
+            Business access is restricted
           </h1>
           <p className="mt-4 leading-7 text-ink/70">
             This salon is no longer active on Girlz Culture. Existing booking
@@ -762,11 +769,14 @@ export default function OwnerDashboardApp({
     return (
       <OwnerDashboardShell
         section={section}
-        salonName={salon.name || "Your Salon"}
+        salonName={salon.name || "Your Business"}
+      sampleBusiness={salon.is_demo===true}
+      businessType={typeof salon.business_type === "string" ? salon.business_type : undefined}
         salonSlug={salon.slug || ""}
         avatar={salon.logo_url || null}
         notifications={notifications}
         access={teamPermissions}
+        independent={isSoloPlan(storedPlan)}
       >
         <div className="rounded-[18px] border border-plum/10 bg-white p-10 text-center">
           <LockKeyhole className="mx-auto text-magenta" />
@@ -834,11 +844,14 @@ export default function OwnerDashboardApp({
   return (
     <OwnerDashboardShell
       section={section}
-      salonName={salon.name || "Your Salon"}
+      salonName={salon.name || "Your Business"}
+      sampleBusiness={salon.is_demo===true}
+      businessType={typeof salon.business_type === "string" ? salon.business_type : undefined}
       salonSlug={salon.slug || ""}
       avatar={salon.logo_url || null}
       notifications={notifications}
       access={teamPermissions}
+        independent={isSoloPlan(storedPlan)}
     >
       {lifecycleStatus === "suspended" ? (
         <div
@@ -972,13 +985,14 @@ function DashboardContent({
   if (section === "my-page") return <BusinessProfileWorkspace c={c} focus={c.focusedRecordId}><MyPage c={c} focus={c.focusedRecordId || "business"} /></BusinessProfileWorkspace>;
   if (section === "photos") return <Photos c={c} focus={c.focusedRecordId} />;
   if (section === "styles") return <StructuredStylesEditor c={c} recordId={c.focusedRecordId} />;
+  if (section === "stylists" && isSoloPlan(c.plan)) return <div role="status" className="rounded-xl border p-6">Your independent plan has one calendar. Team management becomes available with a business team plan.</div>;
   if (section === "stylists") return <><StructuredStylistsEditor c={c} recordId={c.focusedRecordId} />{!c.focusedRecordId && c.stylists.length === 0 ? <StylistSectionFallbackEditor gallery={Array.isArray(c.salon.gallery_photos) ? c.salon.gallery_photos : []} products={c.products} promotions={c.promotions} initial={c.salon.stylist_section_fallback} onSave={c.updateSalon} onNotice={c.setNotice} /> : null}</>;
   if (section === "products") return <TruthfulProducts c={c} recordId={c.focusedRecordId} />;
   if (section === "availability") return <Availability c={c} recordId={c.focusedRecordId} />;
   if (section === "bookings") return <Bookings c={c} recordId={c.focusedRecordId || c.initialBookingId} />;
   if (section === "messages") return <>{c.isOwner && (!c.focusedRecordId || c.focusedRecordId === "campaigns") ? <CustomerCampaignNavigation campaigns={c.focusedRecordId === "campaigns"}/> : null}{c.focusedRecordId === "campaigns" ? c.isOwner ? <BusinessCustomerCampaigns businessId={String(c.salon.id)}/> : <AccessPaused isOwner={false}/> : <BookingInbox scope="salon" initialBookingId={c.focusedRecordId} focused={Boolean(c.focusedRecordId)} />}</>;
   if (section === "reviews") return <Reviews c={c} recordId={c.focusedRecordId} />;
-  if (section === "earnings") return <BusinessFinances key={JSON.stringify([c.salon.id,c.isOwner,c.access])} salonId={String(c.salon.id)} timeZone={String(c.salon.time_zone || "America/New_York")} isOwner={c.isOwner} access={c.access} paymentEvidence={c.isOwner || c.access?.earnings ? <Earnings c={c} recordId={c.focusedRecordId} /> : null}/>;
+  if (section === "earnings") return <BusinessFinances independent={isSoloPlan(c.plan)} key={JSON.stringify([c.salon.id,c.isOwner,c.access])} salonId={String(c.salon.id)} timeZone={String(c.salon.time_zone || "America/New_York")} isOwner={c.isOwner} access={c.access} paymentEvidence={c.isOwner || c.access?.earnings ? <Earnings c={c} recordId={c.focusedRecordId} /> : null}/>;
   if (section === "promotions")
     return (
       <>
@@ -1027,10 +1041,10 @@ function AccessPaused({ isOwner }: { isOwner: boolean }) {
         <LockKeyhole size={30} />
       </span>
       <h1 className="mt-5 font-serif text-4xl font-semibold text-plum">
-        Salon access is paused
+        Business access is paused
       </h1>
       <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-ink/65">
-        This salon’s subscription is not active. Please contact the salon owner;
+        This business’s subscription is not active. Please contact the business owner;
         only the owner can manage billing.
       </p>
       {isOwner ? (
@@ -1192,7 +1206,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
     <>
       <Title
         title="Subscription"
-        subtitle="Choose the plan that matches your salon's operations and growth goals."
+        subtitle="Choose the plan that matches your business’s operations and growth goals."
       />
       {c.subscriptionActive ? (
         <p className="mb-4 text-sm text-ink/70">
@@ -1468,6 +1482,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
           );
         })}
       </div>
+      {c.access === null ? <BusinessAdvertising key={`advertising:${c.salon.id}`} businessId={String(c.salon.id)} /> : null}
       {c.subscription?.stripe_customer_id && c.access === null ? <SubscriptionPaymentMethod key={String(c.salon.id)} disabled={Boolean(busy)} /> : null}
       {c.subscription?.stripe_customer_id ? (
         <div className="mt-5 flex flex-wrap gap-3">
@@ -1579,7 +1594,7 @@ function SubscriptionV2({ c }: { c: Ctx }) {
           </tbody>
         </table>
         </div>
-        </> : <div className="mt-4"><Empty text="No signed Stripe billing events have been received for this salon yet." /></div>}
+        </> : <div className="mt-4"><Empty text="No signed Stripe billing events have been received for this business yet." /></div>}
       </Panel>
     </>
   );
@@ -1660,15 +1675,16 @@ function Overview({c}:{c:Ctx}) { return <BusinessOverview {...c}/>; }
 function BusinessProfileWorkspace({ c, focus, children }: { c: Ctx; focus: string; children: React.ReactNode }) {
   const { locale: onboardingLocale } = useI18n();
   const current = focus || "business";
-  const progress = profileCompletion(c.salon, c.styles.length, c.stylists.length);
+  const progress = profileCompletion(c.salon, c.styles.length, c.stylists.length, isSoloPlan(c.plan));
+  const labels=businessLabels(c.salon.business_type,isSoloPlan(c.plan));
   const tabs = [["business", "Business information"], ["description", "Description"], ["address", "Location"], ["social", "Social links"], ["business-policies", "Business Policy"], ["policies", "Girlz Culture Policies"], ...(c.isOwner ? [["identity", "Public identity"]] : [])];
   const checks: [string, boolean, string][] = [
     ["Business information", Boolean(c.salon.name && c.salon.phone), "my-page/business"],
     ["Description", Boolean(c.salon.description), "my-page/description"],
     ["Location", Boolean(c.salon.address_street), "my-page/address"],
     ["Cover photo", Boolean(c.salon.cover_photo_url), "photos/cover"],
-    ["Styles & Pricing", c.styles.length > 0, "styles"],
-    ["Stylists", c.stylists.length > 0, "stylists"],
+    [labels.services, c.styles.length > 0, "styles"],
+    ...(labels.team?[[labels.team,c.stylists.length>0,"stylists"] as [string,boolean,string]]:[]),
   ];
   return <div className="space-y-5">
     <Title title="My Page" subtitle="Manage your public business profile and showcase your brand to new clients." action={<div className="flex flex-wrap gap-2">{c.isOwner ? <Link href="/salon/onboarding/import" className="flex min-h-11 items-center rounded-xl border border-border bg-white px-4 text-sm font-semibold">{onboardingText(onboardingLocale,"entry")}</Link> : null}<Link href={`/salon/${c.salon.slug}`} className="flex min-h-11 items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold"><Eye size={17}/>{c.translateSource("Preview public page")}</Link></div>}/>
@@ -1700,6 +1716,7 @@ function BusinessProfileWorkspace({ c, focus, children }: { c: Ctx; focus: strin
 }
 
 function MyPage({ c, focus }: { c: Ctx; focus: string }) {
+  if (focus === "address" && c.salon.service_location_type) return c.isOwner ? <BusinessLocationControls key={c.salon.id}/> : <Panel><Empty text="Owner-only access"/></Panel>;
   if (focus === "business-policies") return <BusinessPolicies />;
   if (focus === "policies") {
     return (
@@ -1718,7 +1735,7 @@ function MyPage({ c, focus }: { c: Ctx; focus: string }) {
               </Link>
             ))}
           </div>
-          <p className="mt-4 rounded-[9px] bg-blush/30 p-4 text-xs leading-5 text-ink/65">Salon-specific scheduling controls, hours, and closure dates remain in Availability &amp; Calendar so customers always receive the same authoritative booking rules.</p>
+          <p className="mt-4 rounded-[9px] bg-blush/30 p-4 text-xs leading-5 text-ink/65">Business-specific scheduling controls, hours, and closure dates remain in Availability &amp; Calendar so customers always receive the same authoritative booking rules.</p>
         </Panel>
       </>
     );
@@ -1727,8 +1744,8 @@ function MyPage({ c, focus }: { c: Ctx; focus: string }) {
   if (focus === "identity") {
     return (
       <>
-        <OwnerDetailHeader title="Public identity" subtitle="Manage the salon URL and the identity customers use to recognize your business." fallbackHref="/salon/dashboard/my-page" />
-        {c.isOwner ? <SalonVanityManager salon={c.salon} /> : <Panel><Empty text="Only the salon owner can manage the public identity." /></Panel>}
+        <OwnerDetailHeader title="Public identity" subtitle="Manage the business URL and the identity customers use to recognize your business." fallbackHref="/salon/dashboard/my-page" />
+        {c.isOwner ? <SalonVanityManager salon={c.salon} /> : <Panel><Empty text="Only the business owner can manage the public identity." /></Panel>}
       </>
     );
   }
@@ -1759,8 +1776,8 @@ function MyPage({ c, focus }: { c: Ctx; focus: string }) {
     c.salon.address_needs_review || c.salon.geocode_status === "needs_review";
   const headings: Record<string, [string, string]> = {
     business: ["Business information", "Update the public identity and contact details customers rely on."],
-    description: ["Salon description", "Describe the services, atmosphere, and experience customers can expect."],
-    address: ["Salon address", "Keep the customer-facing address and marketplace map location accurate."],
+    description: ["Business description", "Describe the services, atmosphere, and experience customers can expect."],
+    address: ["Business address", "Keep the customer-facing address and marketplace map location accurate."],
     social: ["Social links", "Add the verified profiles customers can use to see more of your work."],
   };
   const [heading, subtitle] = headings[focus] || headings.business;
@@ -1838,7 +1855,7 @@ function SalonLogoEditor({ c }: { c: Ctx }) {
     <Panel className="mt-4">
       <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
         <div>
-          <h2 className="font-serif text-xl text-plum">Salon Logo</h2>
+          <h2 className="font-serif text-xl text-plum">Business Logo</h2>
           <p className="mt-1 text-xs text-ink/55">
             This is the business mark shown in your owner dashboard and public
             salon profile.
@@ -1848,7 +1865,7 @@ function SalonLogoEditor({ c }: { c: Ctx }) {
               bucket="salon-photos"
               preset="logo"
               folder={`salons/${c.salon.id}/logo`}
-              label="Salon logo"
+              label="Business logo"
               value={logo}
               onChange={(value) =>
                 setLogo(typeof value === "string" ? value : "")
@@ -1884,7 +1901,7 @@ function Photos({ c, focus }: { c: Ctx; focus: string }) {
   const [cover, setCover] = useState(c.salon.cover_photo_url || "");
   if (!c.salon.id) return null;
   if (!focus || focus === "gallery") return <BusinessPhotoLibrary salon={{ ...c.salon, id: c.salon.id }} onSaved={patch => c.setSalon(row => row?.id === c.salon.id ? { ...row, ...patch } : row)}/>;
-  if (focus === "logo") return <><OwnerDetailHeader title="Salon logo" subtitle="Upload and save the mark used across your public profile and dashboard." fallbackHref="/salon/dashboard/photos" status={c.salon.logo_url ? "Saved" : "Optional"}/><SalonLogoEditor c={c}/></>;
+  if (focus === "logo") return <><OwnerDetailHeader title="Business logo" subtitle="Upload and save the mark used across your public profile and dashboard." fallbackHref="/salon/dashboard/photos" status={c.salon.logo_url ? "Saved" : "Optional"}/><SalonLogoEditor c={c}/></>;
   return <><OwnerDetailHeader title="Cover photo" subtitle="Manage the main image on your public business profile." fallbackHref="/salon/dashboard/photos"/>
     <Panel><ImageUpload bucket="salon-photos" preset="cover" folder={`salons/${c.salon.id}`} label="Cover Photo" value={cover} onChange={value => setCover(typeof value === "string" ? value : "")} attachment={{ record_type: "salon", record_id: c.salon.id, field: "cover_photo_url" }} onPersisted={value => { const next = typeof value === "string" ? value : ""; setCover(next); c.setSalon(row => row?.id === c.salon.id ? { ...row, cover_photo_url: next } : row); }}/></Panel>
   </>;
@@ -1936,7 +1953,7 @@ function Styles({ c }: { c: Ctx }) {
   return (
     <>
       <Title
-        title="Styles & Pricing"
+        title="Services & Pricing"
         subtitle="Manage your signature styles, pricing, options, and inclusions."
         action={
           <button
@@ -2589,7 +2606,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
         : until;
     if (
       !window.confirm(
-        c.translateSource("Block new bookings for {value0} until {value1}? Existing appointments will not be cancelled.", { value0: targetStylistId ? activeStylist?.name || c.translateSource("this stylist") : c.translateSource("the whole salon"), value1: mode.endsWith("_today") || mode === "stylist_three_hours" ? c.translateSource(expiration) : expiration }),
+        c.translateSource("Block new bookings for {value0} until {value1}? Existing appointments will not be cancelled.", { value0: targetStylistId ? activeStylist?.name || c.translateSource("this stylist") : c.translateSource("the whole business"), value1: mode.endsWith("_today") || mode === "stylist_three_hours" ? c.translateSource(expiration) : expiration }),
       )
     ) return;
     setBusy(`${mode}:${targetStylistId || "salon"}`);
@@ -2672,7 +2689,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
     },
     hours: {
       title: "Store hours",
-      subtitle: "Set the salon's regular weekly opening and closing times.",
+      subtitle: "Set the business’s regular weekly opening and closing times.",
       status: `${Object.keys(hours).length} days configured`,
     },
     slots: {
@@ -2687,7 +2704,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
     },
     overrides: {
       title: "Availability overrides",
-      subtitle: "Temporarily stop salon or stylist bookings, then reopen availability when ready.",
+      subtitle: "Temporarily stop business or professional bookings, then reopen availability when ready.",
       status: c.translateSource("Active overrides: {value0}", { value0: c.formatNumber(activeBlockouts.length) }),
     },
   };
@@ -2700,7 +2717,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
     </div>
     <WorkspaceCalendar compactHeader key={`${initialCalendarDate || "today"}:${initialCalendarStylist}`} timeZone={timeZone} initialDate={initialCalendarDate} initialView={initialCalendarDate ? "day" : "week"} events={[
       ...activeBookings.filter(row=>!calendarStylist||row.stylist_id===calendarStylist).map(row=>({id:String(row.id),start:String(row.appointment_datetime),end:Number(row.duration_hours)>0&&Number.isFinite(Date.parse(String(row.appointment_datetime)))?new Date(Date.parse(String(row.appointment_datetime))+Number(row.duration_hours)*3600000).toISOString():undefined,title:String(row.guest_name||c.translateSource("Appointment")),subtitle:[row.manual_service_name||styleText(c,row.style_id),stylistText(c,row.stylist_id)].join(" · "),status:String(row.status),href:"/salon/dashboard/bookings/"+row.id})),
-      ...c.blockouts.filter(row=>(!calendarStylist||!row.stylist_id||row.stylist_id===calendarStylist)&&Number.isFinite(Date.parse(String(row.starts_at)))&&Number.isFinite(Date.parse(String(row.ends_at)))).map(row=>({id:String(row.id),start:String(row.starts_at),end:new Date(Math.min(Date.parse(String(row.ends_at)),row.released_at&&Number.isFinite(Date.parse(String(row.released_at)))?Date.parse(String(row.released_at)):Infinity)).toISOString(),title:String(row.reason||c.translateSource("Unavailable")),subtitle:row.stylist_id?stylistText(c,row.stylist_id):c.translateSource("Whole salon"),status:row.released_at?"Released override":"Availability override",kind:"unavailable" as const,href:"/salon/dashboard/availability/"+row.id})),
+      ...c.blockouts.filter(row=>(!calendarStylist||!row.stylist_id||row.stylist_id===calendarStylist)&&Number.isFinite(Date.parse(String(row.starts_at)))&&Number.isFinite(Date.parse(String(row.ends_at)))).map(row=>({id:String(row.id),start:String(row.starts_at),end:new Date(Math.min(Date.parse(String(row.ends_at)),row.released_at&&Number.isFinite(Date.parse(String(row.released_at)))?Date.parse(String(row.released_at)):Infinity)).toISOString(),title:String(row.reason||c.translateSource("Unavailable")),subtitle:row.stylist_id?stylistText(c,row.stylist_id):c.translateSource("Whole business"),status:row.released_at?"Released override":"Availability override",kind:"unavailable" as const,href:"/salon/dashboard/availability/"+row.id})),
     ]}/>
   </div>;
   if (!recordId || recordId === "calendar") {
@@ -2717,7 +2734,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   if (!workspace) {
     return <>
       <OwnerDetailHeader title={booking ? "Calendar appointment" : blockout ? "Availability override" : "Availability details"} subtitle={booking ? `Booking #${bookingReference(booking)}` : blockout ? `Blocked until ${dateText(blockout.ends_at, timeZone, c.locale)}` : "This record could not be found."} fallbackHref="/salon/dashboard/availability" status={booking ? String(booking.status || "Confirmed") : blockout ? (blockout.released_at ? "Released" : "Active override") : "Unavailable"}/>
-      <Panel>{booking ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Customer</b><span data-no-translate={booking.guest_name ? true : undefined}>{String(booking.guest_name || "Customer")}</span><span className="block text-xs font-normal">{isBusinessAdded(booking) ? c.translateSource("Business-added: {value0}", { value0: c.translateSource(BOOKING_SOURCE_LABELS[String(booking.source)] || "Other") }) : c.translateSource("Girlz Culture marketplace")}</span></p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Appointment</b>{dateText(booking.appointment_datetime, timeZone, c.locale)}<br/>{booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)} · {stylistName(c, booking.stylist_id)}</p><Link href={`/salon/dashboard/bookings/${booking.id}`} className="inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white">Manage booking</Link></div> : blockout ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Applies to</b>{blockout.stylist_id ? stylistName(c, blockout.stylist_id) : "Whole salon"}</p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Window</b>{dateText(blockout.starts_at, timeZone, c.locale)} – {dateText(blockout.ends_at, timeZone, c.locale)}</p>{!blockout.released_at ? <button type="button" disabled={Boolean(busy)} onClick={() => void unblock(String(blockout.id))} className="min-h-11 rounded-lg border border-magenta px-5 text-xs font-bold text-magenta">Release override</button> : null}</div> : <Empty text="The availability record is unavailable or outside this salon."/>}</Panel>
+      <Panel>{booking ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Customer</b><span data-no-translate={booking.guest_name ? true : undefined}>{String(booking.guest_name || "Customer")}</span><span className="block text-xs font-normal">{isBusinessAdded(booking) ? c.translateSource("Business-added: {value0}", { value0: c.translateSource(BOOKING_SOURCE_LABELS[String(booking.source)] || "Other") }) : c.translateSource("Girlz Culture marketplace")}</span></p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Appointment</b>{dateText(booking.appointment_datetime, timeZone, c.locale)}<br/>{booking.manual_service_name ? <span data-no-translate>{String(booking.manual_service_name)}</span> : styleName(c, booking.style_id)} · {stylistName(c, booking.stylist_id)}</p><Link href={`/salon/dashboard/bookings/${booking.id}`} className="inline-flex min-h-11 items-center rounded-lg bg-magenta px-5 text-xs font-bold text-white">Manage booking</Link></div> : blockout ? <div className="space-y-4 text-sm"><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Applies to</b>{blockout.stylist_id ? stylistName(c, blockout.stylist_id) : "Whole business"}</p><p><b className="block text-[10px] uppercase tracking-wide gc-text-secondary">Window</b>{dateText(blockout.starts_at, timeZone, c.locale)} – {dateText(blockout.ends_at, timeZone, c.locale)}</p>{!blockout.released_at ? <button type="button" disabled={Boolean(busy)} onClick={() => void unblock(String(blockout.id))} className="min-h-11 rounded-lg border border-magenta px-5 text-xs font-bold text-magenta">Release override</button> : null}</div> : <Empty text="The availability record is unavailable or outside this business."/>}</Panel>
     </>;
   }
 
@@ -3009,7 +3026,7 @@ function Availability({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
               >
                 <div className="flex items-start justify-between gap-3">
                   <span>
-                    <Link href={`/salon/dashboard/availability/${blockout.id}`} className="font-bold text-plum underline-offset-2 hover:text-magenta hover:underline">{blockout.stylist_id ? stylistName(c, blockout.stylist_id) : "Whole salon"}</Link>
+                    <Link href={`/salon/dashboard/availability/${blockout.id}`} className="font-bold text-plum underline-offset-2 hover:text-magenta hover:underline">{blockout.stylist_id ? stylistName(c, blockout.stylist_id) : "Whole business"}</Link>
                     <span className="mt-1 block text-ink/55">
                       Until {dateText(blockout.ends_at, timeZone, c.locale)}
                     </span>
@@ -3226,7 +3243,7 @@ function Bookings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
                 </div>
                 <Status value={String(selected.status || "Confirmed")} />
               </div>
-              <BookingAttendance key={String(selected.id)} bookingId={String(selected.id)} scope="salon" onSaved={status=>c.setBookings(rows=>rows.map(row=>row.id===selected.id?{...row,status}:row))}/><BookingNotes bookingId={String(selected.id)}/>{(!c.access || c.access.client_history) ? <BusinessClientCard key={`${c.salon.id}:${selected.id}:${JSON.stringify(c.access)}`} bookingId={String(selected.id)} timeZone={String(c.salon.time_zone)}/> : null}<BookingPriceEvidence booking={selected}/><BookingPolicyEvidence booking={selected}/>
+              <BookingAttendance key={String(selected.id)} bookingId={String(selected.id)} scope="salon" onSaved={status=>c.setBookings(rows=>rows.map(row=>row.id===selected.id?{...row,status}:row))}/><BookingNotes bookingId={String(selected.id)}/>{(!c.access || c.access.client_history) ? <BusinessClientCard key={`${c.salon.id}:${selected.id}:${JSON.stringify(c.access)}`} bookingId={String(selected.id)} timeZone={String(c.salon.time_zone)}/> : null}<BookedMobileLocation snapshot={selected.service_location_snapshot}/><BookingPriceEvidence booking={selected}/><BookingPolicyEvidence booking={selected}/>
               <div className="mt-5 space-y-3 text-xs">
                 <p>
                   <b className="block text-ink/50">Customer</b>
@@ -3518,7 +3535,7 @@ function Earnings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
   if (recordId) {
     return <>
       <OwnerDetailHeader title={selectedTransaction ? `Transaction ${String(selectedTransaction.public_reference || "")}` : "Transaction details"} subtitle={selectedTransaction ? `${String(selectedTransaction.customer)} · ${dateText(selectedTransaction.date, timeZone, c.locale)}` : "This transaction could not be found."} fallbackHref={ledgerReturnHref} status={selectedTransaction ? String(selectedTransaction.financial_status || selectedTransaction.payout_status || "Recorded") : "Unavailable"}/>
-      <Panel>{selectedTransaction ? <><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Deposit collected" value={money(selectedTransaction.deposit_collected)} icon={CircleDollarSign}/><Metric label="Refund" value={money(selectedTransaction.refund_amount)} icon={CircleDollarSign}/><Metric label="Balance due" value={money(selectedTransaction.balance_due)} icon={Clock3}/><Metric label="Net owed to salon" value={money(selectedTransaction.net_amount_owed_salon)} icon={BadgeCheck}/></div><LedgerEvidence row={selectedTransaction} money={money}/></> : <Empty text="The transaction is unavailable or outside this salon."/>}</Panel>
+      <Panel>{selectedTransaction ? <><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Deposit collected" value={money(selectedTransaction.deposit_collected)} icon={CircleDollarSign}/><Metric label="Refund" value={money(selectedTransaction.refund_amount)} icon={CircleDollarSign}/><Metric label="Balance due" value={money(selectedTransaction.balance_due)} icon={Clock3}/><Metric label="Net owed to business" value={money(selectedTransaction.net_amount_owed_salon)} icon={BadgeCheck}/></div><LedgerEvidence row={selectedTransaction} money={money}/></> : <Empty text="The transaction is unavailable or outside this business."/>}</Panel>
     </>;
   }
   return (
@@ -3539,7 +3556,7 @@ function Earnings({ c, recordId = "" }: { c: Ctx; recordId?: string }) {
           icon={CircleDollarSign}
         />
         <Metric
-          label="Net owed to salon"
+          label="Net owed to business"
           value={money(summary.netOwed)}
           icon={Clock3}
         />
@@ -3803,7 +3820,7 @@ function SettingsWorkspace({ c, focus = "" }: { c: Ctx; focus?: string }) {
   const knownFocus = ["account", "notifications", "marketplace", "team", "integrations", "security"].includes(focus) || focus.startsWith("member-");
   const active = knownFocus ? focus : canEditAccount ? "account" : "notifications";
   const tabs = [...(canEditAccount ? [["account", "Account details"]] : []), ["notifications", "Notifications"],
-    ...(c.isOwner ? [["marketplace", "Marketplace status"], ["team", "Team & permissions"], ["integrations", "Google Business Profile"]] : []),
+    ...(c.isOwner ? [["marketplace", "Marketplace status"], ...(!isSoloPlan(c.plan) ? [["team", "Team & permissions"]] : []), ["integrations", "Google Business Profile"]] : []),
     ["security", "Security & sign out"]];
   const ownerOnly = ["team", "marketplace", "integrations"].includes(active) || active.startsWith("member-");
   return <>
@@ -3834,10 +3851,11 @@ function SettingsSectionHeader({ title, subtitle, status, fallbackHref }: { titl
 
 function SettingsContent({ c, focus }: { c: Ctx; focus: string }) {
   if(focus === "integrations") return <><SettingsSectionHeader title="Google Business Profile" subtitle="Review Google integration availability and manage this business connection."/>{c.isOwner&&c.salon.id?<GoogleBusinessProfileSettings key={c.salon.id} businessId={c.salon.id} photos={Array.isArray(c.salon.gallery_photos)?c.salon.gallery_photos:[]}/>:<p>{c.translateSource("Owner-only access")}</p>}</>;
+  if (isSoloPlan(c.plan) && (focus === "team" || focus.startsWith("member-"))) return <p role="status">Team accounts require a business team plan.</p>;
   if (focus === "team") return <><SettingsSectionHeader title="Team & permissions" subtitle="Choose one team member to manage without losing the settings context. Subscription and billing always remain owner-only." status={c.isOwner ? "Owner access" : "Read only"}/><TeamUserManager scope="salon" /></>;
   if (focus.startsWith("member-")) return <><SettingsSectionHeader title={focus === "member-new" ? "Add team member" : "Manage team member"} subtitle="Save identity, role, status, and dashboard permissions together." fallbackHref="/salon/dashboard/settings/team" status="Owner-only access"/><TeamUserManager scope="salon" initialUserId={focus.slice("member-".length)} showBackLink={false}/></>;
-  if (focus === "marketplace") return <><SettingsSectionHeader title="Marketplace status" subtitle="Manage publication and booking availability without changing the salon record."/><PublicationControls c={c}/></>;
-  if (focus === "security") return <><SettingsSectionHeader title="Security & sign out" subtitle="Password changes use the verified email recovery flow."/><Panel><h2 className="font-serif text-xl text-plum">Secure salon session</h2><p className="mt-2 max-w-2xl text-sm leading-6 gc-text-primary">Use the salon login page to request a password-reset email. Signing out here only ends this salon workspace session and does not affect a separate platform-admin session.</p><div className="mt-5"><RoleLogoutButton scope="salon" /></div></Panel></>;
+  if (focus === "marketplace") return <><SettingsSectionHeader title="Marketplace status" subtitle="Manage publication and booking availability without changing the business record."/><PublicationControls c={c}/></>;
+  if (focus === "security") return <><SettingsSectionHeader title="Security & sign out" subtitle="Password changes use the verified email recovery flow."/><Panel><h2 className="font-serif text-xl text-plum">Secure business session</h2><p className="mt-2 max-w-2xl text-sm leading-6 gc-text-primary">Use the salon login page to request a password-reset email. Signing out here only ends this salon workspace session and does not affect a separate platform-admin session.</p><div className="mt-5"><RoleLogoutButton scope="salon" /></div></Panel></>;
   return <SettingsPage c={c} focus={focus === "notifications" ? "notifications" : "account"} />;
 }
 
@@ -3866,7 +3884,7 @@ function SettingsPage({ c, focus = "account" }: { c: Ctx; focus?: "account" | "n
   }
   return (
     <>
-      <p className="mb-4 text-sm leading-6 gc-text-primary">{focus === "notifications" ? "Control optional alerts while required booking confirmations remain enabled." : "Keep the salon contact details used for booking operations current."}</p>
+      <p className="mb-4 text-sm leading-6 gc-text-primary">{focus === "notifications" ? "Control optional alerts while required booking confirmations remain enabled." : "Keep the business contact details used for booking operations current."}</p>
       {focus === "account" && c.isOwner ? <div className="mb-4"><GcAssistantAppearanceLauncher/></div> : null}
       <form onSubmit={submit} className="block" aria-busy={saving}>
         {focus === "account" ? <Panel>
@@ -3957,6 +3975,8 @@ function SettingsPage({ c, focus = "account" }: { c: Ctx; focus?: "account" | "n
           </button>
         </Panel> : null}
       </form>
+      {focus === "notifications" && c.isOwner ? <BusinessGrowthControls key={`growth:${c.salon.id}`}/> : null}
+      {focus === "notifications" && c.isOwner ? <BusinessRebookingControls key={`rebooking:${c.salon.id}`}/> : null}
     </>
   );
 }
@@ -3981,7 +4001,7 @@ function PublicationControls({ c }: { c: Ctx }) {
     setBusy(next);
     try {
       const session = await getSessionForScope("salon");
-      if (!session) throw new Error("Your salon session expired.");
+      if (!session) throw new Error("Your business session expired.");
       const response = await fetch("/api/salon/lifecycle", {
         method: "POST",
         headers: {
@@ -3992,7 +4012,7 @@ function PublicationControls({ c }: { c: Ctx }) {
       });
       const body = await response.json();
       if (!response.ok && response.status !== 409)
-        throw new Error(body.error || "We couldn't update the salon status.");
+        throw new Error(body.error || "We couldn't update the business status.");
       const lifecycle = body.lifecycle || {};
       setState({
         published: lifecycle.is_discoverable === true,
@@ -4000,12 +4020,12 @@ function PublicationControls({ c }: { c: Ctx }) {
         unpublished: Boolean(lifecycle.owner_unpublished_at),
         closure: Boolean(lifecycle.closure_requested_at),
       });
-      c.setNotice(body.error || "Salon status updated.");
+      c.setNotice(body.error || "Business status updated.");
     } catch (error) {
       c.setNotice(
         error instanceof Error
           ? error.message
-          : "We couldn't update the salon status.",
+          : "We couldn't update the business status.",
       );
     } finally {
       setBusy("");
@@ -4046,7 +4066,7 @@ function PublicationControls({ c }: { c: Ctx }) {
           }
           className="min-h-11 rounded-[8px] border border-plum/20 px-4 text-xs font-bold text-plum"
         >
-          {state.unpublished ? "Publish salon" : "Temporarily hide salon"}
+          {state.unpublished ? "Publish business" : "Temporarily hide business"}
         </button>
         <button
           disabled={Boolean(busy)}

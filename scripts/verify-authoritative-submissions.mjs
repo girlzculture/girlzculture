@@ -13,6 +13,7 @@ const decisionRoute = read(
   "src/app/api/admin/submissions/[id]/decision/route.ts",
 );
 const applicationRoute = read("src/app/api/salon/application/route.ts");
+const reviewedApplicationMigration = read("supabase/migrations/20260923044755_master_build_location_privacy.sql");
 const workspace = read("src/components/admin/AdminSubmissionsWorkspace.tsx");
 const detail = read("src/components/admin/AdminSubmissionDetail.tsx");
 const recordRoute = read("src/app/api/admin/records/route.ts");
@@ -72,7 +73,12 @@ assert.match(detailRoute, /action === "delete_application"/);
 assert.match(detailRoute, /action === "delete_salon"/);
 assert.match(decisionRoute, /application\.archived_at/);
 assert.match(decisionRoute, /admin_reject_salon_application_atomic/);
-assert.match(applicationRoute, /submit_salon_application_atomic/);
+assert.match(applicationRoute, /admin\.rpc\("submit_master_business_application",/);
+assert.match(applicationRoute, /p_actor: user\.id/);
+assert.match(applicationRoute, /p_revision: progress\.revision/);
+assert.match(reviewedApplicationMigration, /pg_advisory_xact_lock\(hashtextextended\('application-progress:'\|\|p_actor::text,0\)\)/);
+assert.match(reviewedApplicationMigration, /result:=public\.submit_salon_application_atomic\(p_actor,published_values,p_application_values\)/);
+assert.match(reviewedApplicationMigration, /submitted_application_id=application_id where user_id=p_actor/);
 assert.doesNotMatch(applicationRoute, /subscription_status: "inactive"/);
 assert.match(
   applicationRoute,

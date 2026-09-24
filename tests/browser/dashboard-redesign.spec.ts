@@ -268,7 +268,7 @@ for (const [width,height] of [[320,844],[390,844],[844,390]]) {
     await expect(panel).not.toBeVisible();
     await tools.click();
     await expect(tools).toHaveAttribute('aria-expanded','true');
-    for(const label of ['Gallery photos','Cover photo','Salon logo','Featured photos']) await expect(panel.getByText(label,{exact:true})).toBeVisible();
+    for(const label of ['Gallery photos','Cover photo','Business logo','Featured photos']) await expect(panel.getByText(label,{exact:true})).toBeVisible();
     await expect(panel.getByRole('link',{name:'View public gallery',exact:true})).toHaveAttribute('href','/salon/p0-browser');
     await expect(panel.getByRole('link',{name:'Change cover photo',exact:true})).toHaveAttribute('href','/salon/dashboard/photos/cover');
     await expect(panel.getByRole('link',{name:'Change business logo',exact:true})).toHaveAttribute('href','/salon/dashboard/photos/logo');

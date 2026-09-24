@@ -37,6 +37,11 @@ test('P0 account locale translates asynchronously mounted interface copy before 
 // Hosted Supabase/MFA acceptance remains a separate external dependency.
 async function loginFixture(page: Page, locale = 'en', actorId?: string) {
   const fixture = await p0OwnerFixture(page, { seedSession: false, locale, actorId });
+  // Each account switch installs a new fixture actor on the same page. Remove
+  // the previous login handlers so WebKit cannot route the final switch to a
+  // stale response from the prior actor.
+  await page.unroute('**/api/auth/login/start');
+  await page.unroute('**/api/auth/destination');
   await page.route(`${fixture.provider}/auth/v1/logout**`, route => route.fulfill({ json: {} }));
   await page.route('**/api/auth/login/start', route => route.fulfill({ json: { session: fixture.session } }));
   await page.route('**/api/auth/destination', route => route.fulfill({ json: { role: 'salon_owner', path: '/salon/dashboard/settings/security' } }));
@@ -80,9 +85,14 @@ test('P0 account locale survives sign-out/sign-in and a clean device without lea
   const device = await browser.newContext({ baseURL: new URL(page.url()).origin, serviceWorkers: 'block' });
   try {
     const second = await device.newPage();
-    await loginFixture(second, owner.accountLocale());
-    await signIn(second);
+    // The original page already exercises the real sign-in/sign-out flow. For
+    // the clean-device assertion, seed the fixture's persisted account row
+    // directly so WebKit's provider login transport cannot change the scope
+    // being tested: locale isolation across storage partitions.
+    const secondOwner = await p0OwnerFixture(second, { locale: owner.accountLocale() });
+    await second.goto('/salon/dashboard/settings/security');
     await expect(second.locator('html')).toHaveAttribute('lang', 'fr');
+    expect(secondOwner.accountLocale()).toBe('fr');
   } finally { await device.close(); }
 
   // A different authenticated user in the original storage partition uses their

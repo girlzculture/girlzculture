@@ -405,7 +405,7 @@ test("functional public pages begin without the removed marketing introductions"
 
   await page.goto("/how-it-works");
   await expect(page.getByText("How booking works", { exact: false })).toHaveCount(0);
-  await expect(page.getByText("Find a style or salon", { exact: true })).toBeVisible();
+  await expect(page.getByText("Find a service or business", { exact: true })).toBeVisible();
 });
 
 test("salon profile starts with every service collapsed and exposes compact review and description controls", async ({
@@ -1170,7 +1170,7 @@ test("mobile public navigation closes with Escape, outside click, and destinatio
 
   await open.click();
   await page.getByRole("navigation", { name: "Mobile navigation" }).getByText("Explore", { exact: true }).click();
-  await page.getByRole("navigation", { name: "Mobile navigation" }).getByRole("link", { name: "Browse Styles" }).click();
+  await page.getByRole("navigation", { name: "Mobile navigation" }).getByRole("link", { name: "Browse Services" }).click();
   await expect(page).toHaveURL(/\/styles$/);
   await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toHaveCount(0);
 });

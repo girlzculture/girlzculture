@@ -1,3 +1,4 @@
+import {demoExternalActionResponse} from '@/lib/demoWorkspace';
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanText, enforceRateLimit, errorResponse } from "@/lib/requestSecurity";
 import { requireSalonOwner } from "@/lib/supabaseAdmin";
@@ -27,6 +28,7 @@ async function POSTHandler(request: Request) {
   try {
     enforceRateLimit(request, "subscription-lifecycle", 10, 10 * 60_000);
     context=await requireSalonOwner(request);
+    const demoBlocked=demoExternalActionResponse(context.salon);if(demoBlocked)return demoBlocked;
     const { admin, salon, isOwner, user } = context;
     if (!isOwner) throw new Error("Only the salon owner can manage cancellation and reactivation.");
     const body = await request.json() as Record<string, unknown>;

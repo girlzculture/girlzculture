@@ -39,9 +39,9 @@ test('unlisted founder entry retains a browsing session across navigation withou
 test('normal public navigation never advertises the founder entrance or closed discovery',()=>{
  const cms=[{item_key:'home',label:'Home',href:'/'},{item_key:'demo',label:'Demo',href:'/site-access'},{item_key:'salons',label:'Salons',href:'/salons'},{item_key:'about',label:'Our story',href:'/about'},{item_key:'pricing',label:'Pricing',href:'/plans'}];
  const normal=publicNavigationGroups(cms,false).flatMap(group=>group.links);
- assert.ok(normal.some(link=>link.href==='/'));assert.ok(normal.some(link=>link.href==='/about'));
+ assert.ok(normal.some(link=>link.href==='/blog'));assert.ok(normal.some(link=>link.href==='/about'));
  assert.ok(normal.some(link=>link.href==='/business/signup'));assert.ok(normal.some(link=>link.href==='/plans'));
  assert.ok(!normal.some(link=>['/site-access','/salons','/styles'].includes(link.href)));
  const demonstration=publicNavigationGroups(cms,true).flatMap(group=>group.links);
- assert.ok(demonstration.some(link=>link.href==='/site-access'));assert.ok(demonstration.some(link=>link.href==='/salons'));
+ assert.ok(!demonstration.some(link=>link.href==='/site-access'));assert.ok(demonstration.some(link=>link.href==='/salons'));
 });

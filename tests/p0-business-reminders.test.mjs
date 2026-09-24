@@ -22,11 +22,11 @@ for(const [locale,title,weekday] of [['en','Appointment reminder','Thursday'],['
  assert.equal(reminderTranslation(locale,'unrelated.setting'),undefined);
 });
 
-function fixture({revision=3,selectedRevision=revision,status='Confirmed',denyChannel=false,locale='es',translations=[]}={}){
+function fixture({revision=3,selectedRevision=revision,status='Confirmed',denyChannel=false,locale='es',translations=[],hours=[24]}={}){
  const calls=[],emails=[],links=[];
  const booking={id:'booking-a',salon_id:'business-a',style_id:'service-a',appointment_datetime:'2030-01-04T02:00:00Z',schedule_revision:revision,status,guest_name:'Client',guest_email:'fixture@example.test',preferred_locale:locale};
  const admin={from(table){const q={select(){return q},eq(){return q},in(){return q},like(){return q},update(){return q},single:async()=>response(),maybeSingle:async()=>response(),then(ok,no){return Promise.resolve(response()).then(ok,no)}};
- function response(){return {error:null,data:table==='bookings'?booking:table==='salons'?{id:'business-a',name:'Isha 5 Stars',email:'business@example.test',time_zone:'America/New_York'}:table==='styles'?{name:'Boho / Goddess Braids $250'}:table==='engine_settings'?[{setting_key:'notifications.channels',published_value:['email']},{setting_key:'notifications.booking_reminder_hours',published_value:[24]}]:table==='translation_entries'?translations:table==='business_communication_preferences'?null:[]};}return q;},rpc:async(name,args)=>{calls.push({name,args});return {error:null,data:name==='due_booking_reminders'?[{id:booking.id,schedule_revision:selectedRevision}]:name==='claim_booking_reminder'?true:name==='claim_scheduled_notification_delivery'?denyChannel?null:'delivery-id':null};}};
+ function response(){return {error:null,data:table==='bookings'?booking:table==='salons'?{id:'business-a',name:'Isha 5 Stars',email:'business@example.test',time_zone:'America/New_York'}:table==='styles'?{name:'Boho / Goddess Braids $250'}:table==='engine_settings'?[{setting_key:'notifications.channels',published_value:['email']},{setting_key:'notifications.booking_reminder_hours',published_value:[24]}]:table==='translation_entries'?translations:table==='business_communication_preferences'?null:[]};}return q;},rpc:async(name,args)=>{calls.push({name,args});return {error:null,data:name==='booking_reminder_hours_in_use'?hours:name==='due_booking_reminders'?[{id:booking.id,schedule_revision:selectedRevision}]:name==='claim_booking_reminder'?true:name==='claim_scheduled_notification_delivery'?denyChannel?null:'delivery-id':null};}};
  const server=typescriptLoader(process.cwd(),{
   '@supabase/supabase-js':{createClient:()=>admin},
   '@/lib/guestBookingAccess':{issueGuestBookingToken:async(_a,id,options)=>{links.push({id,options});return {url:'https://example.test/booking/manage#secure-fixture'};}},
@@ -50,4 +50,9 @@ test('final database gate can reject cancellation between readback and channel d
 });
 test('published Engine translation takes priority over built-in reminder copy',async()=>{
  const f=fixture({translations:[{locale:'es',translation_key:'notification.booking.customer_reminder.subject',translated_text:'Tu próxima cita'}]});await f.server.processBookingReminders();assert.equal(f.emails[0].body.subject,'Tu próxima cita');
+});
+
+test('worker enumerates current business schedules and never falls back after a malformed response',async()=>{
+ const current=fixture({hours:[48]});await current.server.processBookingReminders();assert.deepEqual(current.calls.filter(row=>row.name==='due_booking_reminders').map(row=>row.args.p_reminder_hours),[48]);
+ for(const hours of [null,[0],['48']]){const bad=fixture({hours});const result=await bad.server.processBookingReminders();assert.equal(result.results[0].stage,'load_business_schedules');assert.equal(bad.emails.length,0);assert.equal(bad.calls.filter(row=>row.name==='due_booking_reminders').length,0);}
 });

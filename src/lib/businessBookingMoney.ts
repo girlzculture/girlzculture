@@ -20,7 +20,7 @@ export function bookingMoneyCohort(salonId: string, data: BusinessFinanceData, p
   if (!uuid.test(String(row.id)) || seen.has(String(row.id))) throw Error("BOOKING_MONEY_INVALID_EVIDENCE");
   seen.add(String(row.id));
  }
- const rows = data.bookings.filter(row => row.payment_mode !== "test" && (() => {
+ const rows = data.bookings.filter(row => (row.payment_mode !== "test" || data.is_demo === true && row.is_demo === true) && (() => {
   const day = bookingMoneyDay(row.appointment_datetime, period.timeZone);
   return day >= period.from && day <= period.to;
  })());

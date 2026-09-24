@@ -1,3 +1,4 @@
+import {demoExternalActionResponse} from "@/lib/demoWorkspace";
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { getSupabaseAdmin, requireSalonOwner } from "@/lib/supabaseAdmin";
@@ -87,6 +88,7 @@ export async function instagramOnboardingRequest(request: Request) {
   let c: Context | undefined;
   try {
     c = await requireSalonOwner(request); if (!c.isOwner) throw new InstagramOnboardingError("INSTAGRAM_ACCESS_DENIED", 403);
+  if(c.salon.is_demo===true)return request.method==="GET"?Response.json({status:"unavailable",reason:"DEMO_EXTERNAL_ACTION_DISABLED"},{headers}):demoExternalActionResponse(c.salon)!;
     await freshOwner(c); enforceRateLimit(request, `instagram-onboarding:${c.user.id}`, 12, 60_000);
     const config = instagramConfig(), origin = new URL(request.url).origin;
     if (new URL(request.url).searchParams.size) invalid();

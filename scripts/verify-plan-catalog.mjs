@@ -19,18 +19,19 @@ import {
   stripePriceEnv,
 } from "../src/lib/plans.ts";
 
-assert.deepEqual(PLAN_ORDER, ["Starter", "Growth", "Premium"]);
+const expected = JSON.parse(readFileSync(new URL("../tests/fixtures/master-build-plan-catalog.json", import.meta.url), "utf8"));
+assert.deepEqual(PLAN_ORDER, expected.plans.map(plan => plan.name));
 assert.deepEqual(
   PLAN_ORDER.map((name) => SUBSCRIPTION_PLANS[name].monthlyAmountCents),
-  [8900, 10900, 12900],
+  [6900, 9900, 9900, 14900, 19900],
 );
 assert.deepEqual(
   PLAN_ORDER.map((name) => SUBSCRIPTION_PLANS[name].monthlyPrice),
-  [89, 109, 129],
+  [69, 99, 99, 149, 199],
 );
 assert.deepEqual(
   PLAN_ORDER.map((name) => stripePriceEnv(name)),
-  ["STRIPE_PRICE_STARTER", "STRIPE_PRICE_GROWTH", "STRIPE_PRICE_PREMIUM"],
+  ["STRIPE_PRICE_SOLO", "STRIPE_PRICE_SOLO_PRO", "STRIPE_PRICE_STARTER", "STRIPE_PRICE_GROWTH", "STRIPE_PRICE_PREMIUM"],
 );
 
 assert.equal(parsePlan("starter"), "Starter");
@@ -67,7 +68,7 @@ for (const [query, expected] of [
 assert.equal(parseStoredPlan("Basic"), "Basic");
 assert.equal(canonicalPlanForStored("Basic"), "Starter");
 assert.equal(displayStoredPlan("Basic"), "Basic (legacy)");
-assert.equal(planRank("Basic"), 1);
+assert.equal(planRank("Basic"), 3);
 
 for (const plan of PLAN_ORDER) {
   assert.equal(hasPlanFeature(plan, "promotions"), true);
@@ -82,65 +83,11 @@ assert.equal(hasPlanFeature("Starter", "advanced_analytics"), false);
 assert.equal(hasPlanFeature("Growth", "advanced_analytics"), true);
 assert.equal(hasPlanFeature("Premium", "advanced_analytics"), true);
 
-assert.equal(PLAN_COMPARISON_ROWS.length, 18);
-const expectedComparison = [
-  ["Professional salon profile", true, true, true],
-  ["Unlimited stylist profiles", true, true, true],
-  ["Unlimited appointment bookings", true, true, true],
-  ["0% Girlz Culture appointment commission", true, true, true],
-  ["Customer deposits", true, true, true],
-  ["Booking-specific customer chat", true, true, true],
-  ["Appointment reminders", "Standard", "Customizable", "Advanced"],
-  ["Marketplace visibility", "Standard", "Standard", "Standard"],
-  ["Monthly reporting", "Basic", "Detailed", "Advanced"],
-  ["Booking-source tracking", "Summary", "Full", "Full + comparisons"],
-  ["Waitlist", "Manual", "Automated", "Automated + targeted"],
-  ["Rebooking reminders", "Manual", "Automatic", "Automatic + segmented"],
-  ["Customer promotions", "1 active", "Up to 5", "Unlimited, fair use"],
-  ["Product listings", "10", "30", "Unlimited, fair use"],
-  ["Google Business Profile help", "Guide", "Assisted setup", "Assisted setup + review"],
-  ["Advertising discount", "—", "5%", "15%"],
-  ["Advertising credit", "—", "$10 quarterly", "$10 monthly"],
-  ["Early access to advertising spaces", "—", "—", "48 hours early"],
-];
-assert.equal(
-  expectedComparison.length,
-  18,
-  "The founder comparison must contain exactly 18 rows",
-);
+assert.equal(PLAN_COMPARISON_ROWS.length, 23);
 assert.deepEqual(
-  PLAN_COMPARISON_ROWS.map((row) => row.key),
-  [
-    "professional-salon-profile",
-    "unlimited-stylist-profiles",
-    "unlimited-appointment-bookings",
-    "appointment-commission",
-    "customer-deposits",
-    "booking-chat",
-    "appointment-reminders",
-    "marketplace-visibility",
-    "monthly-reporting",
-    "booking-source-tracking",
-    "waitlist",
-    "rebooking-reminders",
-    "customer-promotions",
-    "product-listings",
-    "google-business-profile-help",
-    "advertising-discount",
-    "advertising-credit",
-    "advertising-early-access",
-  ],
-  "The 18 comparison identities and order must remain exact",
-);
-assert.deepEqual(
-  PLAN_COMPARISON_ROWS.map((row) => [
-    row.label,
-    row.values.Starter,
-    row.values.Growth,
-    row.values.Premium,
-  ]),
-  expectedComparison,
-  "Every founder-approved comparison cell must remain exact and in order",
+  PLAN_COMPARISON_ROWS.map(row => [row.key, row.label, ...PLAN_ORDER.map(plan => row.values[plan])]),
+  expected.rows,
+  "Every Master Build comparison cell and row identity must match the approved five-plan catalog",
 );
 
 const previous = {
@@ -177,8 +124,8 @@ const generatedMessages = readFileSync(
   new URL("../src/i18n/generated-source-messages.ts", import.meta.url),
   "utf8",
 );
-assert.match(page, /Choose a plan during your application\. You will not be charged until your salon is approved and you subscribe/);
-assert.match(page, /Apply first\. After approval, activate your selected plan securely through subscriptions/);
+assert.match(page, /Choose a plan during your application\. You will not be charged until your business is approved and you subscribe/);
+assert.match(page, /Apply first\. Application and approval are available\. New-plan billing activation is not yet verified/);
 assert.match(page, /PLAN_COMPARISON_ROWS\.map/);
 assert.match(page, /Most Popular/);
 assert.doesNotMatch(page, /test.mode|Priority search|Top search|featured rotation/i);
@@ -188,9 +135,9 @@ assert.match(
   /parseApplicationPlanQuery\(searchParams\.get\("plan"\)\)/,
   "Application query parsing must normalize starter/growth/premium and legacy basic",
 );
-assert.match(application, /next\.set\("plan", plan\.toLowerCase\(\)\)/);
+assert.match(application, /next\.set\("plan", SUBSCRIPTION_PLANS\[plan\]\.key\)/);
 assert.match(application, /selected_plan:selectedPlan/);
-assert.match(application, /PLAN_ORDER\.map/);
+assert.match(application, /PLAN_ORDER\.filter\(name=>isSoloPlan\(name\)===\(form\.operator_type==="solo"\)\)\.map/);
 assert.match(application, /href="\/plans" target="_blank"/);
 assert.match(
   signup,
@@ -243,6 +190,6 @@ for (const file of customerFacingFiles) {
   );
 }
 
-console.log("Canonical Starter, Growth, and Premium plan catalog verification passed.");
+console.log("Master Build five-plan catalog verification passed.");
 
 await import("./verify-application-plan.mjs");

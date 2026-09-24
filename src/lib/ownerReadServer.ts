@@ -1,4 +1,5 @@
 import "server-only";
+import {readAssistantProfessionals} from "@/lib/assistantProfessionalRead";
 import type { requireSalonOwner } from "@/lib/supabaseAdmin";
 import { AssistantError, type AssistantTool } from "@/lib/gcAssistantCore";
 import { ownerBusinessMetrics, profileCompletion } from "@/lib/ownerBusinessMetrics";
@@ -24,6 +25,7 @@ type Row = Record<string, unknown>;
 
 export async function readOwnerOperation(context: Context, tool: AssistantTool, args: Row): Promise<unknown> {
   const { admin, salon } = context;
+  if(tool === "get_professionals")return readAssistantProfessionals(context,args);
   const assigned = assistantAssignedProfessional(context);
   if (["get_booking_messages", "get_customers", "get_reviews"].includes(tool)) await assertCommunicationScope(context, tool === "get_reviews" ? "reviews" : "bookings");
   if (tool === "get_promotions") return readAssistantPromotions(context);
@@ -101,14 +103,12 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
     return { messages: rows.map(row => Object.fromEntries(["id", "original_body", "body", "source_locale", "sender_role", "created_at"].map(key => [key, row[key]]))), total: messages.count, capped_at: 100, customer_participant: Boolean(booking.data.customer_id) };
   }
   const lists: Partial<Record<AssistantTool, { table: string; fields: string; key: string; name?: string }>> = {
-    get_professionals: { table: "stylists", fields: "id,name,bio,specialties,years_experience,is_active,is_draft,availability", key: "professionals", name: "name" },
     get_products: { table: "salon_products", fields: "id,name,description,price,sale_price,inventory_quantity,track_inventory,low_stock_threshold,product_status,is_visible,pickup_enabled,pickup_prep_minutes,shipping_enabled,in_person_only", key: "products", name: "name" },
     get_reviews: { table: "reviews", fields: "id,salon_id,rating_overall,written_review,salon_reply,display_name,moderation_status,created_at", key: "reviews" },
   };
   const list = lists[tool];
   if (list) {
-    const canReadAssignments = tool === "get_professionals" && (context.isOwner || context.teamMember?.permissions?.styles === true);
-    let query = admin.from(list.table).select(list.fields + (canReadAssignments ? ",assigned_service_ids" : ""), { count: "exact" }).eq("salon_id", salon.id);
+    let query = admin.from(list.table).select(list.fields, { count: "exact" }).eq("salon_id", salon.id);
     if (list.table !== "reviews") query = query.is("archived_at", null);
     if (list.name) query = query.ilike(list.name, `%${String(args.query || "").replace(/[\\%_]/g, character => `\\${character}`)}%`);
     if (tool === "get_reviews") query = query.gte("created_at", args.start).lt("created_at", args.end);
@@ -132,17 +132,6 @@ export async function readOwnerOperation(context: Context, tool: AssistantTool, 
         stock_alerts:inventory.filter(row=>["low","out"].includes(productStock(row).state)).slice(0,100).map(row=>({name:row.name,kind:row.kind,unit:row.unit,quantity:row.inventory_quantity,threshold:row.low_stock_threshold})),
         stock_alerts_total:inventory.filter(row=>["low","out"].includes(productStock(row).state)).length,
         stock_definition:"Available stock excludes existing order reservations. Only this authenticated business is included. Untracked stock is not zero. Supplies are private, not customer products. Restocks and corrections require the Stock and supplies workflow. Financial product totals use get_earnings_summary; never infer profit from retail prices."};
-    }
-    if (canReadAssignments) {
-      // Resolve names from the same authenticated business before model input.
-      // Publish one bounded dictionary, not a repeated catalog per professional.
-      const services = await admin.from("styles").select("id,name,is_draft", { count: "exact" }).eq("salon_id", salon.id).is("archived_at", null).order("name").limit(1000);
-      if (services.error) throw services.error;
-      const allowed = new Set((services.data || []).map(row => row.id));
-      const professionals = (result.data || []) as unknown as Row[];
-      return { professionals: professionals.map(row => ({ ...row, assigned_service_ids: row.assigned_service_ids == null ? null : (Array.isArray(row.assigned_service_ids) ? row.assigned_service_ids.filter((id: unknown) => typeof id === "string" && allowed.has(id)) : []) })), total: result.count, capped_at: 100,
-        service_dictionary: services.data, services_total: services.count, services_capped_at: 1000,
-        assignment_definition: "Null assignments offer all current and future services; an empty array offers none. IDs are filtered to this business's visible service dictionary. If the dictionary is capped, absence is not evidence that a service is unassigned. Draft services are not bookable." };
     }
     return { [list.key]: result.data, total: result.count, capped_at: 100 };
   }

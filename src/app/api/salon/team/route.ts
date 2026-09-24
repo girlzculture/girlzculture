@@ -1,6 +1,7 @@
+import {demoExternalActionResponse} from '@/lib/demoWorkspace';
 import { noteOperationalFailure, routeMonitoringProfile, withOperationalMonitoring } from "@/lib/operationalMonitoring";
 import { cleanEmail, cleanText, cleanUsPhone, errorResponse } from "@/lib/requestSecurity";
-import { requireSalonOwner } from "@/lib/supabaseAdmin";
+import { requireSalonOwner, assertBusinessTeamAccess } from "@/lib/supabaseAdmin";
 import { inviteNewIdentity } from "@/lib/teamInvite";
 import { compensateFailedInvitation } from "@/lib/teamInviteAtomicity";
 import { compensateFailedTeamMutation } from "@/lib/teamMutationAtomicity";
@@ -8,7 +9,7 @@ import { assertRecentHighRiskVerification, identityDependencySummary, prepareAnd
 
 const SALON_PERMISSION_KEYS = ["overview","my_page","photos","styles","stylists","products","availability","bookings","reviews","earnings","earnings_own","finance_log","finance_manage","client_history","client_formulas","client_notes","client_cautions","client_photos","client_spend","client_edit","promotions","settings"] as const;
 function permissions(value: unknown) { const input = value && typeof value === "object" ? value as Record<string, unknown> : {}; return Object.fromEntries(SALON_PERMISSION_KEYS.map((key) => [key, Boolean(input[key])])); }
-async function owner(request: Request) { const context = await requireSalonOwner(request); if (!context.isOwner) throw new Error("Only the salon owner can manage team users."); return context; }
+async function owner(request: Request) { const context = await requireSalonOwner(request); await assertBusinessTeamAccess(context); if (!context.isOwner) throw new Error("Only the salon owner can manage team users."); return context; }
 function teamAuditSnapshot(value: Record<string, unknown> | null | undefined) {
   if (!value) return null;
   return {
@@ -56,13 +57,14 @@ async function auditTeamChange(
 }
 
 async function GETHandler(request: Request) {
-  try { const { admin, salon, isOwner, teamMember } = await requireSalonOwner(request); if (!isOwner && !(teamMember?.permissions as Record<string,boolean>)?.settings) throw new Error("Forbidden"); const [{ data, error }, { data: stylists, error: stylistsError }] = await Promise.all([admin.from("salon_team_members").select("*").eq("salon_id", salon.id).order("name"), admin.from("stylists").select("id,name,user_id").eq("salon_id", salon.id).order("name")]); if (error) throw error; if (stylistsError) throw stylistsError; return Response.json({ users: data || [], stylists: stylists || [], can_manage: isOwner }); }
+  try { const context = await requireSalonOwner(request); await assertBusinessTeamAccess(context); const { admin, salon, isOwner, teamMember } = context; if (!isOwner && !(teamMember?.permissions as Record<string,boolean>)?.settings) throw new Error("Forbidden"); const [{ data, error }, { data: stylists, error: stylistsError }] = await Promise.all([admin.from("salon_team_members").select("*").eq("salon_id", salon.id).order("name"), admin.from("stylists").select("id,name,user_id").eq("salon_id", salon.id).order("name")]); if (error) throw error; if (stylistsError) throw stylistsError; return Response.json({ users: data || [], stylists: stylists || [], can_manage: isOwner }); }
   catch (error) { return errorResponse(error, "Unable to load salon users."); }
 }
 
 async function POSTHandler(request: Request) {
   try {
     const { admin, salon, user } = await owner(request);
+    const demoBlocked=demoExternalActionResponse(salon);if(demoBlocked)return demoBlocked;
     const body = await request.json() as Record<string, unknown>;
     const email = cleanEmail(body.email);
     const phone = cleanUsPhone(body.phone);

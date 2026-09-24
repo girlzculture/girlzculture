@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
+import AdminAdSpaces from "@/components/admin/AdminAdSpaces";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getSessionForScope } from "@/lib/supabase";
 import { readApiResponse } from "@/lib/apiResponseClient";
@@ -366,6 +367,7 @@ export default function AdminFeaturedCampaigns() {
 
   return (
     <div className="space-y-5">
+      <AdminAdSpaces />
       <AdminMarketWorkspaces scope="marketing" onSelectionChange={setAudience}/>
       {notice ? (
         <p

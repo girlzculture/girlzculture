@@ -137,6 +137,8 @@ export default function MarketplaceSalonCard({
               Verified
             </span>
           ) : null}
+          {salon.independent_professional ? <span className="rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-bold text-primary">Independent professional</span> : null}
+          {salon.travels_to_you ? <span className="rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-bold text-primary">Travels to you</span> : null}
           {salon.sponsored ? (
             <span className="rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-plum">
               Sponsored
