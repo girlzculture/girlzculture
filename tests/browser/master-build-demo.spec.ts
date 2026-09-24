@@ -8,7 +8,7 @@ test.use({serviceWorkers:'block'});
 for(const [width,height] of [[390,844],[768,1024],[1440,1000],[844,390]]){
  test(`Master demo bookings and sample subscription remain populated at ${width}x${height}`,async({page},info)=>{
   const f=await p0OwnerFixture(page,{populated:true});
-  Object.assign(f.business,{is_demo:true,name:'Culture House — Sample Salon'});
+  Object.assign(f.business,{is_demo:true,name:'Culture House — Sample Salon',gallery_photos:['https://girlzculture.com/images/salon-warm.jpg']});
   const base={...f.records.bookings[0],payment_mode:'test'};
   f.records.bookings=[{...base,is_demo:true,guest_name:'Sample visible'},
    {...base,id:'33000000-0000-4000-8000-000000000099',is_demo:false,guest_name:'Sandbox excluded'}];
@@ -33,9 +33,19 @@ for(const [width,height] of [[390,844],[768,1024],[1440,1000],[844,390]]){
   for(const button of await page.getByRole('button',{name:/Upgrade to|Downgrade to|Subscribe to/}).all())await expect(button).toBeDisabled();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
   await history.scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('sample-billing.png')});
+  await page.goto('/salon/dashboard/photos');
+  const galleryLinks=page.getByRole('link',{name:'View public gallery',exact:true,includeHidden:true});
+  await expect(galleryLinks).toHaveCount(2);
+  for(const link of await galleryLinks.all())await expect(link).toHaveAttribute('href','/salon/dashboard/demo-page');
+  const samplePhoto=page.getByRole('img',{name:'Photo 1',exact:true});
+  await expect(samplePhoto).toHaveAttribute('src','/images/salon-warm.jpg');
+  await samplePhoto.scrollIntoViewIfNeeded();
+  await expect.poll(()=>samplePhoto.evaluate((image:HTMLImageElement)=>image.complete&&image.naturalWidth>0)).toBe(true);
   Object.assign(f.business,{is_demo:false});await page.goto('/salon/dashboard/bookings?group=All');
   await expect(bookings.getByRole('heading',{name:'No appointments match these filters',exact:true})).toBeVisible();
   await expect(bookings.getByText('Sample visible',{exact:true})).toHaveCount(0);
+  await page.goto('/salon/dashboard/photos');
+  for(const link of await galleryLinks.all())await expect(link).toHaveAttribute('href',`/salon/${f.business.slug}`);
   expect(f.actions).toEqual([]);expect(f.unexpected).toEqual([]);
  });
 }

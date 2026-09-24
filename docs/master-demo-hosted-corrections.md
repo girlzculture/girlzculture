@@ -27,9 +27,12 @@ private demo, not a replacement business or newly seeded account.
 - The assistant labeled 14:00 UTC as New York time for a 10:00 EDT appointment.
   Answer facts now contain an explicit localized date/time and DST abbreviation;
   the planner retains the original instant for authorized follow-up selection.
-- My Page preview led to the intentionally inaccessible public sample URL. Both
+- My Page and Photos previews led to the intentionally inaccessible public sample URL. Their
   profile and policy preview links now use the existing authenticated private page,
   including only the current published policy. Public discovery remains blocked.
+- The held candidate blocked the eight canonical public-origin sample images under
+  its existing content-security policy. Those exact bundled asset URLs now render
+  from the current deployment. Stored URLs, uploaded images and the CSP are unchanged.
 - The Partner Agreement metadata fallback now uses the required exact title.
 
 ## Local evidence
@@ -40,6 +43,8 @@ private demo, not a replacement business or newly seeded account.
   WebKit at 390×844, 768×1024, 1440×1000 and 844×390.
 - Existing bookings, subscription and booking-money browser regression: 42 passed.
 - Private preview policy/navigation/recovery: 8 passed, four locales and both engines.
+- The final gallery-link/image-loading/private-preview checks: 16 passed across
+  Chromium/WebKit and the same four layouts; exact-asset URL guards: 2 passed.
 - TypeScript and changed-file lint passed.
 - Clean database: all 218 migrations plus database/concurrency assertions passed.
 - Demo seed/current-schema and already-seeded upgrade: 95 checks each, including
