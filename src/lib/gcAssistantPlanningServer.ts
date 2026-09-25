@@ -19,6 +19,7 @@ import { restoreAuthorizedBusinessContact } from "@/lib/assistantBusinessProfile
 import { assertAssistantProposalScope } from "@/lib/assistantProfessionalScope";
 import { assistantBusinessTerminologyGuidance, type BusinessTerminologyDomain } from "@/i18n/business-terminology";
 import { isOwnGalleryCountQuestion } from "@/lib/assistantGalleryCount";
+import { ownTodayBookingRange } from "@/lib/assistantTodayBookings";
 
 const ASSISTANT_LANGUAGE_NAMES = {
   en: "English",
@@ -158,7 +159,9 @@ function planningResult(tool: string, result: unknown, granted: ReadonlySet<stri
     // Share only selection facts; never contact details, messages or payments.
     const value = result as { bookings?: Record<string, unknown>[]; time_zone?: string; total?: number } | null;
     const zone = salonTimeZone(timeZone);
-    return { time_zone: zone, total: value?.total ?? null, is_excerpt: Number(value?.total ?? value?.bookings?.length ?? 0) > 12, shown_count: Math.min(12, value?.bookings?.length ?? 0), bookings: (Array.isArray(value?.bookings) ? value.bookings : []).slice(0, 30).map(row => ({
+    return { time_zone: zone, scope: tool === "get_upcoming_appointments" ? "remaining_upcoming_appointments_only" : "all_appointments_in_requested_range",
+      definition: tool === "get_upcoming_appointments" ? "Earlier appointments are excluded. This total is remaining upcoming appointments, never the whole-day total." : "Includes earlier appointments and all returned statuses in the requested period. Preserve the individual statuses; past time does not establish completion or no-show.",
+      total: value?.total ?? null, is_excerpt: Number(value?.total ?? value?.bookings?.length ?? 0) > 12, shown_count: Math.min(12, value?.bookings?.length ?? 0), bookings: (Array.isArray(value?.bookings) ? value.bookings : []).slice(0, 30).map(row => ({
       id: row.id, public_reference: row.public_reference, guest_name: row.guest_name,
       // Convert before the model sees the answer facts. A UTC timestamp plus
       // a separate zone label led to 14:00 UTC being reported as 14:00 New York.
@@ -504,8 +507,12 @@ export async function planOwnerRequest(input: {
     // the read and relabeling the all-images total as the gallery count.
     const galleryCount = !input.answerOnly && isOwnGalleryCountQuestion(input.text);
     if (galleryCount && !granted.has(ASSISTANT_TOOLS.get_business_media.permission)) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
-    const resolved = galleryCount ? { plan: { tool: "get_business_media", args: {} }, reply: null, clarification: null, navigate: null, ...(input.trackTask ? { task_tool: hydrated.task_tool } : {}) } : hydrated;
-    outcome = "completed"; return { ...resolved, authoritative_summary: resolved.plan?.tool === "get_business_media", language_switch: galleryCount ? explicitLocale : explicitLocale ?? hydrated.language_switch, response_locale: galleryCount ? responseLocale : explicitLocale ?? hydrated.language_switch ?? input.locale };
+    const todayBookings = input.answerOnly ? null : ownTodayBookingRange(input.text, input.timeZone);
+    if (todayBookings && !granted.has(ASSISTANT_TOOLS.get_bookings.permission)) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
+    const resolved = todayBookings ? { plan: { tool: "get_bookings", args: todayBookings }, reply: null, clarification: null, navigate: null, ...(input.trackTask ? { task_tool: null } : {}) }
+      : galleryCount ? { plan: { tool: "get_business_media", args: {} }, reply: null, clarification: null, navigate: null, ...(input.trackTask ? { task_tool: hydrated.task_tool } : {}) } : hydrated;
+    const authoritativeRequest = galleryCount || Boolean(todayBookings);
+    outcome = "completed"; return { ...resolved, authoritative_summary: resolved.plan?.tool === "get_business_media", language_switch: authoritativeRequest ? explicitLocale : explicitLocale ?? hydrated.language_switch, response_locale: authoritativeRequest ? responseLocale : explicitLocale ?? hydrated.language_switch ?? input.locale };
   } catch (error) {
     if (error instanceof AssistantPlannerError) failureCode = `PLANNER_${error.reason}`;
     throw error;

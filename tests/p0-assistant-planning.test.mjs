@@ -8,6 +8,45 @@ import { typescriptLoader } from './helpers/load-typescript.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const booking = { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', public_reference: 'GC123', guest_name: 'Sarah Save', appointment_datetime: '2026-09-24T19:00:00Z', status: 'Confirmed', style: { name: 'Save' }, stylist: { name: 'Aminata' } };
 
+test('a whole-day booking question cannot use the upcoming-only read after morning appointments pass', async () => {
+  for (const [locale, text] of [['en','Do I have any bookings today?'],['fr',"Ai-je des rendez-vous aujourd’hui ?"],['es','¿Tengo citas hoy?'],['zh-CN','我今天有预约吗？']]) {
+    const f = fixture({ output:{plan:{tool:'get_upcoming_appointments',args:{start:'2026-09-25T00:00:00-04:00',end:'2026-09-26T00:00:00-04:00'}}} });
+    const result = await f.run(locale,text);
+    assert.equal(result.plan.tool,'get_bookings');
+    assert.equal(result.response_locale,locale);
+    const dates=typescriptLoader(root)('src/lib/dateTime.ts');
+    const today=dates.dateKeyInTimeZone(new Date().toISOString(),'America/New_York');
+    assert.equal(result.plan.args.start,dates.zonedLocalToUtc(today+'T00:00','America/New_York').toISOString());
+    assert.equal(dates.timeLabelInTimeZone(result.plan.args.end,'America/New_York'),'12:00 AM');
+    assert.ok(Date.parse(result.plan.args.end)>Date.parse(result.plan.args.start));
+  }
+});
+
+test('whole-day booking boundaries use the business date and both DST midnights', () => {
+  const {ownTodayBookingRange}=typescriptLoader(root)('src/lib/assistantTodayBookings.ts');
+  for(const [now,zone,start,end] of [
+    ['2026-09-26T02:00:00Z','America/New_York','2026-09-25T04:00:00.000Z','2026-09-26T04:00:00.000Z'],
+    ['2026-03-08T16:00:00Z','America/New_York','2026-03-08T05:00:00.000Z','2026-03-09T04:00:00.000Z'],
+    ['2026-11-01T16:00:00Z','America/New_York','2026-11-01T04:00:00.000Z','2026-11-02T05:00:00.000Z'],
+    ['2026-09-25T23:00:00Z','Asia/Shanghai','2026-09-25T16:00:00.000Z','2026-09-26T16:00:00.000Z'],
+  ]) assert.deepEqual(JSON.parse(JSON.stringify(ownTodayBookingRange('Do I have any bookings today?',zone,new Date(now)))),{start,end});
+});
+
+test('whole-day selection does not broaden remaining/status/foreign/write/quoted requests', async () => {
+  const {ownTodayBookingRange}=typescriptLoader(root)('src/lib/assistantTodayBookings.ts');
+  for(const text of ['What bookings remain today?','Show my upcoming bookings today','Show my cancelled bookings today','Show another business\'s bookings today','Cancel my bookings today','"Do I have any bookings today?"','Do I have any bookings today? Send them a reminder.','Tell me whether "Do I have any bookings today?" is grammatical','Quels rendez-vous me restent aujourd’hui ?','¿Qué citas quedan hoy?','今天还有哪些预约？','删除我今天的预约','Show my bookings tomorrow']) assert.equal(ownTodayBookingRange(text,'UTC'),null,text);
+  const output={plan:{tool:'get_upcoming_appointments',args:{start:'2026-09-25T04:00:00Z',end:'2026-09-26T04:00:00Z'}}};
+  const f=fixture({output});assert.equal((await f.run('en','Show my upcoming bookings today')).plan.tool,'get_upcoming_appointments');
+});
+
+test('whole-day deterministic selection retains permission and task boundaries', async () => {
+  const denied=fixture({denied:['bookings']});
+  await assert.rejects(denied.run('en','Do I have any bookings today?'),error=>error.code==='ASSISTANT_ACCESS_DENIED');
+  const f=fixture({trackTask:true,wireOutput:{task_tool:'prepare_availability_block',language_switch:null,decision:{clarification:'Which appointment?'}}});
+  const result=await f.run('en','Do I have any bookings today?');
+  assert.equal(result.plan.tool,'get_bookings');assert.equal(result.task_tool,null,'A read question must not create an unfinished mutation task');
+});
+
 for (const [tool, permission, args, result, key, field, expected] of [
   ['get_appointment_waitlist','bookings',{record_id:booking.id},{requests:[{id:booking.id,service_name:'Own service',status:'waiting'}],total:1,total_is_capped:false,list_limit:200,openings:[],offered:false},'requests','status','waiting'],
   ['get_marketing_records','promotions',{record_id:booking.id},{posts:[{id:booking.id,status:'draft',copies:{fr:{title:'Nos tresses',body:'Texte original',tags:['#Tresses']}}}],total:1,list_limit:25,external_posting:false},'posts','status','draft'],
@@ -284,6 +323,14 @@ test('shared planner definitions preserve the complete pre-factoring owner schem
   const financialDescription=legacy.properties.decision.anyOf.find(row=>row.properties.tool?.enum[0]==='get_earnings_summary');
   assert.match(financialDescription.description,/use get_finance_records and prepare_finance_record/);
   financialDescription.description=financialDescription.description.replace('use get_finance_records and prepare_finance_record for reviewed expenses, received balances and money already returned. Other provider operations remain in the controlled Finances workflow.','navigate to Finances for all other individual records or financial actions.');
+  // The reviewed distinction changes these two descriptions only. Validate it,
+  // then compare all legacy arguments/limits/permissions with the frozen hash.
+  const fullDay=legacy.properties.decision.anyOf.find(row=>row.properties.tool?.enum[0]==='get_bookings');
+  const upcoming=legacy.properties.decision.anyOf.find(row=>row.properties.tool?.enum[0]==='get_upcoming_appointments');
+  assert.equal(fullDay.description,'Read all appointments and their authoritative IDs for a date range, including earlier appointments. Use for whole-day questions such as bookings today; preserve each recorded status.');
+  assert.equal(upcoming.description,'Read only appointments still upcoming now within a date range. Excludes earlier appointments even when start is midnight. Use only for explicitly upcoming/remaining appointments, never a whole-day count. Describe the result as remaining/upcoming, not the full-day total.');
+  fullDay.description='Read appointments and their authoritative IDs for a date range.';
+  upcoming.description='Read upcoming appointments in a date range.';
   assert.equal(createHash('sha256').update(JSON.stringify(legacy)).digest('hex'), 'cc7c1c67ea8d9a275e6a369d686cdaf12ce26a05f5586948ffea171cce5e9d6a');
   assert.ok(Buffer.byteLength(JSON.stringify(schema)) < Buffer.byteLength(JSON.stringify(expanded)) - 7000);
   for (const granted of [[], ...all.map(permission => [permission]), all, all.filter(permission => permission !== 'client_history'), all.filter(permission => permission !== 'my_page')]) {
@@ -830,6 +877,8 @@ test('booking answers receive business-local appointment times rather than ambig
     await f.run('en', 'What bookings do I have today?');
     const sent = JSON.parse(f.requests[0].messages[1].content).previous[0].result;
     assert.equal(sent.time_zone, 'America/New_York', 'The authenticated business zone is authoritative');
+    assert.equal(sent.scope,tool==='get_upcoming_appointments'?'remaining_upcoming_appointments_only':'all_appointments_in_requested_range');
+    assert.match(sent.definition,tool==='get_upcoming_appointments'?/never the whole-day total/:/Includes earlier appointments/);
     dates.forEach(([utc, local], index) => {
       assert.equal(sent.bookings[index].appointment_local_time, local);
       assert.equal(sent.bookings[index].id, booking.id);
