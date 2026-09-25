@@ -219,6 +219,9 @@ test("explicit service intent never exposes un-enriched SSR booking links", asyn
 test("public results keep real signals and align the matched service, price and Book URL", async ({
   page,
 }) => {
+  // Reproduce the CI provider-error state deterministically: the view selector
+  // and the recovery button must remain distinct even when both mention Map.
+  await page.route('https://maps.googleapis.com/**', route => route.abort('failed'));
   const requests: SearchBody[] = [];
   await installDiscoveryFixture(page, requests);
   await openResults(page);
@@ -295,9 +298,10 @@ test("public results keep real signals and align the matched service, price and 
   await expect(restoredDialog.getByLabel("Active offers only")).toBeChecked();
   await restoredDialog.getByRole("button", { name: "Close" }).click();
 
-  await page.getByRole("button", { name: "Map" }).click();
+  await page.getByRole("button", { name: "Map", exact: true }).click();
   await expect(page).toHaveURL(/view=map/);
-  await expect(page.getByRole("button", { name: "Map" })).toHaveAttribute(
+  await expect(page.getByRole('button', { name: 'Retry map', exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Map", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -305,7 +309,7 @@ test("public results keep real signals and align the matched service, price and 
   await expect(page).not.toHaveURL(/view=map/);
   await page.goBack();
   await expect(page).toHaveURL(/view=map/);
-  await expect(page.getByRole("button", { name: "Map" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Map", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -317,7 +321,7 @@ test("public results keep real signals and align the matched service, price and 
   );
   await page.goForward();
   await expect(page).toHaveURL(/view=map/);
-  await expect(page.getByRole("button", { name: "Map" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Map", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
