@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
+import { X509Certificate } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { connectionEnvironment, safeFailure, validateReconciliation, verifyOperationsOnly,
-  OPERATIONS_ONLY_PATHS, REFRESH_WORKFLOW, REFRESH_CONFIRMATION } from '../scripts/refresh-culture-house.mjs';
+  OPERATIONS_ONLY_PATHS, REFRESH_WORKFLOW, REFRESH_CONFIRMATION, DATABASE_CA } from '../scripts/refresh-culture-house.mjs';
 import { verifyDispatchContext, MIGRATION_REPOSITORY, MIGRATION_WORKFLOW, MIGRATION_CONFIRMATION } from '../scripts/verify-production-migration-gate.mjs';
 
 const connection = 'postgresql://postgres.cuzfockthsqwubupskui@aws-0-us-east-1.pooler.supabase.com:5432/postgres';
@@ -15,7 +16,16 @@ test('only reviewed operations files may differ from the tested application', ()
 test('uses session routing, certificate verification and environment-only password', () => {
   const result = connectionEnvironment(connection, 'fixture-secret');
   assert.equal(result.PGPORT, '5432'); assert.equal(result.PGSSLMODE, 'verify-full');
-  assert.equal(result.PGSSLROOTCERT, 'system'); assert.equal(result.PGPASSWORD, 'fixture-secret');
+  assert.equal(result.PGSSLROOTCERT, DATABASE_CA); assert.equal(result.PGPASSWORD, 'fixture-secret');
+});
+test('trusts the reviewed public Supabase CA without disabling certificate or hostname validation', () => {
+  const pem = readFileSync(DATABASE_CA, 'utf8');
+  assert.doesNotMatch(pem, /PRIVATE KEY/);
+  const certificate = new X509Certificate(pem);
+  assert.equal(certificate.fingerprint256, '80:70:25:AD:50:D4:ED:21:9D:2C:9C:7D:29:9C:00:4F:82:4E:B0:0C:F7:F6:5A:FE:F6:07:D0:7B:72:E6:CA:FA');
+  assert.equal(certificate.ca, true);
+  assert.ok(certificate.verify(certificate.publicKey));
+  assert.ok(Date.now() < Date.parse(certificate.validTo));
 });
 for (const [label, value] of Object.entries({ transactionPool: connection.replace(':5432', ':6543'),
   otherProject: connection.replace('cuzfockthsqwubupskui', 'other'), externalHost: connection.replace('.pooler.supabase.com', '.example.test'),

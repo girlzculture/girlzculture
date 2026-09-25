@@ -1,12 +1,16 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync, appendFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { verifyProductionMigrationGate } from './verify-production-migration-gate.mjs';
 
 export const RELEASE_SOURCE = 'a3397f23a722c8862aab0cb0a424b45249fdd563';
 export const REFRESH_WORKFLOW = '.github/workflows/culture-house-refresh.yml';
 export const REFRESH_CONFIRMATION = 'REFRESH EXISTING CULTURE HOUSE';
+// Public Supabase production CA, as used by Supabase Studio's certificate download.
+// https://supabase.com/docs/guides/database/psql requires this CA for verify-full.
+export const DATABASE_CA = fileURLToPath(new URL('./certificates/supabase-prod-ca-2021.crt', import.meta.url));
 export const OPERATIONS_ONLY_PATHS = [REFRESH_WORKFLOW, 'scripts/refresh-culture-house.mjs',
+  'scripts/certificates/supabase-prod-ca-2021.crt',
   'scripts/sql/refresh-culture-house.sql', 'scripts/verify-production-migration-gate.mjs',
   'tests/culture-house-refresh.test.mjs'].sort();
 const PROJECT = 'cuzfockthsqwubupskui';
@@ -26,7 +30,7 @@ export function connectionEnvironment(link, password) {
     && url.port === '5432' && /^[a-z0-9-]+\.pooler\.supabase\.com$/.test(url.hostname), 'UNREVIEWED_DATABASE_CONNECTION');
   requireThat(typeof password === 'string' && password.length > 0, 'DATABASE_SECRET_MISSING');
   return { PGHOST: url.hostname, PGPORT: '5432', PGUSER: url.username, PGDATABASE: 'postgres',
-    PGPASSWORD: password, PGSSLMODE: 'verify-full', PGSSLROOTCERT: 'system', PGCONNECT_TIMEOUT: '15',
+    PGPASSWORD: password, PGSSLMODE: 'verify-full', PGSSLROOTCERT: DATABASE_CA, PGCONNECT_TIMEOUT: '15',
     PGAPPNAME: 'culture-house-reviewed-refresh' };
 }
 

@@ -5,6 +5,7 @@ on:
     paths:
       - .github/workflows/culture-house-refresh.yml
       - scripts/refresh-culture-house.mjs
+      - scripts/certificates/supabase-prod-ca-2021.crt
       - scripts/sql/refresh-culture-house.sql
       - scripts/verify-production-migration-gate.mjs
       - tests/culture-house-refresh.test.mjs
