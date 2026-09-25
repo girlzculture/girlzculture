@@ -9,6 +9,7 @@ on:
       - scripts/sql/refresh-culture-house.sql
       - scripts/verify-production-migration-gate.mjs
       - tests/culture-house-refresh.test.mjs
+      - tests/browser/founder-discovery-corrections.spec.ts
   workflow_dispatch:
     inputs:
       confirmation:
