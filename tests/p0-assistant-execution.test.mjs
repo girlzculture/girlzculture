@@ -156,6 +156,24 @@ test('bookings are read only for the resolved business and requested interval', 
   assert.equal(f.saved[0].salon_id, business); assert.equal(f.saved[0].requested_by, actor);
 });
 
+test('whole-day appointment read includes passed morning times, preserves statuses and excludes other tenants and professionals',async()=>{
+  const bookings=[
+    {salon_id:business,stylist_id:actor,appointment_datetime:'2026-09-25T13:00:00Z',guest_name:'Morning one',status:'Confirmed'},
+    {salon_id:business,stylist_id:actor,appointment_datetime:'2026-09-25T14:00:00Z',guest_name:'Morning two',status:'Completed'},
+    {salon_id:business,stylist_id:actor,appointment_datetime:'2026-09-25T18:00:00Z',guest_name:'Afternoon one',status:'Confirmed'},
+    {salon_id:business,stylist_id:'other-professional',appointment_datetime:'2026-09-25T18:00:00Z',guest_name:'Afternoon two',status:'Confirmed'},
+    {salon_id:'other-business',stylist_id:actor,appointment_datetime:'2026-09-25T18:00:00Z',guest_name:'FOREIGN_PRIVATE_NAME',status:'Confirmed'},
+  ];
+  for(const teamMember of [undefined,{stylist_id:actor}]){
+    const f=fixture({now:Date.parse('2026-09-25T15:37:00Z'),teamMember,tables:{bookings}});
+    const result=(await f.run('get_bookings',{start:'2026-09-25T04:00:00Z',end:'2026-09-26T04:00:00Z'})).request.result;
+    assert.equal(result.total,teamMember?3:4);assert.equal(result.bookings.length,teamMember?3:4);
+    assert.equal(result.bookings[0].guest_name,'Morning one');assert.equal(result.bookings[0].status,'Confirmed');assert.equal(result.bookings[1].status,'Completed');
+    assert.doesNotMatch(JSON.stringify(result),/FOREIGN_PRIVATE_NAME/);
+    if(teamMember)assert.doesNotMatch(JSON.stringify(result),/Afternoon two/);
+  }
+});
+
 test('availability retains canonical professional identity for a subsequent scoped draft', async () => {
   const f = fixture({now:Date.parse('2026-09-19T12:00:00Z'),tables:{salons:[{id:business,user_id:actor,time_zone:'America/New_York'}],styles:[{id:requestId,salon_id:business,name:'Own service',base_price:100,duration_min_hours:1,duration_max_hours:1,buffer_minutes:15,option_groups:[]}]}});
   const response = await f.run('get_availability', { style_id: requestId, stylist_id: null, date: '2026-09-20' });
