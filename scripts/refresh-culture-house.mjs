@@ -10,6 +10,7 @@ export const REFRESH_CONFIRMATION = 'REFRESH EXISTING CULTURE HOUSE';
 // https://supabase.com/docs/guides/database/psql requires this CA for verify-full.
 export const DATABASE_CA = fileURLToPath(new URL('./certificates/supabase-prod-ca-2021.crt', import.meta.url));
 export const OPERATIONS_ONLY_PATHS = [REFRESH_WORKFLOW, 'scripts/refresh-culture-house.mjs',
+  'scripts/start-acceptance-supabase-fixture.mjs',
   'scripts/certificates/supabase-prod-ca-2021.crt',
   'tests/browser/founder-discovery-corrections.spec.ts',
   'scripts/sql/refresh-culture-house.sql', 'scripts/verify-production-migration-gate.mjs',

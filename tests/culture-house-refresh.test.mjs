@@ -3,11 +3,53 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { X509Certificate } from 'node:crypto';
 import { createRequire } from 'node:module';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { Agent, createServer, request } from 'node:http';
 import { connectionEnvironment, safeFailure, validateReconciliation, verifyOperationsOnly,
   OPERATIONS_ONLY_PATHS, REFRESH_WORKFLOW, REFRESH_CONFIRMATION, DATABASE_CA } from '../scripts/refresh-culture-house.mjs';
 import { verifyDispatchContext, MIGRATION_REPOSITORY, MIGRATION_WORKFLOW, MIGRATION_CONFIRMATION } from '../scripts/verify-production-migration-gate.mjs';
 
 const connection = 'postgresql://postgres.cuzfockthsqwubupskui@aws-0-us-east-1.pooler.supabase.com:5432/postgres';
+
+test('fixture mutations use fresh connections while normal reads keep pooling', async () => {
+  const reservation = createServer();
+  reservation.listen(0, '127.0.0.1'); await once(reservation, 'listening');
+  const port = reservation.address().port;
+  await new Promise(resolve => reservation.close(resolve));
+  const fixture = spawn(process.execPath, ['scripts/start-acceptance-supabase-fixture.mjs'], {
+    env: { ...process.env, GIRLZ_CULTURE_ACCEPTANCE_MODE: 'true', PLAYWRIGHT_ACCEPTANCE_SUPABASE_URL: `http://127.0.0.1:${port}` },
+    stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true,
+  });
+  const agent = new Agent({ keepAlive: true, maxSockets: 1 });
+  const exited = once(fixture, 'exit');
+  const send = (path, version) => new Promise((resolve, reject) => {
+    const body = version === undefined ? null : JSON.stringify({ version });
+    const req = request({ host: '127.0.0.1', port, path, agent, method: body ? 'POST' : 'GET',
+      headers: body ? { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body), 'x-acceptance-fixture': 'p0-public-policy' } : {} }, res => {
+      let text = ''; res.setEncoding('utf8'); res.on('data', part => { text += part; });
+      res.on('end', () => resolve({ status: res.statusCode, connection: res.headers.connection, reused: req.reusedSocket, body: JSON.parse(text) }));
+    });
+    req.on('error', reject); req.end(body);
+  });
+  try {
+    await new Promise((resolve, reject) => {
+      fixture.stdout.on('data', data => { if (data.toString().includes('fixture listening')) resolve(); });
+      fixture.once('error', reject); fixture.once('exit', () => reject(Error('Fixture exited before ready')));
+    });
+    const path = '/__fixtures/p0-public-policy/55000000-0000-4000-8000-000000000001';
+    for (const version of [1, 2, null]) {
+      const result = await send(path, version);
+      assert.equal(result.status, 200); assert.equal(result.body.ok, true);
+      assert.equal(result.connection, 'close', 'No idle mutation socket may survive UI interactions');
+      assert.equal(result.reused, false, 'Setup, replacement and cleanup each use a fresh socket; no retry');
+    }
+    assert.equal((await send('/health')).connection, 'keep-alive');
+    assert.equal((await send('/health')).reused, true, 'Ordinary application reads still pool');
+  } finally {
+    agent.destroy(); fixture.kill('SIGTERM'); await exited;
+  }
+});
 test('only reviewed operations files may differ from the tested application', () => {
   verifyOperationsOnly(OPERATIONS_ONLY_PATHS);
   for (const paths of [[], ['src/app/layout.tsx'], ['supabase/migrations/new.sql'], [...OPERATIONS_ONLY_PATHS, 'netlify.toml']])
