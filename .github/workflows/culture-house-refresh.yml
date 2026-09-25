@@ -1,0 +1,81 @@
+name: Refresh reviewed Culture House history
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/culture-house-refresh.yml
+      - scripts/refresh-culture-house.mjs
+      - scripts/start-acceptance-supabase-fixture.mjs
+      - scripts/certificates/supabase-prod-ca-2021.crt
+      - scripts/sql/refresh-culture-house.sql
+      - scripts/verify-production-migration-gate.mjs
+      - tests/culture-house-refresh.test.mjs
+      - tests/browser/founder-discovery-corrections.spec.ts
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type REFRESH EXISTING CULTURE HOUSE to run the reviewed one-time refresh
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: node --test tests/production-migration-gate.test.mjs tests/culture-house-refresh.test.mjs
+  refresh:
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'girlzculture/girlzculture' && github.ref == 'refs/heads/main' && inputs.confirmation == 'REFRESH EXISTING CULTURE HOUSE'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    environment: production-database
+    concurrency:
+      group: girlz-culture-production-database
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Require reviewed source and passing exact-main CI
+        run: node scripts/refresh-culture-house.mjs --preflight
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MIGRATION_CONFIRMATION: ${{ inputs.confirmation }}
+      - name: Link only the reviewed production project
+        shell: bash
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test "$SUPABASE_PROJECT_ID" = 'cuzfockthsqwubupskui'
+          npx --yes 'supabase@2.111.0' link --project-ref "$SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD"
+      - name: Atomically refresh the same private business over a session connection
+        run: node scripts/refresh-culture-house.mjs --apply
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MIGRATION_CONFIRMATION: ${{ inputs.confirmation }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      - name: Remove ephemeral link metadata
+        if: always()
+        shell: bash
+        run: rm -rf -- supabase/.temp

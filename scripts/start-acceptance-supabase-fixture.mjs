@@ -50,6 +50,12 @@ const server = createServer(async (request, response) => {
   const method = request.method || "GET";
   const url = new URL(request.url || "/", `http://${host}:${port}`);
 
+  // Test setup/replacement/cleanup may be separated by a long browser flow.
+  // Do not leave their control sockets pooled across the server's idle expiry:
+  // a policy replacement in CI raced that close and failed with ECONNRESET.
+  // Ordinary application requests retain keep-alive; failures are never retried.
+  if (url.pathname.startsWith('/__fixtures/')) response.setHeader('Connection', 'close');
+
   if (method === "OPTIONS") {
     response.writeHead(204, corsHeaders);
     response.end();
