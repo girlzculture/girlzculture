@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { Agent, createServer, request } from 'node:http';
 import { connectionEnvironment, safeFailure, validateReconciliation, verifyOperationsOnly,
-  OPERATIONS_ONLY_PATHS, REFRESH_WORKFLOW, REFRESH_CONFIRMATION, DATABASE_CA } from '../scripts/refresh-culture-house.mjs';
+  OPERATIONS_ONLY_PATHS, REFRESH_WORKFLOW, REFRESH_CONFIRMATION, DATABASE_CA, REFRESH_PROCESS_TIMEOUT_MS } from '../scripts/refresh-culture-house.mjs';
 import { verifyDispatchContext, MIGRATION_REPOSITORY, MIGRATION_WORKFLOW, MIGRATION_CONFIRMATION } from '../scripts/verify-production-migration-gate.mjs';
 
 const connection = 'postgresql://postgres.cuzfockthsqwubupskui@aws-0-us-east-1.pooler.supabase.com:5432/postgres';
@@ -77,6 +77,7 @@ for (const [label, value] of Object.entries({ transactionPool: connection.replac
 test('requires the existing protected secret', () => assert.throws(() => connectionEnvironment(connection, ''), /DATABASE_SECRET_MISSING/));
 test('safe failure permits only SQLSTATE and never error details', () => {
   assert.equal(safeFailure('ERROR:  P0001\nprivate details'), 'P0001');
+  assert.equal(safeFailure('ERROR:  57014\nprivate statement context'), '57014');
   assert.equal(safeFailure('password authentication failed for user secret'), 'UNCLASSIFIED');
 });
 test('requires reconciliation rather than treating process success as proof', () => {
@@ -103,6 +104,11 @@ test('protected workflow has one explicit same-tenant operation, no migrations o
   assert.equal(workflow.jobs.refresh.environment, 'production-database');
   assert.equal(workflow.jobs.refresh.concurrency.group, 'girlz-culture-production-database');
   assert.equal(workflow.jobs.refresh.concurrency['cancel-in-progress'], false);
+  const sql = readFileSync('scripts/sql/refresh-culture-house.sql', 'utf8');
+  const statementSeconds = Number(sql.match(/set local statement_timeout='(\d+)s'/)?.[1]);
+  assert.ok(statementSeconds > 0 && statementSeconds <= 300, 'The private refresh remains bounded');
+  assert.ok(REFRESH_PROCESS_TIMEOUT_MS > statementSeconds * 1000 + 30_000, 'Allow SQL cancellation, rollback and reconciliation before terminating the client');
+  assert.ok(REFRESH_PROCESS_TIMEOUT_MS + 60_000 < workflow.jobs.refresh['timeout-minutes'] * 60_000, 'Keep room for cleanup before the protected job deadline');
   assert.match(workflow.jobs.refresh.if, /refs\/heads\/main/);
   const commands = workflow.jobs.refresh.steps.map(s => s.run ?? '').join('\n');
   assert.equal(commands.split('node scripts/refresh-culture-house.mjs --apply').length - 1, 1);
