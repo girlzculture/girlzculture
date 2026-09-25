@@ -2,7 +2,10 @@
 -- Existing identity only; compare-and-set reset, one atomic transaction.
 begin isolation level repeatable read;
 set local lock_timeout='5s';
-set local statement_timeout='120s';
+-- The full trigger-preserving refresh measured 100-113s locally and exceeded
+-- 120s on the hosted database (run 36096048589, SQLSTATE 57014). Allow bounded
+-- production execution while retaining the short lock limit and atomic guards.
+set local statement_timeout='300s';
 set local timezone='America/New_York';
 do $$
 declare

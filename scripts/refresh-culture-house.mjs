@@ -3,7 +3,9 @@ import { readFileSync, appendFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { verifyProductionMigrationGate } from './verify-production-migration-gate.mjs';
 
-export const RELEASE_SOURCE = 'a3397f23a722c8862aab0cb0a424b45249fdd563';
+// Reviewed assistant correction, already verified before the operational change.
+export const RELEASE_SOURCE = '5ec6c091d70492d0cc1c670be03f1bd353392cbf';
+export const REFRESH_PROCESS_TIMEOUT_MS = 360_000;
 export const REFRESH_WORKFLOW = '.github/workflows/culture-house-refresh.yml';
 export const REFRESH_CONFIRMATION = 'REFRESH EXISTING CULTURE HOUSE';
 // Public Supabase production CA, as used by Supabase Studio's certificate download.
@@ -63,7 +65,7 @@ export async function main(env = process.env) {
   const connection = connectionEnvironment(readFileSync('supabase/.temp/pooler-url', 'utf8'), env.SUPABASE_DB_PASSWORD);
   const result = spawnSync('psql', ['-X', '-qAt', '--set', 'ON_ERROR_STOP=1', '--set', 'VERBOSITY=sqlstate'], {
     input: readFileSync('scripts/sql/refresh-culture-house.sql', 'utf8'), encoding: 'utf8',
-    env: { PATH: env.PATH, HOME: env.HOME, ...connection }, timeout: 180_000, maxBuffer: 1024 * 1024,
+    env: { PATH: env.PATH, HOME: env.HOME, ...connection }, timeout: REFRESH_PROCESS_TIMEOUT_MS, maxBuffer: 1024 * 1024,
   });
   requireThat(result.status === 0, `REFRESH_FAILED_SQLSTATE_${safeFailure(result.stderr ?? '')}_READ_BACK_BEFORE_RETRY`);
   const reconciliation = validateReconciliation(result.stdout);
