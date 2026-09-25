@@ -11,6 +11,44 @@ const sale=(changes={})=>({id:'sale-1',salon_id:salon,source:'platform',kind:'se
 const payment=(id,stage,amount_cents,changes={})=>({id,salon_id:salon,sale_id:'sale-1',occurred_at:at,stage,method:'card',amount_cents,original_payment_id:null,...changes});
 const summary=books=>core.summarizeOperatingBooks(salon,books,period);
 
+test('three thousand connected bookings use bounded formatter creation and linear payment traversal',()=>{
+  let formatters=0,paymentReads=0;
+  const measured=typescriptLoader(process.cwd(),{}, {Intl:{DateTimeFormat:class extends Intl.DateTimeFormat {constructor(...args){super(...args);formatters++;}}}});
+  const finance=measured('src/lib/businessFinanceCore.ts');
+  const insights=measured('src/lib/businessMoneyInsights.ts');
+  const books=empty();
+  for(let i=0;i<3085;i++){
+    const id=`sale-${i}`,stamp=new Date(Date.UTC(2025,7,1+Math.floor(i/8),9+i%8)).toISOString();
+    books.sales.push(sale({id,occurred_at:stamp,recorded_at:stamp,client_id:`client-${i%480}`}));
+    for(const [stage,amount] of [['deposit',2000],['balance',8000]])books.payments.push(new Proxy(payment(`${id}-${stage}`,stage,amount,{sale_id:id,occurred_at:stamp}),{get(target,key){paymentReads++;return target[key];}}));
+  }
+  const result=finance.summarizeOperatingBooks(salon,books,period);
+  const money=insights.businessMoneyInsights(salon,books,period);
+  const localDate=finance.financeDayReader(period.timeZone);
+  const expected=books.sales.filter(row=>localDate(row.occurred_at)>=period.from&&localDate(row.occurred_at)<=period.to).length;
+  assert.equal(result.visits,expected);
+  assert.equal(result.completed_sales_cents,expected*10000);
+  assert.equal(result.cash_received_cents,expected*10000);
+  assert.ok(result.balances.every(row=>row.received_cents===10000&&row.unpaid_cents===0));
+  assert.equal(money.completed_sales_cents,result.completed_sales_cents);
+  assert.equal(money.received_cents,result.cash_received_cents);
+  // Operation bounds, not machine-dependent elapsed-time assertions. The old
+  // implementation constructed >67,000 formatters and scanned receipts for
+  // every sale and refund, exhausting the hosted request budget.
+  assert.ok(formatters<=10,`${formatters} formatters for one reporting request`);
+  assert.ok(paymentReads<books.payments.length*100,`${paymentReads} payment-field reads`);
+});
+
+test('request-local financial dates preserve DST and reject invalid timestamps without sharing tenant state',()=>{
+  const day=core.financeDayReader('America/New_York');
+  assert.equal(day('2026-03-08T04:59:59Z'),'2026-03-07');
+  assert.equal(day('2026-03-08T05:00:00Z'),'2026-03-08');
+  assert.equal(day('2026-11-01T05:30:00Z'),'2026-11-01');
+  assert.equal(day('2026-11-01T06:30:00Z'),'2026-11-01');
+  assert.equal(core.financeDayReader('UTC')('2026-03-08T04:59:59Z'),'2026-03-08');
+  assert.throws(()=>day('not-a-date'),/FINANCE_INVALID_DATE/);
+});
+
 test('unpaid and incomplete statuses never count as collected deposits',()=>{
   const legacy=load('src/lib/financeLedgerCore.ts');
   for(const deposit_status of ['Unpaid','Payment incomplete','Not paid','Pending','Failed']) assert.equal(legacy.bookingTransaction({deposit_status,deposit_amount:20}).deposit_collected,0,deposit_status);

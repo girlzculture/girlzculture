@@ -1,14 +1,10 @@
-import { summarizeOperatingBooks, validateFinancePeriod, type FinancePeriod, type OperatingBooks } from "@/lib/businessFinanceCore";
+import { financeDayReader, summarizeOperatingBooks, validateFinancePeriod, type FinancePeriod, type OperatingBooks } from "@/lib/businessFinanceCore";
 
 export type MoneyRecommendation = { kind: "balances" | "costs" | "cancellations" | "trend"; count: number; value_cents: number };
 const shiftDay = (day: string, amount: number) => {
   const date = new Date(`${day}T12:00:00Z`);
   date.setUTCDate(date.getUTCDate() + amount);
   return date.toISOString().slice(0, 10);
-};
-const localDay = (at: string, timeZone: string) => {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(at));
-  return ["year", "month", "day"].map(key => parts.find(part => part.type === key)?.value).join("-");
 };
 
 /** Deterministic explanations of the existing authorized books. No discovery,
@@ -21,7 +17,8 @@ export function businessMoneyInsights(salonId: string, books: OperatingBooks, pe
   // Both summaries validate the entire business scope before any derived output.
   const current = summarizeOperatingBooks(salonId, books, period);
   const previous = summarizeOperatingBooks(salonId, books, previousPeriod);
-  const sales = books.sales.filter(sale => { const day = localDay(sale.occurred_at, period.timeZone); return day >= period.from && day <= period.to; });
+  const localDay = financeDayReader(period.timeZone);
+  const sales = books.sales.filter(sale => { const day = localDay(sale.occurred_at); return day >= period.from && day <= period.to; });
   const completed = sales.filter(sale => sale.status === "completed");
   const cancelled = sales.filter(sale => sale.status === "cancelled");
   const pending = sales.filter(sale => sale.status === "pending");

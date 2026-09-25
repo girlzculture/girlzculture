@@ -61,11 +61,21 @@ export function moneyCents(value: unknown): number {
 }
 const validCents = (value: number) => Number.isSafeInteger(value) && value >= 0;
 export const financeSalePayable = (sale: OperatingSale) => sale.agreed_cents + (sale.tax_cents || 0) + (sale.shipping_cents || 0);
-const dateKey = (value: string, timeZone: string) => {
-  if (!Number.isFinite(Date.parse(value))) throw Error("FINANCE_INVALID_DATE");
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date(value));
-  return ["year", "month", "day"].map(type => parts.find(part => part.type === type)?.value).join("-");
-};
+/** Request-local: reuse the costly timezone formatter and repeated timestamps,
+ * without retaining business data across requests or tenants. */
+export function financeDayReader(timeZone: string) {
+  const formatter = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+  const days = new Map<string, string>();
+  return (value: string) => {
+    const cached = days.get(value);
+    if (cached !== undefined) return cached;
+    if (!Number.isFinite(Date.parse(value))) throw Error("FINANCE_INVALID_DATE");
+    const parts = formatter.formatToParts(new Date(value));
+    const day = ["year", "month", "day"].map(type => parts.find(part => part.type === type)?.value).join("-");
+    days.set(value, day);
+    return day;
+  };
+}
 export function validateFinancePeriod(period: FinancePeriod) {
   for (const value of [period.from, period.to]) if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || new Date(`${value}T12:00:00Z`).toISOString().slice(0, 10) !== value) throw Error("FINANCE_INVALID_PERIOD");
   if (period.to < period.from) throw Error("FINANCE_INVALID_PERIOD");
@@ -87,28 +97,34 @@ export function assertOperatingBooksScope(salonId: string, books: OperatingBooks
   }
   const sales = new Set(books.sales.map(sale => sale.id));
   const payments = new Map(books.payments.map(payment => [payment.id, payment]));
+  const refundsByReceipt = new Map<string, number>();
+  const receiptsBySale = new Map<string, number>();
   for (const payment of books.payments) {
     if (!sales.has(payment.sale_id) || !validCents(payment.amount_cents)) throw Error("FINANCE_INVALID_RECORD");
     if (payment.stage === "refund") {
       const original = payments.get(payment.original_payment_id || "");
       if (!original || original.sale_id !== payment.sale_id || original.stage === "refund" || original.method !== payment.method) throw Error("FINANCE_INVALID_REFUND");
+    } else {
+      receiptsBySale.set(payment.sale_id, (receiptsBySale.get(payment.sale_id) || 0) + payment.amount_cents);
     }
+    if (payment.original_payment_id) refundsByReceipt.set(payment.original_payment_id, (refundsByReceipt.get(payment.original_payment_id) || 0) + payment.amount_cents);
   }
   for (const original of books.payments.filter(payment => payment.stage !== "refund")) {
-    if (books.payments.filter(payment => payment.original_payment_id === original.id).reduce((sum, payment) => sum + payment.amount_cents, 0) > original.amount_cents) throw Error("FINANCE_REFUND_EXCEEDS_RECEIPT");
+    if ((refundsByReceipt.get(original.id) || 0) > original.amount_cents) throw Error("FINANCE_REFUND_EXCEEDS_RECEIPT");
   }
   for (const sale of books.sales) {
     if (![sale.tax_cents ?? 0, sale.shipping_cents ?? 0].every(validCents)) throw Error("FINANCE_INVALID_RECORD");
     if (![sale.list_cents, sale.discount_cents, sale.agreed_cents].every(validCents) || sale.discount_cents > sale.list_cents || sale.agreed_cents !== sale.list_cents - sale.discount_cents || sale.cost_cents !== null && !validCents(sale.cost_cents)) throw Error("FINANCE_INVALID_RECORD");
     if (sale.compensation.kind === "commission" && (!Number.isFinite(sale.compensation.percent) || sale.compensation.percent < 0 || sale.compensation.percent > 100)) throw Error("FINANCE_INVALID_ARRANGEMENT");
-    if (books.payments.filter(payment => payment.sale_id === sale.id && payment.stage !== "refund").reduce((sum, payment) => sum + payment.amount_cents, 0) > financeSalePayable(sale)) throw Error("FINANCE_RECEIPTS_EXCEED_SALE");
+    if ((receiptsBySale.get(sale.id) || 0) > financeSalePayable(sale)) throw Error("FINANCE_RECEIPTS_EXCEED_SALE");
   }
 }
 
 export function summarizeOperatingBooks(salonId: string, books: OperatingBooks, period: FinancePeriod) {
   validateFinancePeriod(period);
   assertOperatingBooksScope(salonId, books);
-  const within = (at: string) => { const day = dateKey(at, period.timeZone); return day >= period.from && day <= period.to; };
+  const dateKey = financeDayReader(period.timeZone);
+  const within = (at: string) => { const day = dateKey(at); return day >= period.from && day <= period.to; };
   const salesById = new Map(books.sales.map(sale => [sale.id, sale]));
   const completed = books.sales.filter(sale => sale.status === "completed" && within(sale.occurred_at));
   const receipts = books.payments.filter(payment => within(payment.occurred_at));
@@ -152,7 +168,7 @@ export function summarizeOperatingBooks(salonId: string, books: OperatingBooks, 
     }
     bySource[sale.source] += sale.agreed_cents;
     byService[sale.name] = (byService[sale.name] || 0) + sale.agreed_cents;
-    const day = dateKey(sale.occurred_at, period.timeZone);
+    const day = dateKey(sale.occurred_at);
     const daily = byDay[day] ||= { visits: 0, sales_cents: 0 };
     if (sale.kind === "service") daily.visits++;
     daily.sales_cents += sale.agreed_cents;
@@ -195,15 +211,21 @@ export function summarizeOperatingBooks(salonId: string, books: OperatingBooks, 
   const expenseCategories: Record<string, number> = {};
   for (const expense of expenses.filter(row => row.treatment === "operating")) expenseCategories[expense.category] = (expenseCategories[expense.category] || 0) + expense.amount_cents;
   const operatingExpenses = Object.values(expenseCategories).reduce((sum, amount) => sum + amount, 0);
-  const position = books.sales.filter(sale => dateKey(sale.recorded_at, period.timeZone) <= period.to).map(sale => {
-    const received = books.payments.filter(payment => payment.sale_id === sale.id && dateKey(payment.occurred_at, period.timeZone) <= period.to).reduce((sum, payment) => sum + (payment.stage === "refund" ? -payment.amount_cents : payment.amount_cents), 0);
+  const receivedBySale = new Map<string, number>();
+  const refundedBySaleAsOf = new Map<string, number>();
+  for (const payment of books.payments) if (dateKey(payment.occurred_at) <= period.to) {
+    receivedBySale.set(payment.sale_id, (receivedBySale.get(payment.sale_id) || 0) + (payment.stage === "refund" ? -payment.amount_cents : payment.amount_cents));
+    if (payment.stage === "refund") refundedBySaleAsOf.set(payment.sale_id, (refundedBySaleAsOf.get(payment.sale_id) || 0) + payment.amount_cents);
+  }
+  const position = books.sales.filter(sale => dateKey(sale.recorded_at) <= period.to).map(sale => {
+    const received = receivedBySale.get(sale.id) || 0;
     // A recorded refund does not reopen a discharged price as customer debt.
-    const refunded = books.payments.filter(payment => payment.sale_id === sale.id && payment.stage === "refund" && dateKey(payment.occurred_at, period.timeZone) <= period.to).reduce((sum, payment) => sum + payment.amount_cents, 0);
+    const refunded = refundedBySaleAsOf.get(sale.id) || 0;
     return { sale_id: sale.id, received_cents: received, unpaid_cents: sale.status === "cancelled" ? 0 : Math.max(0, financeSalePayable(sale) - received - refunded) };
   });
   const compensationPosition: Record<string, { commission_earned_cents: number; commission_paid_cents: number; wage_due_cents: number; wage_paid_cents: number; booth_rent_due_cents: number; booth_rent_paid_cents: number; compensation_outstanding_cents: number; advance_cents: number; rent_outstanding_cents: number }> = {};
   const account = (id: string) => compensationPosition[id] ||= { commission_earned_cents:0,commission_paid_cents:0,wage_due_cents:0,wage_paid_cents:0,booth_rent_due_cents:0,booth_rent_paid_cents:0,compensation_outstanding_cents:0,advance_cents:0,rent_outstanding_cents:0 };
-  const asOf = (at: string) => dateKey(at, period.timeZone) <= period.to;
+  const asOf = (at: string) => dateKey(at) <= period.to;
   for (const sale of books.sales) if (sale.stylist_id && sale.status === "completed" && sale.kind === "service" && sale.compensation.kind === "commission" && asOf(sale.occurred_at)) {
     const earned = Math.round((sale.compensation.basis === "before_discount" ? sale.list_cents : sale.agreed_cents) * sale.compensation.percent / 100);
     account(sale.stylist_id).commission_earned_cents += earned;

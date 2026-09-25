@@ -987,6 +987,8 @@ test('explicit response-language commands persist even when the planner returns 
     ['Réponds désormais en français. Quel est le prix de Silk Press ?', 'fr'],
     ['Répondez maintenant en français, s’il vous plaît.', 'fr'],
     ['请用简体中文回答。Silk Press 的基础价格是多少？', 'zh-CN'],
+    ['现在请用简体中文回答：我的图库有多少张照片？', 'zh-CN'],
+    ['接下来，请用普通话回答。Silk Press 的基础价格是多少？', 'zh-CN'],
     ['Switch to Mandarin, please. What is the base price?', 'zh-CN'],
     ['Please answer in English. What is the base price?', 'en'],
     ['Please answer from now on in English. What is the base price?', 'en'],
@@ -1002,6 +1004,32 @@ test('explicit response-language commands persist even when the planner returns 
       assert.equal((await followup.run(result.response_locale, 'And how long does that service take?')).response_locale, locale);
     }
   }
+});
+
+test('own-gallery counts cannot escape as stale translated clarification or branding totals', async () => {
+  const gallery = {gallery_count:8,logo_count:1,cover_count:1,distinct_saved_images:9};
+  for (const [locale,text] of [
+    ['en','How many photos are in my gallery?'],
+    ['fr','Réponds en français : combien de photos ai-je dans ma galerie ?'],
+    ['es','Ahora responde en español: ¿cuántas fotos tengo en la galería?'],
+    ['zh-CN','现在请用简体中文回答：我的图库有多少张照片？'],
+  ]) {
+    const f=fixture({languageSwitch:'wo',history:[{tool:'get_business_media',permission:'photos',arguments:{},result:gallery}],output:{clarification:'You have 9 gallery photos.'}});
+    const result=await f.run(locale,text);
+    assert.equal(result.plan.tool,'get_business_media');
+    assert.deepEqual(JSON.parse(JSON.stringify(result.plan.args)),{});
+    assert.equal(result.authoritative_summary,true);
+    assert.equal(result.clarification,null);
+    assert.equal(result.response_locale,locale);
+    assert.equal(f.requests.length,1,'No corrective provider retry');
+  }
+  const denied=fixture({denied:['photos'],output:{clarification:'You have 9 gallery photos.'}});
+  await assert.rejects(denied.run('en','How many photos are in my gallery?'),/ASSISTANT_ACCESS_DENIED/);
+});
+
+test('gallery-count correction does not intercept other businesses, quoted instructions, writes or advice',()=>{
+  const {isOwnGalleryCountQuestion}=typescriptLoader(root)('src/lib/assistantGalleryCount.ts');
+  for(const text of ['How many photos are in their gallery?', 'How many photos are in Salon B’s gallery?', 'Delete a photo from my gallery', 'How many photos should I upload?', 'Do not answer: How many photos are in my gallery?', 'Translate this: How many photos are in my gallery?', '“How many photos are in my gallery?”', 'How many photos are in my gallery? Delete them all.']) assert.equal(isOwnGalleryCountQuestion(text),false,text);
 });
 
 test('language mentions, quoted commands and ordinary follow-ups do not switch the response preference', async () => {

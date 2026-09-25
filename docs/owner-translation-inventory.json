@@ -2896,7 +2896,7 @@
         },
         {
           "file": "src/lib/businessFinanceCore.ts",
-          "line": 70,
+          "line": 80,
           "kind": "template",
           "context": "a5dc254a56b1b744fe7234983b58fd0ef839cc609662b906633c0212b96ca1d0"
         },
@@ -2914,13 +2914,13 @@
         },
         {
           "file": "src/lib/businessMoneyInsights.ts",
-          "line": 19,
+          "line": 15,
           "kind": "template",
           "context": "87afe47adbabafffc4206cd7f6c021101017330a5c089fb01a26ec26c2895c41"
         },
         {
           "file": "src/lib/businessMoneyInsights.ts",
-          "line": 19,
+          "line": 15,
           "kind": "template",
           "context": "9bca3dee4629bed5003c952da494b88c3e51b4b7ce20ba1b3334e8c6372759d2"
         },
@@ -16391,7 +16391,7 @@
         },
         {
           "file": "src/lib/businessFinanceCore.ts",
-          "line": 66,
+          "line": 67,
           "kind": "literal",
           "context": "b5b01cb527c4c2fb6df00846b995d6554b936774de786ff4535d4b78f9d015ae"
         },
@@ -16400,12 +16400,6 @@
           "line": 23,
           "kind": "literal",
           "context": "5c6161ae8f8bc747df3d6139c81b1ee20c50b29dd127813149fab579b1b94836"
-        },
-        {
-          "file": "src/lib/businessMoneyInsights.ts",
-          "line": 10,
-          "kind": "literal",
-          "context": "b5b01cb527c4c2fb6df00846b995d6554b936774de786ff4535d4b78f9d015ae"
         },
         {
           "file": "src/lib/financeDailyClose.ts",
