@@ -18,6 +18,7 @@ import { formatZonedDateTime, salonTimeZone } from "@/lib/dateTime";
 import { restoreAuthorizedBusinessContact } from "@/lib/assistantBusinessProfileRead";
 import { assertAssistantProposalScope } from "@/lib/assistantProfessionalScope";
 import { assistantBusinessTerminologyGuidance, type BusinessTerminologyDomain } from "@/i18n/business-terminology";
+import { isOwnGalleryCountQuestion } from "@/lib/assistantGalleryCount";
 
 const ASSISTANT_LANGUAGE_NAMES = {
   en: "English",
@@ -36,7 +37,7 @@ function explicitResponseLanguage(text: string): AssistantLanguage | null {
   // "Responde ahora en español" fell through to a null planner switch, so a
   // Spanish answer could be displayed while the persisted preference stayed fr.
   const western = command.match(/^(?:(?:now|ahora|maintenant)[,\s]+)?(?:please[,\s]+|por favor[,\s]+|s'il vous plaît[,\s]+)?(?:(?:switch|change)(?:\s+(?:now|from now on))?\s+to|(?:answer|respond|reply)(?:\s+(?:now|from now on|henceforth))?\s+in|(?:cambia|cambiar)(?:\s+(?:ahora|de ahora en adelante))?\s+al?|(?:responde|respóndeme|contesta)(?:\s+(?:ahora|de ahora en adelante|a partir de ahora))?\s+en|(?:réponds|répondez|réponds-moi|passe|passez)(?:\s+(?:désormais|maintenant|dorénavant|à partir de maintenant))?\s+en)\s+([\p{L}-]+(?:\s+Chinese)?)(?=$|[\s,.!?;:])/iu);
-  const chinese = command.match(/^(?:请)?(?:用|使用|改用|切换到|切换为)(英语|英文|法语|法文|西班牙语|西班牙文|简体中文|中文|普通话)(?:回答|回复|作答|[。！？，,.\s]|$)/u);
+  const chinese = command.match(/^(?:(?:现在|从现在开始|接下来)[，,\s]*)?(?:请)?(?:用|使用|改用|切换到|切换为)(英语|英文|法语|法文|西班牙语|西班牙文|简体中文|中文|普通话)(?:回答|回复|作答|[。！？，,.\s]|$)/u);
   const name = (western?.[1] || chinese?.[1] || "").toLocaleLowerCase("en");
   const aliases: Record<string, AssistantLanguage> = {
     english: "en", anglais: "en", inglés: "en", 英语: "en", 英文: "en",
@@ -498,7 +499,13 @@ export async function planOwnerRequest(input: {
     if (text.length > 16000) throw new AssistantError("ASSISTANT_UNAVAILABLE", 503);
     const plan = parseOwnerPlannerResponse(text, granted as Set<string>, Boolean(input.answerOnly),input.trackTask);
     const hydrated = input.answerOnly ? plan : hydratePendingPlan(plan, pendingRows);
-    outcome = "completed"; return { ...hydrated, language_switch: explicitLocale ?? hydrated.language_switch, response_locale: explicitLocale ?? hydrated.language_switch ?? input.locale };
+    // A precise own-gallery count has an authoritative localized presentation.
+    // A model can otherwise put a factual answer in `clarification`, bypassing
+    // the read and relabeling the all-images total as the gallery count.
+    const galleryCount = !input.answerOnly && isOwnGalleryCountQuestion(input.text);
+    if (galleryCount && !granted.has(ASSISTANT_TOOLS.get_business_media.permission)) throw new AssistantError("ASSISTANT_ACCESS_DENIED", 403);
+    const resolved = galleryCount ? { plan: { tool: "get_business_media", args: {} }, reply: null, clarification: null, navigate: null, ...(input.trackTask ? { task_tool: hydrated.task_tool } : {}) } : hydrated;
+    outcome = "completed"; return { ...resolved, authoritative_summary: resolved.plan?.tool === "get_business_media", language_switch: galleryCount ? explicitLocale : explicitLocale ?? hydrated.language_switch, response_locale: galleryCount ? responseLocale : explicitLocale ?? hydrated.language_switch ?? input.locale };
   } catch (error) {
     if (error instanceof AssistantPlannerError) failureCode = `PLANNER_${error.reason}`;
     throw error;

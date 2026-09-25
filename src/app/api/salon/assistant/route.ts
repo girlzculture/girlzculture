@@ -80,7 +80,7 @@ async function POSTHandler(request: Request) {
       if (!planned.plan) return Response.json({...planned,...(body.task_tracking?{active_task:taskSummary(task)}:{})}, { headers });
       noteTool(planned.plan.tool, planned.plan.args);
       const executed = await executeAssistantTool(context, { requestId: body.request_id, locale: responseLocale, tool: planned.plan.tool, args: planned.plan.args });
-      if (ASSISTANT_TOOLS[planned.plan.tool as AssistantTool].risk === 1) {
+      if (ASSISTANT_TOOLS[planned.plan.tool as AssistantTool].risk === 1 && !planned.authoritative_summary) {
         // A read is followed by a short answer to the actual question. The
         // responder can neither call tools nor confirm a write. If it fails,
         // the authorized, deterministic summary remains available.

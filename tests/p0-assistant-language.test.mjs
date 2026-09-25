@@ -2,6 +2,25 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { typescriptLoader } from './helpers/load-typescript.mjs';
 
+for(const locale of ['en','fr','es','zh-CN'])test(`authoritative ${locale} gallery count uses fresh scoped read without model rewriting`,async()=>{
+  const id='33000000-0000-4000-8000-000000000001',executions=[],plans=[];
+  const context={admin:{},user:{id:'owner',user_metadata:{gc_assistant_locale:locale}},salon:{id:'business'}};
+  const present=typescriptLoader(process.cwd())('src/lib/gcAssistantPresentation.ts').presentAssistantResult;
+  const message=present('get_business_media',{gallery_count:8,cover_count:1,logo_count:1,distinct_saved_images:9,publicly_visible:false},locale).message;
+  const load=typescriptLoader(process.cwd(),{
+    '@/lib/supabaseAdmin':{requireSalonOwner:async()=>context},
+    '@/lib/requestSecurity':{enforceRateLimit(){},RateLimitError:class extends Error{}},
+    '@/lib/gcAssistantPlanningServer':{planOwnerRequest:async input=>{plans.push(input);assert.equal(input.answerOnly,undefined);return {response_locale:locale,authoritative_summary:true,plan:{tool:'get_business_media',args:{}}};}},
+    '@/lib/gcAssistantServer':{executeAssistantTool:async(scoped,input)=>{assert.equal(scoped,context);executions.push(input);return {request:{id},assistant_message:message};}},
+    '@/lib/operationalMonitoring':{withOperationalMonitoring:(_p,handler)=>handler,routeMonitoringProfile(){}},
+  });
+  const response=await load('src/app/api/salon/assistant/route.ts').POST(new Request('http://localhost/api/salon/assistant',{method:'POST',body:JSON.stringify({action:'plan',request_id:id,locale,text:'How many photos are in my gallery?',previous_request_ids:[]})}));
+  assert.equal(response.status,200);
+  assert.equal((await response.json()).assistant_message,message);
+  assert.match(message,{en:/8 gallery photos/,fr:/8 photos de galerie/,es:/8 fotos de galería/,'zh-CN':/8 张图库照片/}[locale]);
+  assert.equal(executions.length,1);assert.equal(executions[0].tool,'get_business_media');assert.equal(executions[0].locale,locale);assert.equal(plans.length,1);
+});
+
 for (const locale of ['en', 'fr', 'es', 'zh-CN']) for (const answerOnly of [false, true]) {
   test(`literal null in ${locale} ${answerOnly ? 'answer' : 'planning'} produces bounded recovery, not visible null`, async () => {
     const incidents = [], executions = [], plans = [];
