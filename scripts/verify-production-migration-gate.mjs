@@ -18,15 +18,15 @@ function requireCondition(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-export function verifyDispatchContext(env, checkoutSha) {
+export function verifyDispatchContext(env, checkoutSha, { workflowPath = MIGRATION_WORKFLOW, confirmation = MIGRATION_CONFIRMATION } = {}) {
   requireCondition(env.GITHUB_REPOSITORY === MIGRATION_REPOSITORY, "Production migrations require the canonical repository.");
   requireCondition(env.GITHUB_EVENT_NAME === "workflow_dispatch", "Production migrations require a manual dispatch.");
   requireCondition(env.GITHUB_REF === "refs/heads/main", "Production migrations require main.");
-  requireCondition(env.MIGRATION_CONFIRMATION === MIGRATION_CONFIRMATION, "Founder confirmation must be APPLY REVIEWED MIGRATIONS.");
+  requireCondition(env.MIGRATION_CONFIRMATION === confirmation, `Founder confirmation must be ${confirmation}.`);
   requireCondition(/^[a-f0-9]{40}$/.test(env.GITHUB_SHA ?? ""), "The dispatch commit SHA is missing or invalid.");
   requireCondition(checkoutSha === env.GITHUB_SHA, "Checked-out source differs from the dispatch commit.");
   requireCondition(env.GITHUB_WORKFLOW_SHA === env.GITHUB_SHA, "Workflow source differs from the dispatch commit.");
-  requireCondition(env.GITHUB_WORKFLOW_REF === `${MIGRATION_REPOSITORY}/${MIGRATION_WORKFLOW}@refs/heads/main`, "The dispatch must use the canonical migration workflow on main.");
+  requireCondition(env.GITHUB_WORKFLOW_REF === `${MIGRATION_REPOSITORY}/${workflowPath}@refs/heads/main`, "The dispatch must use its reviewed workflow on main.");
   requireCondition(Boolean(env.GITHUB_TOKEN), "A read-only GitHub token is required to verify prior CI.");
   return env.GITHUB_SHA;
 }
@@ -50,8 +50,8 @@ function verifySuccessfulRun(run) {
 }
 
 /** Read-only proof. The token is sent only to api.github.com and never printed. */
-export async function verifyProductionMigrationGate({ env, checkoutSha, fetchImpl = fetch }) {
-  const sha = verifyDispatchContext(env, checkoutSha);
+export async function verifyProductionMigrationGate({ env, checkoutSha, fetchImpl = fetch, workflowPath = MIGRATION_WORKFLOW, confirmation = MIGRATION_CONFIRMATION }) {
+  const sha = verifyDispatchContext(env, checkoutSha, { workflowPath, confirmation });
   const base = `https://api.github.com/repos/${MIGRATION_REPOSITORY}`;
   async function get(path) {
     let response;
