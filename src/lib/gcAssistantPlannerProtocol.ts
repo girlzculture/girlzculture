@@ -151,8 +151,11 @@ export class AssistantPlannerError extends AssistantError {
 
 const isObject = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 // Reject punctuation/control-only fragments, not valid non-Latin or numeric
-// responses. This checks readable content, not factual or semantic correctness.
-const hasProseContent = (value: string) => /[\p{L}\p{N}]/u.test(value);
+// responses. An absent-value token encoded as a string is not an answer either:
+// the hosted planner emitted clarification: "null", which otherwise passed.
+// This checks readable content, not factual or semantic correctness.
+const hasProseContent = (value: string) => /[\p{L}\p{N}]/u.test(value)
+  && !/^["']?(?:null|undefined)["']?$/i.test(value.replace(/[\p{Cc}\p{Cf}]/gu, '').trim());
 
 export function parseOwnerPlannerResponse(text: string, granted: ReadonlySet<string>, answerOnly: boolean, trackTask = false) {
   let payload: unknown;

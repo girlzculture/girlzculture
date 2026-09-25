@@ -711,6 +711,15 @@ test('one service decision is normalized and a revoked tool is absent from the p
 
 const proseGuardHistory = [{ tool: 'get_services_and_prices', permission: 'styles', arguments: { query: 'Boho' }, result: { services: [{ name: 'Boho / Goddess Braids', duration_min_hours: 5, duration_max_hours: 7, buffer_minutes: 45 }] } }];
 
+for (const answerOnly of [false, true]) test(`hosted null-text regression rejects absent-value ${answerOnly ? 'answers' : 'clarifications'} without extra provider calls`, async () => {
+  for (const prose of ['null', ' NULL ', 'undefined', '\u200bnull\u0000', '"null"']) {
+    const f = fixture({ answerOnly, history: proseGuardHistory, output: answerOnly ? { reply: prose } : { clarification: prose } });
+    await assert.rejects(f.run('fr', 'Ahora responde en español: ¿cuántas fotos tengo en la galería?'), /ASSISTANT_INVALID_PLAN/);
+    assert.deepEqual(JSON.parse(JSON.stringify(f.updates)), [{ outcome: 'failed', safe_error_code: answerOnly ? 'PLANNER_ANSWER' : 'PLANNER_DECISION' }]);
+    assert.equal(f.requests.length, 1);
+  }
+});
+
 for (const answerOnly of [false, true]) test(`structured prose guard rejects punctuation-only ${answerOnly ? 'answers' : 'clarifications'} without retry or false completion`, async () => {
   for (const prose of ['{', '[]', ' \u200b\u0000 ', '…']) {
     const f = fixture({ answerOnly, history: proseGuardHistory, output: answerOnly ? { reply: prose } : { clarification: prose } });
@@ -970,6 +979,9 @@ test('explicit response-language commands persist even when the planner returns 
   for (const [text, locale] of [
     ['Cambia al español. ¿Cuál es el precio base de Silk Press?', 'es'],
     ['Responde ahora en español. ¿Cuál es el precio base del Silk Press en mi salón?', 'es'],
+    ['Ahora responde en español: ¿cuántas fotos tengo en la galería?', 'es'],
+    ['Maintenant, réponds en français.', 'fr'],
+    ['Now answer in English.', 'en'],
     ['Por favor, responde de ahora en adelante en español. ¿Cuánto cuesta Silk Press?', 'es'],
     ['Réponds en français. Quel est le prix de Silk Press ?', 'fr'],
     ['Réponds désormais en français. Quel est le prix de Silk Press ?', 'fr'],
@@ -993,7 +1005,7 @@ test('explicit response-language commands persist even when the planner returns 
 });
 
 test('language mentions, quoted commands and ordinary follow-ups do not switch the response preference', async () => {
-  for (const text of ['Is that before add-ons?', 'What does "Switch to English" mean?', 'Do not switch to English.', 'How much is French Braids?', 'The service is called Spanish Style.', '“Responde ahora en español” is the message I received.', 'No respondas ahora en español.']) {
+  for (const text of ['Is that before add-ons?', 'What does "Switch to English" mean?', 'Do not switch to English.', 'How much is French Braids?', 'The service is called Spanish Style.', '“Responde ahora en español” is the message I received.', 'No respondas ahora en español.', 'Ahora no respondas en español.', '“Ahora responde en español” is a message I received.']) {
     const f = fixture();
     assert.equal((await f.run('fr', text)).response_locale, 'fr', text);
   }
